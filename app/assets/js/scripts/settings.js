@@ -3,6 +3,9 @@ const os = require('os')
 const semver = require('semver')
 
 const DropinModUtil = require('./assets/js/dropinmodutil')
+const Modrinth = require('./assets/js/modrinth')
+
+const loggerModrinth = LoggerUtil.getLogger('Modrinth')
 const {MSFT_OPCODE, MSFT_REPLY_TYPE, MSFT_ERROR} = require('./assets/js/ipcconstants')
 
 const settingsState = {
@@ -1023,6 +1026,168 @@ async function reloadDropinMods() {
     bindModsToggleSwitch()
 }
 
+// Modrinth
+
+const modrinthState = {
+    serv: null,
+    target: null,
+    blocklist: new Set(),
+    query: '',
+    offset: 0,
+    request: 0
+}
+
+function setModrinthStatus(text, retry = null) {
+    const status = document.getElementById('settingsModrinthStatus')
+    status.textContent = text
+    if (retry != null) {
+        const btn = document.createElement('button')
+        btn.type = 'button'
+        btn.className = 'settingsModrinthRetry'
+        btn.textContent = Lang.queryJS('settings.modrinth.retry')
+        btn.onclick = retry
+        status.appendChild(btn)
+    }
+}
+
+function modrinthErrorMessage(err) {
+    const title = err.data?.title
+    switch (err.code) {
+        case 'BLOCKED':
+            return err.data.dependency
+                ? Lang.queryJS('settings.modrinth.blockedDependency', { title })
+                : Lang.queryJS('settings.modrinth.blocked', { title })
+        case 'ALREADY_INSTALLED':
+            return Lang.queryJS('settings.modrinth.alreadyInstalled', { title })
+        case 'NO_COMPATIBLE_VERSION':
+            return Lang.queryJS('settings.modrinth.noCompatibleVersion', { title })
+        default:
+            return Lang.queryJS('settings.modrinth.installFailed')
+    }
+}
+
+function renderModrinthHit(hit, packProjects) {
+    const row = document.createElement('div')
+    row.className = 'settingsModrinthHit'
+
+    const icon = document.createElement('img')
+    icon.className = 'settingsModrinthIcon'
+    icon.alt = ''
+    icon.loading = 'lazy'
+    if (hit.icon_url) {
+        icon.src = hit.icon_url
+    }
+
+    const info = document.createElement('div')
+    info.className = 'settingsModrinthInfo'
+    const title = document.createElement('span')
+    title.className = 'settingsModrinthTitle'
+    title.textContent = hit.title
+    const meta = document.createElement('span')
+    meta.className = 'settingsModrinthMeta'
+    meta.textContent = `${Lang.queryJS('settings.modrinth.by', { author: hit.author })} · ${Lang.queryJS('settings.modrinth.downloads', { count: hit.downloads.toLocaleString('pt-BR') })}`
+    const desc = document.createElement('span')
+    desc.className = 'settingsModrinthDesc'
+    desc.textContent = hit.description
+    const rowStatus = document.createElement('span')
+    rowStatus.className = 'settingsModrinthRowStatus'
+    rowStatus.setAttribute('role', 'status')
+    info.append(title, meta, desc, rowStatus)
+
+    const btn = document.createElement('button')
+    btn.type = 'button'
+    btn.className = 'settingsModrinthInstall'
+    btn.textContent = Lang.queryJS('settings.modrinth.install')
+    btn.setAttribute('aria-label', `${Lang.queryJS('settings.modrinth.install')} ${hit.title}`)
+    btn.onclick = async () => {
+        btn.disabled = true
+        btn.textContent = Lang.queryJS('settings.modrinth.installing')
+        rowStatus.textContent = ''
+        rowStatus.removeAttribute('error')
+        try {
+            await Modrinth.install(hit.project_id, modrinthState.target, CACHE_SETTINGS_MODS_DIR, modrinthState.blocklist, packProjects)
+            btn.textContent = Lang.queryJS('settings.modrinth.installed')
+            rowStatus.textContent = Lang.queryJS('settings.modrinth.installedStatus', { title: hit.title })
+            await reloadDropinMods()
+        } catch (err) {
+            if (err instanceof Modrinth.ModrinthError && err.code === 'ALREADY_INSTALLED') {
+                btn.textContent = Lang.queryJS('settings.modrinth.installed')
+            } else {
+                btn.disabled = false
+                btn.textContent = Lang.queryJS('settings.modrinth.install')
+            }
+            if (!(err instanceof Modrinth.ModrinthError)) {
+                loggerModrinth.error('Install failed', err)
+            }
+            rowStatus.textContent = modrinthErrorMessage(err)
+            rowStatus.toggleAttribute('error', err.code !== 'ALREADY_INSTALLED')
+        }
+    }
+
+    row.append(icon, info, btn)
+    return row
+}
+
+async function searchModrinth(append = false) {
+    const results = document.getElementById('settingsModrinthResults')
+    const more = document.getElementById('settingsModrinthMore')
+    const request = ++modrinthState.request
+
+    if (!append) {
+        modrinthState.query = document.getElementById('settingsModrinthQuery').value.trim()
+        modrinthState.offset = 0
+        results.replaceChildren()
+    }
+    more.hidden = true
+    setModrinthStatus(Lang.queryJS('settings.modrinth.loading'))
+
+    try {
+        const packProjects = await Modrinth.getModpackProjects(modrinthState.serv)
+        const res = await Modrinth.search(modrinthState.query, modrinthState.target, modrinthState.blocklist, packProjects, modrinthState.offset)
+        if (request !== modrinthState.request) {
+            return
+        }
+        for (const hit of res.hits) {
+            results.appendChild(renderModrinthHit(hit, packProjects))
+        }
+        modrinthState.offset = res.offset + res.pageSize
+        more.hidden = modrinthState.offset >= res.total
+        setModrinthStatus(results.childElementCount === 0 && more.hidden ? Lang.queryJS('settings.modrinth.empty') : '')
+    } catch (err) {
+        if (request !== modrinthState.request) {
+            return
+        }
+        loggerModrinth.error('Search failed', err)
+        setModrinthStatus(Lang.queryJS('settings.modrinth.error'), () => searchModrinth(append))
+    }
+}
+
+async function prepareModrinthBrowser() {
+    const serv = (await DistroAPI.getDistribution()).getServerById(ConfigManager.getSelectedServer())
+    const form = document.getElementById('settingsModrinthForm')
+    const results = document.getElementById('settingsModrinthResults')
+
+    modrinthState.serv = serv
+    modrinthState.target = Modrinth.getServerTarget(serv)
+    modrinthState.blocklist = Modrinth.getBlocklist(serv)
+    modrinthState.request++
+    results.replaceChildren()
+    document.getElementById('settingsModrinthMore').hidden = true
+
+    if (modrinthState.target == null) {
+        form.hidden = true
+        setModrinthStatus(Lang.queryJS('settings.modrinth.unsupported'))
+        return
+    }
+    form.hidden = false
+    setModrinthStatus(Lang.queryJS('settings.modrinth.hint'))
+    form.onsubmit = (e) => {
+        e.preventDefault()
+        searchModrinth()
+    }
+    document.getElementById('settingsModrinthMore').onclick = () => searchModrinth(true)
+}
+
 // Shaderpack
 
 let CACHE_SETTINGS_INSTANCE_DIR
@@ -1176,6 +1341,7 @@ async function prepareModsTab(first) {
     bindShaderpackButton()
     bindModsToggleSwitch()
     await loadSelectedServerOnModsTab()
+    await prepareModrinthBrowser()
 }
 
 /**

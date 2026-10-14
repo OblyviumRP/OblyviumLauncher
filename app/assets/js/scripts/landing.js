@@ -467,6 +467,41 @@ const GAME_JOINED_REGEX = /\[.+\]: Sound engine started/
 const GAME_LAUNCH_REGEX = /^\[.+\]: (?:MinecraftForge .+ Initialized|ModLauncher .+ starting: .+|Loading Minecraft .+ with Fabric Loader .+)$/
 const MIN_LINGER = 5000
 
+function escapeHtml(text) {
+    const div = document.createElement('div')
+    div.textContent = text
+    return div.innerHTML
+}
+
+/**
+ * Disable enabled drop-in mods that the staff has blocked, then tell the
+ * player. If Modrinth cannot be reached the launch carries on.
+ */
+async function disableBlockedDropins(serv, logger) {
+    const modsDir = path.join(ConfigManager.getInstanceDirectory(), serv.rawServer.id, 'mods')
+    let blocked
+    try {
+        blocked = await Modrinth.findBlockedDropins(modsDir, Modrinth.getBlocklist(serv))
+    } catch (err) {
+        logger.warn('Could not check drop-in mods against the blocklist.', err)
+        return
+    }
+    if (blocked.length === 0) {
+        return
+    }
+    for (const mod of blocked) {
+        await DropinModUtil.toggleDropinMod(modsDir, mod.fileName, false)
+        logger.warn(`Disabled blocked drop-in mod ${mod.fileName} (${mod.title}).`)
+    }
+    setOverlayContent(
+        Lang.queryJS('landing.dlAsync.blockedModsTitle'),
+        Lang.queryJS('landing.dlAsync.blockedModsMessage', { mods: blocked.map(m => escapeHtml(m.title)).join(', ') }),
+        Lang.queryJS('landing.launch.okay')
+    )
+    setOverlayHandler(null)
+    toggleOverlay(true)
+}
+
 async function dlAsync(login = true) {
 
     // Login parameter is temporary for debug purposes. Allows testing the validation/downloads without
@@ -558,6 +593,8 @@ async function dlAsync(login = true) {
     remote.getCurrentWindow().setProgressBar(-1)
 
     fullRepairModule.destroyReceiver()
+
+    await disableBlockedDropins(serv, loggerLaunchSuite)
 
     setLaunchDetails(Lang.queryJS('landing.dlAsync.preparingToLaunch'))
 

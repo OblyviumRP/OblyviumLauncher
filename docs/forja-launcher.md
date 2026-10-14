@@ -55,3 +55,23 @@ Configurações têm uma barra fixa com **Voltar ao launcher**, indicação de q
 As ações de selecionar e desconectar conta são visíveis sem hover. Conteúdo de configuração tem largura máxima de 1160px e espaçamento constante entre os grupos de conta, para leitura em janelas grandes.
 
 O QA no Electron também verifica centralização do modal offline, foco dos campos, saída pelos três caminhos, erro/correção de resolução, fechamento do dropdown sem sair da aba e configurações em 800 e 1920px. O teste usa perfil isolado; não autentica uma conta Microsoft real nem inicia o Minecraft.
+
+## Mods da Modrinth
+
+Na aba **Mods**, o jogador busca mods na Modrinth e instala direto na pasta de drop-in mods do servidor selecionado. A busca só mostra mods compatíveis com a versão do Minecraft e o loader (Forge ou Fabric) do servidor, que rodam no cliente, e que não estão no modpack nem na lista de proibidos. As dependências obrigatórias são instaladas juntas. Se alguma estiver proibida, nada é baixado. Todo arquivo baixado é conferido pelo hash `sha512` informado pela Modrinth.
+
+A staff mantém a lista de proibidos no `distribution.json`, na entrada de cada servidor. Valem o slug ou o ID do projeto na Modrinth:
+
+```json
+{
+    "id": "oblyvium-1.20.1",
+    "modrinth": {
+        "blocked": ["xaeros-minimap", "freecam", "AANobbMI"]
+    }
+}
+```
+
+Antes de abrir o jogo, o launcher identifica os drop-ins ativos pelo hash e desativa (renomeia para `.disabled`) os que estiverem proibidos, avisando o jogador. Se a Modrinth estiver fora do ar, o jogo abre sem a checagem.
+
+Limites: o launcher só reconhece arquivos publicados na Modrinth. Um jar modificado ou baixado de outro site passa pela checagem. A lista é uma barreira de conveniência; anticheat de verdade precisa ficar no servidor.
+
