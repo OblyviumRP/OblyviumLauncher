@@ -372,6 +372,35 @@ input:checked + .toggleSwitchSlider::before { transform: translateX(15px); }
 @keyframes forja-loading { to { transform: translateX(150%); } }
 @keyframes forja-spin { to { transform: rotate(360deg); } }
 
+/* Modrinth mod browser (settings > Mods). */
+#settingsModrinthContainer { width: 100%; padding-bottom: 25px; }
+#settingsModrinthForm { display: flex; gap: 8px; margin-bottom: 8px; }
+#settingsModrinthForm[hidden] { display: none; }
+#settingsModrinthQuery { flex: 1; min-width: 0; min-height: 32px; padding: 0 10px; color: var(--foreground); background: var(--sidebar); border: 1px solid var(--input-border); border-radius: 4px; font: 13px var(--font-sans); }
+#settingsModrinthQuery::placeholder { color: var(--muted-2); }
+#settingsModrinthSearchButton, #settingsModrinthMore, .settingsModrinthInstall, .settingsModrinthRetry { min-height: 32px; padding: 0 12px; border-radius: 4px; font: 500 12px var(--font-sans); cursor: pointer; transition: background var(--dur-fast) var(--ease-forja), border-color var(--dur-fast) var(--ease-forja); }
+#settingsModrinthSearchButton, .settingsModrinthInstall { color: #fff; background: var(--primary-fill); border: 1px solid var(--primary-fill); }
+#settingsModrinthSearchButton:hover, .settingsModrinthInstall:hover:not(:disabled) { background: var(--fj-primary-hover); border-color: var(--fj-primary-hover); }
+.settingsModrinthInstall:disabled { color: var(--muted-foreground); background: var(--surface-2); border-color: var(--border-2); cursor: default; }
+#settingsModrinthMore, .settingsModrinthRetry { color: var(--foreground); background: var(--surface-2); border: 1px solid var(--border-2); }
+#settingsModrinthMore:hover, .settingsModrinthRetry:hover { background: var(--border-2); }
+#settingsModrinthMore { width: 100%; margin-top: 8px; }
+#settingsModrinthMore[hidden] { display: none; }
+#settingsModrinthStatus { display: flex; align-items: center; gap: 10px; color: var(--muted-foreground); font-size: 12px; min-height: 20px; margin-bottom: 8px; }
+#settingsModrinthStatus:empty { display: none; }
+#settingsModrinthResults { display: flex; flex-direction: column; gap: 6px; }
+.settingsModrinthHit { display: flex; align-items: center; gap: 12px; padding: 10px; background: var(--card); border: 1px solid var(--border-2); border-radius: 6px; }
+.settingsModrinthHit:hover { background: var(--accent); }
+.settingsModrinthIcon { flex: none; width: 40px; height: 40px; border-radius: 6px; background: var(--surface-2); object-fit: cover; }
+.settingsModrinthInfo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.settingsModrinthTitle { color: var(--foreground); font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.settingsModrinthMeta { color: var(--muted-foreground); font: 11px var(--font-mono); }
+.settingsModrinthDesc { color: var(--muted-foreground); font-size: 12px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.settingsModrinthInstall { flex: none; }
+.settingsModrinthRowStatus { color: var(--success-fg); font-size: 12px; }
+.settingsModrinthRowStatus:empty { display: none; }
+.settingsModrinthRowStatus[error] { color: var(--danger-fg); }
+
 @media (max-width: 900px) {
     #landingContainer > #upper { grid-template-columns: minmax(0, 1fr) auto; gap: 16px 24px; padding: 24px; }
     #landingContainer > #upper > #content { grid-template-columns: minmax(0, 1fr) 320px; gap: 24px; }

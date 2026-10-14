@@ -172,6 +172,16 @@
                         
                     </div>
                 </div>
+                <div id="settingsModrinthContainer">
+                    <div class="settingsModsHeader"><%- lang('settings.modrinthHeader') %></div>
+                    <form id="settingsModrinthForm" role="search">
+                        <input id="settingsModrinthQuery" type="search" autocomplete="off" spellcheck="false" placeholder="<%- lang('settings.modrinthSearchPlaceholder') %>" aria-label="<%- lang('settings.modrinthSearchPlaceholder') %>">
+                        <button id="settingsModrinthSearchButton" type="submit"><%- lang('settings.modrinthSearchButton') %></button>
+                    </form>
+                    <div id="settingsModrinthStatus" role="status" aria-live="polite"></div>
+                    <div id="settingsModrinthResults"></div>
+                    <button id="settingsModrinthMore" type="button" hidden><%- lang('settings.modrinthLoadMore') %></button>
+                </div>
                 <div id="settingsDropinModsContainer">
                     <div class="settingsModsHeader"><%- lang('settings.dropinMods') %></div>
                     <button id="settingsDropinFileSystemButton"><%- lang('settings.addMods') %> <span id="settingsDropinRefreshNote"><%- lang('settings.dropinRefreshNote') %></span></button>
