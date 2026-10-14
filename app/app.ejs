@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8" http-equiv="Content-Security-Policy" content="script-src 'self' 'sha256-In6B8teKZQll5heMl9bS7CESTbGvuAt3VVV86BUQBDk='"/>
+    <title><%= lang('app.title') %></title>
+    <script src="./assets/js/scripts/uicore.js"></script>
+    <script src="./assets/js/scripts/uibinder.js"></script>
+    <link type="text/css" rel="stylesheet" href="./assets/css/forja.css">
+</head>
+<body bkid="<%=bkid%>">
+    <%- include('frame') %>
+    <div id="main">
+        <%- include('welcome') %>
+        <%- include('login') %>
+        <%- include('loginOffline') %>
+        <%- include('waiting') %>
+        <%- include('loginOptions') %>
+        <%- include('settings') %>
+        <%- include('landing') %>
+    </div>
+    <%- include('overlay') %>
+    <div id="loadingContainer" role="status" aria-live="polite">
+        <div id="loadingContent">
+            <div id="loadSpinnerContainer">
+                <img id="loadCenterImage" src="assets/images/oblyvium-mark.svg" alt="Oblyvium">
+            </div>
+            <span class="loading-title">Oblyvium</span>
+            <span class="loading-caption">Preparando sua jornada…</span>
+            <div class="forja-loading-bar"></div>
+        </div>
+    </div>
+    <script src="./assets/js/scripts/forja.js"></script>
+</body>
+</html>

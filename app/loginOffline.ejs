@@ -1,0 +1,41 @@
+<div id="loginOfflineContainer" style="display: none;">
+    <div id="loginOfflineCancelContainer" >
+        <button id="loginOfflineCancelButton">
+            <div id="loginCancelIcon">X</div>
+            <span id="loginCancelText">Cancelar</span>
+        </button>
+    </div>
+    <div id="loginContent">
+        <form id="loginOfflineForm">
+            <img id="loginOfflineImageSeal" src="assets/images/oblyvium-mark.svg" alt="Oblyvium"/>
+            <span class="auth-kicker">Portal do jogador</span>
+            <h1 class="auth-heading">Sua identidade no mundo.</h1>
+            <p class="auth-description">Informe seu nome no Minecraft para entrar offline.</p>
+            <div class="loginFieldContainer">
+                <svg id="profileSVG" class="loginSVG" viewBox="40 37 65.36 61.43">
+                    <g>
+                        <path d="M86.77,58.12A13.79,13.79,0,1,0,73,71.91,13.79,13.79,0,0,0,86.77,58.12M97,103.67a3.41,3.41,0,0,0,3.39-3.84,27.57,27.57,0,0,0-54.61,0,3.41,3.41,0,0,0,3.39,3.84Z"/>
+                    </g>
+                </svg>
+                <input id="loginOfflineUsername" minlength="3" maxlength="16" class="loginField" type="text" placeholder="Seu nome no Minecraft" aria-label="Nome no Minecraft" aria-describedby="offlineUsernameHint" autocomplete="username" data-view-focus/>
+            </div>
+            <p id="offlineUsernameHint" class="auth-description">Use de 3 a 16 letras, números ou sublinhado.</p>
+            <button id="loginOfflineButton" disabled>
+                <div id="loginButtonContent">
+                    Entrar
+                    <svg id="loginSVG" viewBox="0 0 24.87 13.97">
+                        <defs>
+                            <style>.arrowLine{fill:none;stroke:#FFF;stroke-width:2px;transition: 0.25s ease;}</style>
+                        </defs>
+                        <polyline class="arrowLine" points="0.71 13.26 12.56 1.41 24.16 13.02"/>
+                    </svg>
+                    <div class="circle-loader">
+                        <div class="checkmark draw"></div>
+                    </div>
+                </div>
+            </button>
+        </form>
+    </div>
+    <script src="./assets/js/scripts/loginOffline.js"></script>
+    <div class="scene-credit">Arte conceitual, não é uma captura do servidor.</div>
+</div>

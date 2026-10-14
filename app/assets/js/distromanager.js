@@ -1,0 +1,16 @@
+const { DistributionAPI } = require('helios-core/common')
+
+const ConfigManager = require('./configmanager')
+
+// TODO Set the Oblyvium distribution.json URL.
+exports.REMOTE_DISTRO_URL = ''
+
+const api = new DistributionAPI(
+    ConfigManager.getLauncherDirectory(),
+    null, // Injected forcefully by the preloader.
+    null, // Injected forcefully by the preloader.
+    exports.REMOTE_DISTRO_URL,
+    false
+)
+
+exports.DistroAPI = api
