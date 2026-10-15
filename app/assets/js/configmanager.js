@@ -100,7 +100,9 @@ const DEFAULT_CONFIG = {
     selectedAccount: null,
     authenticationDatabase: {},
     modConfigurations: [],
-    javaConfig: {}
+    javaConfig: {},
+    gameConfig: {},
+    profiles: {}
 }
 
 let config = null
@@ -791,4 +793,81 @@ exports.getAllowPrerelease = function(def = false){
  */
 exports.setAllowPrerelease = function(allowPrerelease){
     config.settings.launcher.allowPrerelease = allowPrerelease
+}
+
+// Profiles
+
+/**
+ * The raw profiles store. See profiles.js for its shape.
+ *
+ * @returns {Object}
+ */
+exports.getProfiles = function(){
+    return config.profiles
+}
+
+function gameConfigFor(key){
+    if(config.gameConfig[key] == null){
+        config.gameConfig[key] = {
+            resWidth: config.settings.game.resWidth,
+            resHeight: config.settings.game.resHeight,
+            fullscreen: config.settings.game.fullscreen
+        }
+    }
+    return config.gameConfig[key]
+}
+
+exports.getProfileGameWidth = function(key){
+    return gameConfigFor(key).resWidth
+}
+
+exports.setProfileGameWidth = function(key, resWidth){
+    gameConfigFor(key).resWidth = Number.parseInt(resWidth)
+}
+
+exports.validateProfileGameWidth = function(resWidth){
+    return exports.validateGameWidth(resWidth)
+}
+
+exports.getProfileGameHeight = function(key){
+    return gameConfigFor(key).resHeight
+}
+
+exports.setProfileGameHeight = function(key, resHeight){
+    gameConfigFor(key).resHeight = Number.parseInt(resHeight)
+}
+
+exports.validateProfileGameHeight = function(resHeight){
+    return exports.validateGameHeight(resHeight)
+}
+
+exports.getProfileFullscreen = function(key){
+    return gameConfigFor(key).fullscreen
+}
+
+exports.setProfileFullscreen = function(key, fullscreen){
+    gameConfigFor(key).fullscreen = fullscreen
+}
+
+/**
+ * Copy Java, game and optional-mod settings from one profile key to another.
+ */
+exports.copyProfileConfig = function(srcKey, dstKey){
+    if(config.javaConfig[srcKey] != null){
+        config.javaConfig[dstKey] = JSON.parse(JSON.stringify(config.javaConfig[srcKey]))
+    }
+    config.gameConfig[dstKey] = JSON.parse(JSON.stringify(gameConfigFor(srcKey)))
+    const modConf = exports.getModConfiguration(srcKey)
+    if(modConf != null){
+        exports.setModConfiguration(dstKey, { id: dstKey, mods: JSON.parse(JSON.stringify(modConf.mods)) })
+    }
+}
+
+/**
+ * Forget every setting stored for a profile key.
+ */
+exports.removeProfileConfig = function(key){
+    delete config.javaConfig[key]
+    delete config.gameConfig[key]
+    config.modConfigurations = config.modConfigurations.filter(c => c.id !== key)
 }
