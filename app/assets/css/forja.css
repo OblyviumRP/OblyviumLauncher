@@ -127,7 +127,7 @@ input[error] { border-color: var(--danger-fg); color: var(--danger-fg); backgrou
 #avatarOverlay { min-height: 0; padding: 0; border-radius: 0; background: var(--fj-overlay); font-size: 11px; }
 #mediaContent { display: contents; }
 #internalMedia { grid-column: 2; grid-row: 1; flex-direction: row; align-self: center; gap: 8px; }
-#externalMedia { grid-column: 1 / -1; grid-row: 2; display: flex; align-items: center; justify-content: center; }
+#externalMedia { grid-column: 1 / -1; grid-row: 2; display: flex; align-items: flex-end; justify-content: center; }
 #settingsMediaButton { width: 44px; height: 44px; }
 .social-rail-heading { font: 11px var(--font-display); color: var(--muted-foreground); margin-bottom: 16px; }
 .social-links-rail { display: flex; flex-direction: row; align-items: center; gap: 12px; }
@@ -474,7 +474,7 @@ button.mods-row-title:hover { color: var(--primary-light); text-decoration: unde
 .mods-project-body pre { padding: 10px; overflow-x: auto; }
 .mods-project-body table { border-collapse: collapse; }
 .mods-project-body td, .mods-project-body th { border: 1px solid var(--border-2); padding: 4px 8px; }
-#modsMediaButton { width: auto; gap: 6px; padding: 8px 10px; color: var(--foreground); font: 500 12px var(--font-sans); cursor: pointer; }
+#modsMediaButton { width: auto; height: 44px; gap: 6px; padding: 8px 10px; color: var(--foreground); font: 500 12px var(--font-sans); cursor: pointer; }
 #modsMediaButton .mediaSVG { width: 18px; height: 18px; fill: none; }
 #modsMediaButton:hover .mediaSVG { fill: none; color: var(--primary-light); }
 
