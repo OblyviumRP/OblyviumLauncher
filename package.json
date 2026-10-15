@@ -11,6 +11,7 @@
   "scripts": {
     "start": "electron .",
     "verify:visual": "electron scripts/verify-visual.cjs",
+    "test": "node --test \"test/*.test.js\"",
     "dist": "electron-builder build",
     "dist:win": "npm run dist -- -w",
     "dist:mac": "npm run dist -- -m",
