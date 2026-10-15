@@ -3,11 +3,12 @@ const { LoggerUtil } = require('helios-core')
 const os   = require('os')
 const path = require('path')
 
+const LegacyMigration = require('./legacymigration')
+
 const logger = LoggerUtil.getLogger('ConfigManager')
 
 const sysRoot = process.env.APPDATA || (process.platform == 'darwin' ? process.env.HOME + '/Library/Application Support' : process.env.HOME)
 
-//Todo: Change default folder
 const dataPath = path.join(sysRoot, '.OblyviumLauncher')
 
 const launcherDir = require('@electron/remote').app.getPath('userData')
@@ -151,6 +152,9 @@ exports.load = function(){
         }
         if(doValidate){
             config = validateKeySet(DEFAULT_CONFIG, config)
+            if(LegacyMigration.migrateLegacyDataDirectory(config, sysRoot, dataPath)){
+                logger.info('Moved the data directory from the old NationNetwork default to', dataPath)
+            }
             exports.save()
         }
     }
