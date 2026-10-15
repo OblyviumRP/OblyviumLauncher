@@ -393,6 +393,8 @@ deleteConfirm = "Excluir"
 deleteCancel = "Cancelar"
 deleteFailed = "Não foi possível excluir o perfil."
 saveFailed = "Não foi possível salvar o perfil."
+loadFailed = "Não foi possível carregar os ajustes de jogo deste perfil."
+duplicating = "Duplicando…"
 
 [js.settings.serverListing]
 mainServer = "Servidor Principal"
