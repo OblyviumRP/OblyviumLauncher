@@ -27,7 +27,9 @@ const FILES = {
     // Malicious filename announced by a version, used to test path safety.
     '../evil.jar': makeFile('../evil.jar', 'conteudo hostil'),
     // Invalid filename ("..") for a project whose dependency has a valid name.
-    '..': makeFile('..', 'conteudo invalido')
+    '..': makeFile('..', 'conteudo invalido'),
+    // Announced with a valid hash, but the download always fails (404).
+    'quebrado-1.0.jar': makeFile('quebrado-1.0.jar', 'quebrado 1.0')
 }
 
 function project(id, slug, title, type, extra = {}){
@@ -58,7 +60,10 @@ const PROJECTS = [
     project('HHHHHHHH', 'extra', 'Extra', 'plugin'),
     // Valid dependency (sodium), but its own file name is invalid; used to test
     // that install() validates every step before downloading any of them.
-    project('IIIIIIII', 'invalido', 'Invalido', 'mod')
+    project('IIIIIIII', 'invalido', 'Invalido', 'mod'),
+    // Valid dependency (sodium) that downloads fine, but its own download
+    // fails; used to test that install() cleans up files it already wrote.
+    project('JJJJJJJJ', 'quebrado', 'Quebrado', 'mod')
 ]
 
 exports.start = async function(){
@@ -84,7 +89,8 @@ exports.start = async function(){
         EEEEEEEE: [version('ve1', 'EEEEEEEE', '1.0', ['iris'], 'sombra-1.0.zip')],
         FFFFFFFF: [version('vf1', 'FFFFFFFF', '1.0', ['forge'], 'corrompido-1.0.jar')],
         GGGGGGGG: [version('vg1', 'GGGGGGGG', '1.0', ['forge'], '../evil.jar')],
-        IIIIIIII: [version('vi1', 'IIIIIIII', '1.0', ['forge'], '..', [{ project_id: 'AAAAAAAA', dependency_type: 'required' }])]
+        IIIIIIII: [version('vi1', 'IIIIIIII', '1.0', ['forge'], '..', [{ project_id: 'AAAAAAAA', dependency_type: 'required' }])],
+        JJJJJJJJ: [version('vj1', 'JJJJJJJJ', '1.0', ['forge'], 'quebrado-1.0.jar', [{ project_id: 'AAAAAAAA', dependency_type: 'required' }])]
     })
     const findProject = idOrSlug => PROJECTS.find(p => p.id === idOrSlug || p.slug === idOrSlug)
     const requests = []
@@ -105,7 +111,7 @@ exports.start = async function(){
             if(p.startsWith('/files/')){
                 const name = decodeURIComponent(p.slice('/files/'.length))
                 // Always missing, for download-failure tests.
-                if(name === 'sumiu.jar'){
+                if(name === 'sumiu.jar' || name === 'quebrado-1.0.jar'){
                     return send(404, {})
                 }
                 // Sends a few bytes then kills the connection, for mid-stream failure tests.

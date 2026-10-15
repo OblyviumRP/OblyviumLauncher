@@ -18,6 +18,7 @@ const DEFAULT_ID = 'padrao'
 const DEFAULT_NAME = 'Padrão'
 const ICONS = ['espada', 'escudo', 'machado', 'arco', 'picareta', 'livro', 'pocao', 'coroa']
 const PROFILES_DIR = '.perfis'
+const ID_PATTERN = /^[0-9a-f]{8}$/
 const SETTINGS_FILES = ['options.txt', 'optionsof.txt', 'optionsshaders.txt', 'config']
 const SKIP_ON_COPY = new Set(['logs', 'crash-reports'])
 
@@ -46,7 +47,10 @@ exports.ensureServer = function(store, serverId, now = new Date()) {
     if(!Array.isArray(entry.list)) {
         entry.list = []
     }
-    entry.list = entry.list.filter(p => p != null && typeof p === 'object' && typeof p.id === 'string')
+    // Ids name a folder under .perfis, so only the default id and the newId
+    // format are kept; anything else (e.g. '..') is dropped as corrupt.
+    entry.list = entry.list.filter(p => p != null && typeof p === 'object' && typeof p.id === 'string' &&
+        (p.id === DEFAULT_ID || ID_PATTERN.test(p.id)))
     if(!entry.list.some(p => p.id === DEFAULT_ID)) {
         entry.list.unshift({ id: DEFAULT_ID, name: DEFAULT_NAME, icon: ICONS[0], created: now.toISOString() })
     }

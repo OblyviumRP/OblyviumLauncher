@@ -47,6 +47,30 @@ const loggerLanding = LoggerUtil.getLogger('Landing')
 // True while the loading area is shown (Java scan, file checks, downloads,
 // game start). The profile and its content must not change meanwhile.
 let launchAreaShown = false
+// Number of game processes spawned and not yet closed. The loading area hides
+// once the game window is up, but the game keeps using the profile folder
+// until it exits.
+let gameRunning = 0
+
+/**
+ * @returns {boolean} True while the game is opening or running.
+ */
+function isLaunchLocked(){
+    return launchAreaShown || gameRunning > 0
+}
+
+/**
+ * Disable the Mods button and the profile selector while the game is opening
+ * or running; re-enable them otherwise.
+ */
+function refreshLaunchLock(){
+    document.getElementById('modsMediaButton').disabled = isLaunchLocked()
+    if(isLaunchLocked()){
+        document.getElementById('profile_selection').disabled = true
+    } else {
+        renderProfileSelection()
+    }
+}
 
 /**
  * Show/hide the loading area.
@@ -62,12 +86,7 @@ function toggleLaunchArea(loading){
         launch_details.style.display = 'none'
         launch_content.style.display = 'inline-flex'
     }
-    document.getElementById('modsMediaButton').disabled = loading
-    if(loading){
-        document.getElementById('profile_selection').disabled = true
-    } else {
-        renderProfileSelection()
-    }
+    refreshLaunchLock()
 }
 
 /**
@@ -221,7 +240,7 @@ function renderProfileSelection(){
         return
     }
     // dlAsync refreshes the distro mid-launch, which re-renders this selector.
-    select.disabled = launchAreaShown
+    select.disabled = isLaunchLocked()
     const selected = ProfileManager.getSelected(serverId)
     for(const profile of ProfileManager.list(serverId)){
         select.add(new Option(profile.name, profile.id, false, profile.id === selected.id))
@@ -731,6 +750,24 @@ async function dlAsync(login = true) {
         try {
             // Build Minecraft process.
             proc = pb.build()
+            const gameProc = proc
+            gameRunning++
+            let released = false
+            const releaseGameLock = () => {
+                if(!released){
+                    released = true
+                    gameRunning--
+                    refreshLaunchLock()
+                }
+            }
+            gameProc.on('close', releaseGameLock)
+            // A process that never spawned may emit 'error' without 'close'.
+            gameProc.on('error', err => {
+                loggerLaunchSuite.error('Game process error', err)
+                if(gameProc.pid == null){
+                    releaseGameLock()
+                }
+            })
 
             // Bind listeners to stdout.
             proc.stdout.on('data', tempListener)

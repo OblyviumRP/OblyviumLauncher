@@ -79,7 +79,7 @@ A staff proíbe projetos no `distribution.json`, na entrada de cada servidor, po
 
 Proibidos e suas dependências não aparecem nem instalam. Antes de abrir o jogo, o launcher identifica pelo hash o conteúdo ativo do perfil e desativa o que estiver proibido, avisando o jogador. Se a Modrinth estiver fora do ar, o jogo abre sem a checagem.
 
-Limites: só arquivos publicados na Modrinth são reconhecidos; um jar modificado ou de outro site passa pela checagem. A lista é uma barreira de conveniência; anticheat de verdade fica no servidor.
+Limites: só arquivos publicados na Modrinth são reconhecidos; um jar modificado ou de outro site passa pela checagem. A lista é uma barreira de conveniência; anticheat de verdade fica no servidor. Proibir resource packs e shaders desativa o item no `options.txt`/configuração de shaders antes de abrir o jogo, mas o arquivo continua na pasta e pode ser reativado dentro do jogo até a próxima abertura pelo launcher.
 
 Testes: `npm test` (módulos de perfis, conteúdo e Modrinth, contra uma Modrinth falsa local) e `npm run verify:mods` (tela no Electron, com capturas em `%TEMP%\oblyvium-mods-qa`).
 
@@ -89,6 +89,6 @@ Testes: `npm test` (módulos de perfis, conteúdo e Modrinth, contra uma Modrint
 - A descrição do mod/resource pack/shader e o conteúdo da notícia (RSS) passam pelo mesmo sanitizador de HTML (`richtext.js`, DOMPurify com lista branca de tags/atributos e só URLs `https:`).
 - Instalações são enfileiradas uma de cada vez (nunca em paralelo) e todo nome de arquivo anunciado pela Modrinth é validado antes de tocar o disco.
 - **Remover** manda o mod/resource pack/shader para a lixeira do sistema, com fallback para exclusão definitiva se a lixeira falhar; excluir um perfil manda a pasta inteira para a lixeira do mesmo jeito.
-- Durante o lançamento do jogo, o botão **Mods** e o seletor de perfil ficam bloqueados até o processo terminar, para o perfil não mudar por baixo do launch em andamento.
+- O botão **Mods** e o seletor de perfil ficam bloqueados enquanto o jogo está abrindo ou rodando, para o perfil não mudar por baixo do jogo.
 - Memória, executável do Java, argumentos da JVM e resolução saíram de Configurações e agora ficam em **Editar perfil**, por perfil.
 
