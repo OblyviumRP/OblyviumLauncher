@@ -17,8 +17,8 @@
     "dist:win": "npm run dist -- -w",
     "dist:mac": "npm run dist -- -m",
     "dist:linux": "npm run dist -- -l",
-    "lint": "eslint --config .eslintrc.json .",
-    "lint-fix": "eslint --fix --config .eslintrc.json ."
+    "lint": "eslint .",
+    "lint-fix": "eslint --fix ."
   },
   "engines": {
     "node": "22.x.x"
