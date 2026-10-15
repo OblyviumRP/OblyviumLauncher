@@ -12,6 +12,8 @@ const crypto                = require('crypto')
 const fs                    = require('fs-extra')
 const got                   = require('got')
 const path                  = require('path')
+const { Transform }         = require('stream')
+const { pipeline }          = require('stream/promises')
 const { Type }              = require('helios-distribution-types')
 const { LoggerUtil }        = require('helios-core')
 const { version }           = require('../../../package.json')
@@ -136,19 +138,26 @@ function sha1(file) {
  *
  * @param {string[]} files Absolute paths of existing files.
  * @returns {Promise<Map<string, Object>>} file path -> Modrinth version, for recognised files only.
+ * Every file is included, even when several share the same content and hash.
  */
 exports.identifyFiles = async function(files) {
-    const byHash = new Map()
+    const pathsByHash = new Map()
     for(const file of files) {
-        byHash.set(await sha1(file), file)
+        const hash = await sha1(file)
+        if(!pathsByHash.has(hash)) {
+            pathsByHash.set(hash, [])
+        }
+        pathsByHash.get(hash).push(file)
     }
     const result = new Map()
-    if(byHash.size === 0) {
+    if(pathsByHash.size === 0) {
         return result
     }
-    const versions = await postJson('version_files', { hashes: [...byHash.keys()], algorithm: 'sha1' })
+    const versions = await postJson('version_files', { hashes: [...pathsByHash.keys()], algorithm: 'sha1' })
     for(const [hash, ver] of Object.entries(versions)) {
-        result.set(byHash.get(hash), ver)
+        for(const file of pathsByHash.get(hash) ?? []) {
+            result.set(file, ver)
+        }
     }
     return result
 }
@@ -159,33 +168,43 @@ const packProjectsCache = new Map()
  * Modrinth project IDs of the mods already shipped by the server's modpack.
  * Installing these again would load the same mod twice.
  *
+ * The result is only cached when every expected modpack file was found on
+ * disk; a partial scan (e.g. while files are still being downloaded) is
+ * returned but not remembered, so the next call tries again.
+ *
  * @param {HeliosServer} serv The distribution server.
  * @returns {Promise<Set<string>>}
  */
 exports.getModpackProjects = async function(serv) {
     const key = `${serv.rawServer.id}@${serv.rawServer.version}`
-    if(!packProjectsCache.has(key)) {
-        const files = []
-        const walk = mdls => {
-            for(const mdl of mdls) {
-                if(mdl.rawModule.type === Type.ForgeMod || mdl.rawModule.type === Type.FabricMod) {
-                    if(fs.existsSync(mdl.getPath())) {
-                        files.push(mdl.getPath())
-                    }
-                }
-                walk(mdl.subModules)
-            }
-        }
-        walk(serv.modules)
-        const promise = exports.identifyFiles(files)
-            .then(ids => new Set([...ids.values()].map(v => v.project_id)))
-            .catch(err => {
-                packProjectsCache.delete(key)
-                throw err
-            })
-        packProjectsCache.set(key, promise)
+    if(packProjectsCache.has(key)) {
+        return packProjectsCache.get(key)
     }
-    return packProjectsCache.get(key)
+    const files = []
+    let complete = true
+    const walk = mdls => {
+        for(const mdl of mdls) {
+            if(mdl.rawModule.type === Type.ForgeMod || mdl.rawModule.type === Type.FabricMod) {
+                if(fs.existsSync(mdl.getPath())) {
+                    files.push(mdl.getPath())
+                } else {
+                    complete = false
+                }
+            }
+            walk(mdl.subModules)
+        }
+    }
+    walk(serv.modules)
+    const result = exports.identifyFiles(files).then(ids => new Set([...ids.values()].map(v => v.project_id)))
+    if(!complete) {
+        return result
+    }
+    const promise = result.catch(err => {
+        packProjectsCache.delete(key)
+        throw err
+    })
+    packProjectsCache.set(key, promise)
+    return promise
 }
 
 let categoriesPromise = null
@@ -206,7 +225,8 @@ exports.getCategories = async function(type) {
 }
 
 /**
- * Search content compatible with the server.
+ * Search content compatible with the server. Mods are never searched on a
+ * vanilla server (no loader to install them with).
  *
  * @param {{query?: string, type?: string, categories?: string[], sort?: string, offset?: number}} options
  * @param {{gameVersion: string, loader: string | null}} target From getServerTarget.
@@ -215,6 +235,9 @@ exports.getCategories = async function(type) {
  * @returns {Promise<{hits: Object[], total: number, offset: number, pageSize: number}>}
  */
 exports.search = async function({ query = '', type = 'mod', categories = [], sort = 'relevance', offset = 0 }, target, blocklist, packProjects) {
+    if(type === 'mod' && target.loader == null) {
+        return { hits: [], total: 0, offset, pageSize: PAGE_SIZE }
+    }
     const facets = [[`project_type:${type}`], [`versions:${target.gameVersion}`]]
     if(type !== 'resourcepack') {
         facets.push(loadersFor(type, target).map(l => `categories:${l}`))
@@ -248,7 +271,13 @@ exports.getProjects = async function(ids) {
     return getJson('projects', { searchParams: { ids: JSON.stringify(ids) } })
 }
 
+/**
+ * Mods have no compatible version on a vanilla server (no loader to run them with).
+ */
 exports.getCompatibleVersion = async function(projectId, type, target) {
+    if(type === 'mod' && target.loader == null) {
+        return null
+    }
     const versions = await getJson(`project/${encodeURIComponent(projectId)}/version`, {
         searchParams: {
             loaders: JSON.stringify(loadersFor(type, target)),
@@ -262,22 +291,59 @@ function primaryFile(ver) {
     return ver.files.find(f => f.primary) ?? ver.files[0]
 }
 
+// Characters that are reserved on Windows, plus control characters.
+const UNSAFE_NAME_CHARS = /[<>:"/\\|?*\x00-\x1f]/
+const EXTENSION_FOR_TYPE = { mod: '.jar', resourcepack: '.zip', shader: '.zip' }
+
+/**
+ * Validate a file name announced by Modrinth before it is ever joined into a
+ * real path. Rejects anything that could escape the destination folder
+ * (path separators, "." / "..", Windows-reserved characters, control
+ * characters) or that does not have the extension the content type expects.
+ *
+ * @param {string} name The file name as announced by Modrinth.
+ * @param {string} type One of TYPES.
+ * @returns {string} The same name, once it is confirmed safe to use.
+ */
+function safeFileName(name, type) {
+    if(typeof name !== 'string' || name.length === 0 || name === '.' || name === '..') {
+        throw new ModrinthError('BAD_FILENAME', `Invalid file name: ${JSON.stringify(name)}`)
+    }
+    if(path.basename(name) !== name || UNSAFE_NAME_CHARS.test(name)) {
+        throw new ModrinthError('BAD_FILENAME', `Invalid file name: ${name}`)
+    }
+    if(path.extname(name).toLowerCase() !== EXTENSION_FOR_TYPE[type]) {
+        throw new ModrinthError('BAD_FILENAME', `Invalid file name: ${name}`)
+    }
+    return name
+}
+exports.safeFileName = safeFileName
+
+/**
+ * Download a file, verifying its sha512 hash as it streams in. Never leaves
+ * a partial file behind: on any failure (network, HTTP status, hash
+ * mismatch) the temporary file is removed before the error is rethrown.
+ */
 async function downloadVerified(file, dest) {
     const tmp = `${dest}.part`
     const hash = crypto.createHash('sha512')
     await fs.ensureDir(path.dirname(dest))
-    await new Promise((resolve, reject) => {
-        const out = fs.createWriteStream(tmp)
-        got.stream(file.url, { headers: { 'user-agent': USER_AGENT }, timeout: 60000 })
-            .on('data', chunk => hash.update(chunk))
-            .on('error', reject)
-            .pipe(out)
-            .on('error', reject)
-            .on('finish', resolve)
-    }).catch(async err => {
-        await fs.remove(tmp)
-        throw err
+    const hashingTransform = new Transform({
+        transform(chunk, encoding, callback) {
+            hash.update(chunk)
+            callback(null, chunk)
+        }
     })
+    try {
+        await pipeline(
+            got.stream(file.url, { headers: { 'user-agent': USER_AGENT }, timeout: 60000 }),
+            hashingTransform,
+            fs.createWriteStream(tmp)
+        )
+    } catch(err) {
+        await fs.remove(tmp).catch(() => {})
+        throw err
+    }
     if(hash.digest('hex') !== file.hashes.sha512) {
         await fs.remove(tmp)
         throw new ModrinthError('HASH_MISMATCH', `Hash mismatch for ${file.filename}`)
@@ -317,7 +383,10 @@ exports.resolveInstall = async function(projectId, target, installedProjects, bl
             throw new ModrinthError('ALREADY_INSTALLED', `${project.title} is already installed`, { title: project.title })
         }
 
-        const type = TYPES[project.project_type] != null ? project.project_type : 'mod'
+        if(TYPES[project.project_type] == null) {
+            throw new ModrinthError('UNSUPPORTED_TYPE', `${project.title} has an unsupported content type`, { title: project.title })
+        }
+        const type = project.project_type
         const ver = await exports.getCompatibleVersion(project.id, type, target)
         if(ver == null) {
             throw new ModrinthError('NO_COMPATIBLE_VERSION', `${project.title} has no compatible version`, { title: project.title })
@@ -339,6 +408,7 @@ exports.resolveInstall = async function(projectId, target, installedProjects, bl
 /**
  * Install a project and its required dependencies into a game folder.
  * Everything is resolved first, so a blocked dependency leaves nothing behind.
+ * Every announced file name is validated before it is written.
  *
  * @returns {Promise<string[]>} File names written, dependencies first.
  */
@@ -346,40 +416,52 @@ exports.install = async function(projectId, target, gameDir, installedProjects, 
     const plan = await exports.resolveInstall(projectId, target, installedProjects, blocklist, packProjects)
     const written = []
     for(const { project, version: ver, file, type } of plan) {
-        await downloadVerified(file, path.join(gameDir, TYPES[type].folder, path.basename(file.filename)))
-        written.push(file.filename)
-        logger.info(`Installed ${project.slug} ${ver.version_number} (${file.filename}).`)
+        const name = safeFileName(file.filename, type)
+        await downloadVerified(file, path.join(gameDir, TYPES[type].folder, name))
+        written.push(name)
+        logger.info(`Installed ${project.slug} ${ver.version_number} (${name}).`)
     }
     return written
 }
 
 /**
- * Find newer compatible versions of installed files.
+ * Find newer compatible versions of installed files. Mods are skipped on a
+ * vanilla server (no loader to check compatibility against).
  *
  * @param {{path: string, type: string}[]} files
  * @param {{gameVersion: string, loader: string | null}} target From getServerTarget.
  * @returns {Promise<Map<string, Object>>} file path -> newer version, only for files that have one.
+ * Every file sharing an outdated hash is included, even duplicates.
  */
 exports.checkUpdates = async function(files, target) {
     const result = new Map()
     for(const type of Object.keys(TYPES)) {
+        if(type === 'mod' && target.loader == null) {
+            continue
+        }
         const ofType = files.filter(f => f.type === type)
         if(ofType.length === 0) {
             continue
         }
-        const byHash = new Map()
+        const pathsByHash = new Map()
         for(const f of ofType) {
-            byHash.set(await sha1(f.path), f.path)
+            const hash = await sha1(f.path)
+            if(!pathsByHash.has(hash)) {
+                pathsByHash.set(hash, [])
+            }
+            pathsByHash.get(hash).push(f.path)
         }
         const latest = await postJson('version_files/update', {
-            hashes: [...byHash.keys()],
+            hashes: [...pathsByHash.keys()],
             algorithm: 'sha1',
             loaders: loadersFor(type, target),
             game_versions: [target.gameVersion]
         })
         for(const [hash, ver] of Object.entries(latest)) {
             if(!ver.files.some(f => f.hashes.sha1 === hash)) {
-                result.set(byHash.get(hash), ver)
+                for(const filePath of pathsByHash.get(hash) ?? []) {
+                    result.set(filePath, ver)
+                }
             }
         }
     }
@@ -387,14 +469,20 @@ exports.checkUpdates = async function(files, target) {
 }
 
 /**
- * Replace a file with a newer version, keeping a ".disabled" suffix.
+ * Replace a file with a newer version, keeping a ".disabled" suffix. The
+ * content type is inferred from the old file's extension (".jar" is a mod,
+ * anything else is a zip-based type), and the new file name is validated
+ * before it is written.
  *
  * @returns {Promise<string>} The new file name.
  */
 exports.update = async function(filePath, newVersion) {
     const file = primaryFile(newVersion)
     const suffix = filePath.endsWith('.disabled') ? '.disabled' : ''
-    const dest = path.join(path.dirname(filePath), path.basename(file.filename) + suffix)
+    const base = suffix ? filePath.slice(0, -suffix.length) : filePath
+    const oldType = path.extname(base).toLowerCase() === '.jar' ? 'mod' : 'resourcepack'
+    const name = safeFileName(file.filename, oldType)
+    const dest = path.join(path.dirname(filePath), name + suffix)
     await downloadVerified(file, dest)
     if(path.resolve(dest) !== path.resolve(filePath)) {
         await fs.remove(filePath)

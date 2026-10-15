@@ -69,7 +69,11 @@ function readPacksLine(lines) {
         return { index, packs: ['vanilla'] }
     }
     try {
-        return { index, packs: JSON.parse(lines[index].slice(PACKS_KEY.length)) }
+        const parsed = JSON.parse(lines[index].slice(PACKS_KEY.length))
+        if(!Array.isArray(parsed)) {
+            return { index, packs: ['vanilla'] }
+        }
+        return { index, packs: parsed.filter(p => typeof p === 'string') }
     } catch {
         return { index, packs: ['vanilla'] }
     }
@@ -168,7 +172,12 @@ exports.setEnabled = async function(gameDir, type, fileName, enabled) {
         }
         const next = enabled ? fileName.slice(0, -DISABLED_EXT.length) : fileName + DISABLED_EXT
         const dir = exports.folder(gameDir, type)
-        await fs.rename(path.join(dir, fileName), path.join(dir, next))
+        const destPath = path.join(dir, next)
+        // fs.rename overwrites silently on Windows; refuse instead of losing a file.
+        if(await fs.pathExists(destPath)) {
+            throw new Error(`Destination exists: ${next}`)
+        }
+        await fs.rename(path.join(dir, fileName), destPath)
         return next
     }
     if(type === 'resourcepack') {
