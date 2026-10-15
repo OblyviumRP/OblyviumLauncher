@@ -42,6 +42,10 @@ function onDistroLoad(data){
             ConfigManager.save()
         }
     }
+    // Also keep the result on the page window (shared with this preload since
+    // contextIsolation is off): the IPC echo can arrive before uibinder.js has
+    // registered its listener, and uibinder.js checks this value when it loads.
+    window.distributionIndexResult = data != null // eslint-disable-line no-undef
     ipcRenderer.send('distributionIndexDone', data != null)
 }
 
