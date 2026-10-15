@@ -1104,7 +1104,7 @@ function renderModrinthHit(hit, packProjects) {
         rowStatus.textContent = ''
         rowStatus.removeAttribute('error')
         try {
-            await Modrinth.install(hit.project_id, modrinthState.target, CACHE_SETTINGS_MODS_DIR, modrinthState.blocklist, packProjects)
+            await Modrinth.install(hit.project_id, modrinthState.target, path.dirname(CACHE_SETTINGS_MODS_DIR), new Set(), modrinthState.blocklist, packProjects)
             btn.textContent = Lang.queryJS('settings.modrinth.installed')
             rowStatus.textContent = Lang.queryJS('settings.modrinth.installedStatus', { title: hit.title })
             await reloadDropinMods()
@@ -1142,7 +1142,7 @@ async function searchModrinth(append = false) {
 
     try {
         const packProjects = await Modrinth.getModpackProjects(modrinthState.serv)
-        const res = await Modrinth.search(modrinthState.query, modrinthState.target, modrinthState.blocklist, packProjects, modrinthState.offset)
+        const res = await Modrinth.search({ query: modrinthState.query, type: 'mod', offset: modrinthState.offset }, modrinthState.target, modrinthState.blocklist, packProjects)
         if (request !== modrinthState.request) {
             return
         }
@@ -1173,7 +1173,7 @@ async function prepareModrinthBrowser() {
     results.replaceChildren()
     document.getElementById('settingsModrinthMore').hidden = true
 
-    if (modrinthState.target == null) {
+    if (modrinthState.target.loader == null) {
         form.hidden = true
         setModrinthStatus(Lang.queryJS('settings.modrinth.unsupported'))
         return

@@ -1,9 +1,8 @@
 /**
- * Modrinth integration for drop-in mods.
+ * Modrinth integration: search, project pages, installs and updates for
+ * mods, resource packs and shaders.
  *
- * Players can search Modrinth and install mods into the selected server's
- * mods folder. The staff controls which projects are forbidden through the
- * server entry of the distribution index:
+ * The staff blocks projects per server in the distribution index:
  *
  *   "modrinth": { "blocked": ["xaeros-minimap", "AANobbMI"] }
  *
@@ -19,7 +18,8 @@ const { version }           = require('../../../package.json')
 
 const logger = LoggerUtil.getLogger('Modrinth')
 
-const API = 'https://api.modrinth.com/v2'
+// The override exists for tests only.
+const API = process.env.OBLYVIUM_MODRINTH_API || 'https://api.modrinth.com/v2'
 const PAGE_SIZE = 20
 
 // Modrinth asks every client to identify itself.
@@ -33,6 +33,16 @@ const http = got.extend({
     retry: 1
 })
 
+/** Content types and the game folder each one is installed into. */
+const TYPES = {
+    mod: { folder: 'mods' },
+    resourcepack: { folder: 'resourcepacks' },
+    shader: { folder: 'shaderpacks' }
+}
+exports.TYPES = TYPES
+
+exports.SORTS = ['relevance', 'downloads', 'newest', 'updated']
+
 class ModrinthError extends Error {
     constructor(code, message, data = {}) {
         super(message)
@@ -42,11 +52,34 @@ class ModrinthError extends Error {
 }
 exports.ModrinthError = ModrinthError
 
+function wrapError(err) {
+    if(err?.response?.statusCode === 429) {
+        return new ModrinthError('RATE_LIMITED', 'Modrinth rate limit reached')
+    }
+    return err
+}
+
+async function getJson(url, options) {
+    try {
+        return await http.get(url, options).json()
+    } catch(err) {
+        throw wrapError(err)
+    }
+}
+
+async function postJson(url, json) {
+    try {
+        return await http.post(url, { json }).json()
+    } catch(err) {
+        throw wrapError(err)
+    }
+}
+
 /**
  * Resolve the Minecraft version and mod loader of a server.
  *
  * @param {HeliosServer} serv The distribution server.
- * @returns {{gameVersion: string, loader: string} | null} null when the server has no supported loader.
+ * @returns {{gameVersion: string, loader: string | null}} loader is null for vanilla servers.
  */
 exports.getServerTarget = function(serv) {
     for(const mdl of serv.modules) {
@@ -58,7 +91,7 @@ exports.getServerTarget = function(serv) {
                 return { gameVersion: serv.rawServer.minecraftVersion, loader: 'fabric' }
         }
     }
-    return null
+    return { gameVersion: serv.rawServer.minecraftVersion, loader: null }
 }
 
 /**
@@ -70,9 +103,22 @@ exports.getBlocklist = function(serv) {
     return new Set(Array.isArray(blocked) ? blocked.map(b => String(b).toLowerCase()) : [])
 }
 
-function isBlocked(blocklist, project) {
-    return blocklist.has(project.project_id?.toLowerCase() ?? project.id?.toLowerCase())
+/**
+ * @param {Set<string>} blocklist From getBlocklist.
+ * @param {{id?: string, project_id?: string, slug?: string}} project A project or search hit.
+ */
+exports.isBlocked = function(blocklist, project) {
+    return blocklist.has((project.project_id ?? project.id)?.toLowerCase())
         || blocklist.has(project.slug?.toLowerCase())
+}
+
+// Loaders a content type accepts on this server.
+function loadersFor(type, target) {
+    switch(type) {
+        case 'mod': return [target.loader]
+        case 'shader': return ['iris', 'optifine']
+        default: return ['minecraft']
+    }
 }
 
 function sha1(file) {
@@ -86,12 +132,12 @@ function sha1(file) {
 }
 
 /**
- * Identify local jars on Modrinth by hash.
+ * Identify local files on Modrinth by hash.
  *
  * @param {string[]} files Absolute paths of existing files.
- * @returns {Promise<Map<string, string>>} file path -> Modrinth project ID, for recognised files only.
+ * @returns {Promise<Map<string, Object>>} file path -> Modrinth version, for recognised files only.
  */
-async function identifyFiles(files) {
+exports.identifyFiles = async function(files) {
     const byHash = new Map()
     for(const file of files) {
         byHash.set(await sha1(file), file)
@@ -100,11 +146,9 @@ async function identifyFiles(files) {
     if(byHash.size === 0) {
         return result
     }
-    const versions = await http.post('version_files', {
-        json: { hashes: [...byHash.keys()], algorithm: 'sha1' }
-    }).json()
+    const versions = await postJson('version_files', { hashes: [...byHash.keys()], algorithm: 'sha1' })
     for(const [hash, ver] of Object.entries(versions)) {
-        result.set(byHash.get(hash), ver.project_id)
+        result.set(byHash.get(hash), ver)
     }
     return result
 }
@@ -113,7 +157,7 @@ const packProjectsCache = new Map()
 
 /**
  * Modrinth project IDs of the mods already shipped by the server's modpack.
- * Installing these again as drop-ins would load the same mod twice.
+ * Installing these again would load the same mod twice.
  *
  * @param {HeliosServer} serv The distribution server.
  * @returns {Promise<Set<string>>}
@@ -133,8 +177,8 @@ exports.getModpackProjects = async function(serv) {
             }
         }
         walk(serv.modules)
-        const promise = identifyFiles(files)
-            .then(ids => new Set(ids.values()))
+        const promise = exports.identifyFiles(files)
+            .then(ids => new Set([...ids.values()].map(v => v.project_id)))
             .catch(err => {
                 packProjectsCache.delete(key)
                 throw err
@@ -144,52 +188,78 @@ exports.getModpackProjects = async function(serv) {
     return packProjectsCache.get(key)
 }
 
+let categoriesPromise = null
+
 /**
- * Search mods compatible with the server.
+ * @param {string} type One of TYPES.
+ * @returns {Promise<string[]>} Category names for the type, sorted.
+ */
+exports.getCategories = async function(type) {
+    if(categoriesPromise == null) {
+        categoriesPromise = getJson('tag/category').catch(err => {
+            categoriesPromise = null
+            throw err
+        })
+    }
+    const all = await categoriesPromise
+    return all.filter(c => c.project_type === type && c.header === 'categories').map(c => c.name).sort()
+}
+
+/**
+ * Search content compatible with the server.
  *
- * @param {string} query Free text.
- * @param {{gameVersion: string, loader: string}} target Server target.
+ * @param {{query?: string, type?: string, categories?: string[], sort?: string, offset?: number}} options
+ * @param {{gameVersion: string, loader: string | null}} target From getServerTarget.
  * @param {Set<string>} blocklist From getBlocklist.
  * @param {Set<string>} packProjects From getModpackProjects.
- * @param {number} offset Pagination offset.
  * @returns {Promise<{hits: Object[], total: number, offset: number, pageSize: number}>}
  */
-exports.search = async function(query, target, blocklist, packProjects, offset = 0) {
-    const facets = [
-        ['project_type:mod'],
-        [`versions:${target.gameVersion}`],
-        [`categories:${target.loader}`],
-        ['client_side:required', 'client_side:optional']
-    ]
-    const res = await http.get('search', {
-        searchParams: {
-            query,
-            facets: JSON.stringify(facets),
-            index: query ? 'relevance' : 'downloads',
-            limit: PAGE_SIZE,
-            offset
-        }
-    }).json()
+exports.search = async function({ query = '', type = 'mod', categories = [], sort = 'relevance', offset = 0 }, target, blocklist, packProjects) {
+    const facets = [[`project_type:${type}`], [`versions:${target.gameVersion}`]]
+    if(type !== 'resourcepack') {
+        facets.push(loadersFor(type, target).map(l => `categories:${l}`))
+    }
+    if(type === 'mod') {
+        facets.push(['client_side:required', 'client_side:optional'])
+    }
+    for(const category of categories) {
+        facets.push([`categories:${category}`])
+    }
+    const index = sort === 'relevance' && !query ? 'downloads' : sort
+    const res = await getJson('search', {
+        searchParams: { query, facets: JSON.stringify(facets), index, limit: PAGE_SIZE, offset }
+    })
     return {
-        hits: res.hits.filter(hit => !isBlocked(blocklist, hit) && !packProjects.has(hit.project_id)),
+        hits: res.hits.filter(hit => !exports.isBlocked(blocklist, hit) && !packProjects.has(hit.project_id)),
         total: res.total_hits,
         offset: res.offset,
         pageSize: PAGE_SIZE
     }
 }
 
-async function getProject(idOrSlug) {
-    return http.get(`project/${encodeURIComponent(idOrSlug)}`).json()
+exports.getProject = function(idOrSlug) {
+    return getJson(`project/${encodeURIComponent(idOrSlug)}`)
 }
 
-async function getCompatibleVersion(projectId, target) {
-    const versions = await http.get(`project/${encodeURIComponent(projectId)}/version`, {
+exports.getProjects = async function(ids) {
+    if(ids.length === 0) {
+        return []
+    }
+    return getJson('projects', { searchParams: { ids: JSON.stringify(ids) } })
+}
+
+exports.getCompatibleVersion = async function(projectId, type, target) {
+    const versions = await getJson(`project/${encodeURIComponent(projectId)}/version`, {
         searchParams: {
-            loaders: JSON.stringify([target.loader]),
+            loaders: JSON.stringify(loadersFor(type, target)),
             game_versions: JSON.stringify([target.gameVersion])
         }
-    }).json()
+    })
     return versions.find(v => v.version_type === 'release') ?? versions[0] ?? null
+}
+
+function primaryFile(ver) {
+    return ver.files.find(f => f.primary) ?? ver.files[0]
 }
 
 async function downloadVerified(file, dest) {
@@ -216,29 +286,28 @@ async function downloadVerified(file, dest) {
 }
 
 /**
- * Install a project and its required dependencies into the mods folder.
+ * Work out what installing a project downloads, without downloading anything.
  *
  * @param {string} projectId Project ID or slug.
- * @param {{gameVersion: string, loader: string}} target Server target.
- * @param {string} modsDir The server's drop-in mods directory.
+ * @param {{gameVersion: string, loader: string | null}} target From getServerTarget.
+ * @param {Set<string>} installedProjects Project IDs already in the profile.
  * @param {Set<string>} blocklist From getBlocklist.
  * @param {Set<string>} packProjects From getModpackProjects.
- * @returns {Promise<string[]>} File names written to modsDir.
+ * @returns {Promise<{project: Object, version: Object, file: Object, type: string}[]>}
+ * Dependencies first, the requested project last.
  */
-exports.install = async function(projectId, target, modsDir, blocklist, packProjects) {
-    const installedProjects = new Set((await identifyFiles(listModFiles(modsDir, true))).values())
+exports.resolveInstall = async function(projectId, target, installedProjects, blocklist, packProjects) {
     const seen = new Set()
     const plan = []
 
-    // Resolve everything first so a blocked dependency leaves nothing behind.
     const resolve = async (idOrSlug, isDependency) => {
-        const project = await getProject(idOrSlug)
+        const project = await exports.getProject(idOrSlug)
         if(seen.has(project.id)) {
             return
         }
         seen.add(project.id)
 
-        if(isBlocked(blocklist, project)) {
+        if(exports.isBlocked(blocklist, project)) {
             throw new ModrinthError('BLOCKED', `${project.title} is blocked`, { title: project.title, dependency: isDependency })
         }
         if(packProjects.has(project.id) || installedProjects.has(project.id)) {
@@ -248,7 +317,8 @@ exports.install = async function(projectId, target, modsDir, blocklist, packProj
             throw new ModrinthError('ALREADY_INSTALLED', `${project.title} is already installed`, { title: project.title })
         }
 
-        const ver = await getCompatibleVersion(project.id, target)
+        const type = TYPES[project.project_type] != null ? project.project_type : 'mod'
+        const ver = await exports.getCompatibleVersion(project.id, type, target)
         if(ver == null) {
             throw new ModrinthError('NO_COMPATIBLE_VERSION', `${project.title} has no compatible version`, { title: project.title })
         }
@@ -259,57 +329,76 @@ exports.install = async function(projectId, target, modsDir, blocklist, packProj
             }
         }
 
-        plan.push({ project, ver, file: ver.files.find(f => f.primary) ?? ver.files[0] })
+        plan.push({ project, version: ver, file: primaryFile(ver), type })
     }
 
     await resolve(projectId, false)
+    return plan
+}
 
+/**
+ * Install a project and its required dependencies into a game folder.
+ * Everything is resolved first, so a blocked dependency leaves nothing behind.
+ *
+ * @returns {Promise<string[]>} File names written, dependencies first.
+ */
+exports.install = async function(projectId, target, gameDir, installedProjects, blocklist, packProjects) {
+    const plan = await exports.resolveInstall(projectId, target, installedProjects, blocklist, packProjects)
     const written = []
-    for(const { project, ver, file } of plan) {
-        await downloadVerified(file, path.join(modsDir, path.basename(file.filename)))
+    for(const { project, version: ver, file, type } of plan) {
+        await downloadVerified(file, path.join(gameDir, TYPES[type].folder, path.basename(file.filename)))
         written.push(file.filename)
         logger.info(`Installed ${project.slug} ${ver.version_number} (${file.filename}).`)
     }
     return written
 }
 
-function listModFiles(modsDir, includeDisabled = false) {
-    if(!fs.existsSync(modsDir)) {
-        return []
+/**
+ * Find newer compatible versions of installed files.
+ *
+ * @param {{path: string, type: string}[]} files
+ * @param {{gameVersion: string, loader: string | null}} target From getServerTarget.
+ * @returns {Promise<Map<string, Object>>} file path -> newer version, only for files that have one.
+ */
+exports.checkUpdates = async function(files, target) {
+    const result = new Map()
+    for(const type of Object.keys(TYPES)) {
+        const ofType = files.filter(f => f.type === type)
+        if(ofType.length === 0) {
+            continue
+        }
+        const byHash = new Map()
+        for(const f of ofType) {
+            byHash.set(await sha1(f.path), f.path)
+        }
+        const latest = await postJson('version_files/update', {
+            hashes: [...byHash.keys()],
+            algorithm: 'sha1',
+            loaders: loadersFor(type, target),
+            game_versions: [target.gameVersion]
+        })
+        for(const [hash, ver] of Object.entries(latest)) {
+            if(!ver.files.some(f => f.hashes.sha1 === hash)) {
+                result.set(byHash.get(hash), ver)
+            }
+        }
     }
-    const pattern = includeDisabled ? /\.jar(\.disabled)?$/ : /\.jar$/
-    return fs.readdirSync(modsDir)
-        .filter(f => pattern.test(f))
-        .map(f => path.join(modsDir, f))
-        .filter(f => fs.statSync(f).isFile())
+    return result
 }
 
 /**
- * Find enabled drop-in mods that the staff has blocked. Jars that Modrinth
- * does not recognise cannot be checked and are left alone.
+ * Replace a file with a newer version, keeping a ".disabled" suffix.
  *
- * @param {string} modsDir The server's drop-in mods directory.
- * @param {Set<string>} blocklist From getBlocklist.
- * @returns {Promise<{fileName: string, title: string}[]>}
+ * @returns {Promise<string>} The new file name.
  */
-exports.findBlockedDropins = async function(modsDir, blocklist) {
-    if(blocklist.size === 0) {
-        return []
+exports.update = async function(filePath, newVersion) {
+    const file = primaryFile(newVersion)
+    const suffix = filePath.endsWith('.disabled') ? '.disabled' : ''
+    const dest = path.join(path.dirname(filePath), path.basename(file.filename) + suffix)
+    await downloadVerified(file, dest)
+    if(path.resolve(dest) !== path.resolve(filePath)) {
+        await fs.remove(filePath)
     }
-    const ids = await identifyFiles(listModFiles(modsDir))
-    if(ids.size === 0) {
-        return []
-    }
-    const projects = await http.get('projects', {
-        searchParams: { ids: JSON.stringify([...new Set(ids.values())]) }
-    }).json()
-    const byId = new Map(projects.map(p => [p.id, p]))
-    const found = []
-    for(const [file, projectId] of ids) {
-        const project = byId.get(projectId)
-        if(project != null && isBlocked(blocklist, project)) {
-            found.push({ fileName: path.basename(file), title: project.title })
-        }
-    }
-    return found
+    logger.info(`Updated ${path.basename(filePath)} to ${path.basename(dest)}.`)
+    return path.basename(dest)
 }
