@@ -5,7 +5,11 @@
  * Globals from other scripts: ConfigManager, DistroAPI, ProfileManager,
  * Modrinth, ContentManager, Type, path (uibinder.js); Lang, LoggerUtil, shell,
  * ipcRenderer (uicore.js); switchView, getCurrentView, VIEWS (uibinder.js);
- * renderProfileSelection (landing.js); toggleServerSelection (overlay.js).
+ * renderProfileSelection, escapeHtml (landing.js); toggleServerSelection,
+ * setOverlayContent, setOverlayHandler, setDismissHandler, toggleOverlay
+ * (overlay.js); initSettingsValidators, initSettingsValues, saveSettingsValues,
+ * prepareJavaTab (settings.js, loaded after this script but only called on
+ * user action).
  */
 const modsFs         = require('fs-extra')
 const RichText       = require('./assets/js/richtext')
@@ -276,10 +280,21 @@ async function openModsView({ createProfile = false } = {}){
         modsSetType(modsState.target.loader == null ? 'resourcepack' : 'mod', false)
         modsRenderHeader()
         modsShowTab('installed')
-        switchView(getCurrentView(), VIEWS.mods)
-        if(createProfile && typeof modsOpenEditor === 'function'){
-            modsOpenEditor('create')
+        const openEditor = createProfile && typeof modsOpenEditor === 'function'
+        if(openEditor){
+            await modsOpenEditor('create')
         }
+        if(getCurrentView() === VIEWS.mods){
+            return
+        }
+        // The screen is still hidden here, so the editor's name field can only
+        // take focus once it has faded in. switchView leaves focus alone when
+        // onNextFade already put it inside the new view.
+        switchView(getCurrentView(), VIEWS.mods, 180, 180, () => {}, () => {
+            if(openEditor && modsState.editing != null){
+                modsEl('modsEditName').focus()
+            }
+        })
     } catch(err) {
         loggerMods.error('Could not open the mods screen.', err)
     } finally {
@@ -334,7 +349,7 @@ document.addEventListener('keydown', e => {
     }
     e.preventDefault()
     if(modsState.editing != null && typeof modsCloseEditor === 'function'){
-        modsCloseEditor()
+        modsCloseEditor(true)
     } else if(modsState.tab === 'project'){
         modsLeaveProject()
     } else {
@@ -979,3 +994,181 @@ function modsProjectContent(project, plan, planError, installed){
 }
 
 modsEl('modsProjectBack').onclick = modsLeaveProject
+
+// Profile editor
+
+const modsEditorState = { invalid: new Set(), validatorsBound: false }
+
+function modsSetEditorSaveDisabled(disabled){
+    modsEl('modsEditSave').disabled = disabled
+}
+
+function modsRenderIconPicker(selected){
+    const box = modsEl('modsEditIcons')
+    box.replaceChildren(...ProfileManager.ICONS.map(name => {
+        const label = document.createElement('label')
+        label.className = 'mods-icon-option'
+        const input = document.createElement('input')
+        input.type = 'radio'
+        input.name = 'modsEditIcon'
+        input.value = name
+        input.checked = name === selected
+        input.setAttribute('aria-label', ProfileIcons.LABELS[name])
+        label.append(input, ProfileIcons.svg(name))
+        return label
+    }))
+}
+
+/**
+ * @param {'create' | 'edit'} mode
+ */
+async function modsOpenEditor(mode){
+    if(modsState.editing != null){
+        modsCloseEditor()
+    }
+    modsState.editing = { mode }
+    const profile = mode === 'edit' ? ProfileManager.get(modsState.serverId, modsState.profileId) : null
+    modsEl('modsEditTitle').textContent = Lang.queryJS(mode === 'create' ? 'mods.editor.createTitle' : 'mods.editor.editTitle')
+    modsEl('modsEditName').value = profile?.name ?? ''
+    modsEl('modsEditName').removeAttribute('aria-invalid')
+    modsEl('modsEditNameError').textContent = ''
+    modsRenderIconPicker(profile?.icon ?? ProfileManager.ICONS[0])
+
+    modsEl('modsEditCopyWrap').hidden = mode !== 'create'
+    if(mode === 'create'){
+        const select = modsEl('modsEditCopyFrom')
+        select.replaceChildren()
+        for(const p of ProfileManager.list(modsState.serverId)){
+            select.add(new Option(p.name, p.id, false, p.id === modsState.profileId))
+        }
+        select.add(new Option(Lang.queryJS('mods.editor.noCopy'), ''))
+    }
+    modsEl('modsEditGame').hidden = mode !== 'edit'
+    modsEl('modsEditDelete').hidden = mode !== 'edit' || modsState.profileId === ProfileManager.DEFAULT_ID
+    modsEl('modsEditDuplicate').hidden = mode !== 'edit'
+
+    // The editor works on the current profile: switching it underneath would
+    // save the fields into the wrong one.
+    modsEl('modsProfileSelect').disabled = true
+    modsEl('modsBrowse').hidden = true
+    document.querySelector('.mods-profile-actions').hidden = true
+    modsEl('modsPanelEdit').hidden = false
+
+    if(mode === 'edit'){
+        if(!modsEditorState.validatorsBound){
+            initSettingsValidators(modsEl('modsEditGame'), modsEditorState, modsSetEditorSaveDisabled)
+            modsEditorState.validatorsBound = true
+        }
+        try {
+            await initSettingsValues(modsEl('modsEditGame'), modsConfigKey())
+            await prepareJavaTab()
+        } catch(err) {
+            loggerMods.error('Could not load the profile game settings.', err)
+        }
+    }
+    modsEl('modsEditName').focus()
+}
+
+/**
+ * @param {boolean} restoreFocus Put focus back on the Edit profile button.
+ */
+function modsCloseEditor(restoreFocus = false){
+    modsState.editing = null
+    modsEl('modsPanelEdit').hidden = true
+    modsEl('modsBrowse').hidden = false
+    document.querySelector('.mods-profile-actions').hidden = false
+    modsEl('modsProfileSelect').disabled = false
+    modsEditorState.invalid.clear()
+    modsSetEditorSaveDisabled(false)
+    for(const el of modsEl('modsEditGame').querySelectorAll('[error]')){
+        el.removeAttribute('error')
+        el.removeAttribute('aria-invalid')
+    }
+    if(restoreFocus){
+        modsEl('modsEditProfile').focus()
+    }
+}
+
+function modsEditorFailed(key, err){
+    loggerMods.error('Profile editor action failed.', err)
+    modsEl('modsEditNameError').textContent = Lang.queryJS(key)
+}
+
+modsEl('modsEditProfile').onclick = () => modsOpenEditor('edit')
+modsEl('modsEditCancel').onclick = () => modsCloseEditor(true)
+
+modsEl('modsEditName').addEventListener('keydown', e => {
+    if(e.key === 'Enter'){
+        e.preventDefault()
+        modsEl('modsEditSave').click()
+    }
+})
+
+modsEl('modsEditSave').onclick = async () => {
+    const nameInput = modsEl('modsEditName')
+    const name = ProfileManager.validateName(nameInput.value)
+    if(name == null){
+        modsEl('modsEditNameError').textContent = Lang.queryJS('mods.editor.nameError')
+        nameInput.setAttribute('aria-invalid', 'true')
+        nameInput.focus()
+        return
+    }
+    nameInput.removeAttribute('aria-invalid')
+    modsEl('modsEditNameError').textContent = ''
+    const icon = document.querySelector('input[name="modsEditIcon"]:checked')?.value
+    const btn = modsEl('modsEditSave')
+    btn.disabled = true
+    try {
+        if(modsState.editing.mode === 'create'){
+            const copyFrom = modsEl('modsEditCopyFrom').value || null
+            const profile = await ProfileManager.create(modsState.serverId, { name, icon, copyFrom })
+            modsCloseEditor()
+            modsSwitchProfile(profile.id)
+        } else {
+            ProfileManager.update(modsState.serverId, modsState.profileId, { name, icon })
+            saveSettingsValues(modsEl('modsEditGame'), modsConfigKey())
+            ConfigManager.save()
+            modsCloseEditor()
+            modsRenderHeader()
+        }
+        modsEl('modsEditProfile').focus()
+    } catch(err) {
+        modsEditorFailed('mods.editor.saveFailed', err)
+    } finally {
+        btn.disabled = modsEditorState.invalid.size > 0
+    }
+}
+
+modsEl('modsEditDuplicate').onclick = async () => {
+    try {
+        const profile = await ProfileManager.duplicate(modsState.serverId, modsState.profileId)
+        modsCloseEditor()
+        modsSwitchProfile(profile.id)
+        modsEl('modsEditProfile').focus()
+    } catch(err) {
+        modsEditorFailed('mods.editor.saveFailed', err)
+    }
+}
+
+modsEl('modsEditDelete').onclick = () => {
+    const profile = ProfileManager.get(modsState.serverId, modsState.profileId)
+    setOverlayContent(
+        Lang.queryJS('mods.editor.deleteTitle', { name: escapeHtml(profile.name) }),
+        Lang.queryJS('mods.editor.deleteMessage'),
+        Lang.queryJS('mods.editor.deleteConfirm'),
+        Lang.queryJS('mods.editor.deleteCancel')
+    )
+    setOverlayHandler(async () => {
+        toggleOverlay(false)
+        try {
+            await ProfileManager.remove(modsState.serverId, profile.id)
+            modsCloseEditor()
+            modsSwitchProfile(ProfileManager.DEFAULT_ID)
+            modsEl('modsEditProfile').focus()
+        } catch(err) {
+            modsEditorFailed('mods.editor.deleteFailed', err)
+        }
+    })
+    setDismissHandler(() => toggleOverlay(false))
+    toggleOverlay(true, true)
+}

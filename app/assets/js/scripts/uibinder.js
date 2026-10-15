@@ -51,7 +51,8 @@ function switchView(current, next, currentFadeTime = 180, nextFadeTime = 180, on
         $(`${next}`).fadeIn(nextFadeTime, async () => {
             await onNextFade()
             const focusTarget = document.querySelector(next + ' [data-view-focus]')
-            if(focusTarget && !focusTarget.disabled && currentView === next && !isOverlayVisible()){
+            const focusPlaced = document.querySelector(next)?.contains(document.activeElement)
+            if(focusTarget && !focusTarget.disabled && currentView === next && !isOverlayVisible() && !focusPlaced){
                 focusTarget.focus({preventScroll: true})
             }
         })
