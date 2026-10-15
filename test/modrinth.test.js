@@ -140,12 +140,33 @@ test('safeFileName rejeita nomes perigosos e aceita nomes válidos', () => {
     assert.throws(() => Modrinth.safeFileName('sodium-1.0.zip', 'mod'), err => err.code === 'BAD_FILENAME')
 })
 
+test('safeFileName rejeita nomes de dispositivo reservados do Windows', () => {
+    for(const bad of ['con.jar', 'CON.zip', 'prn.jar', 'aux.zip', 'nul.jar', 'com1.jar', 'COM9.zip', 'lpt1.jar', 'lpt9.zip', 'nul']) {
+        assert.throws(() => Modrinth.safeFileName(bad, 'mod'), err => err.code === 'BAD_FILENAME')
+    }
+    // Starts with a reserved name but isn't one — must not be a false positive.
+    assert.equal(Modrinth.safeFileName('controller.jar', 'mod'), 'controller.jar')
+    assert.equal(Modrinth.safeFileName('nullable.jar', 'mod'), 'nullable.jar')
+})
+
 test('install rejeita nome de arquivo perigoso anunciado pela Modrinth e não escreve nada', async () => {
     const dir = await tmpGameDir()
     await assert.rejects(
         Modrinth.install('hostil', TARGET, dir, new Set(), new Set(), new Set()),
         err => err.code === 'BAD_FILENAME'
     )
+    assert.ok(!await fs.pathExists(path.join(dir, 'mods')))
+})
+
+test('install valida todos os nomes do plano antes de baixar qualquer arquivo', async () => {
+    const dir = await tmpGameDir()
+    await assert.rejects(
+        Modrinth.install('invalido', TARGET, dir, new Set(), new Set(), new Set()),
+        err => err.code === 'BAD_FILENAME'
+    )
+    // The dependency (sodium) has a valid name and would download fine on its
+    // own; nothing should have been written because the plan as a whole has
+    // an invalid file name (the requested project's own file).
     assert.ok(!await fs.pathExists(path.join(dir, 'mods')))
 })
 
@@ -179,6 +200,35 @@ test('download cortado no meio não deixa arquivo .part nem apaga o original', a
     const fakeVersion = { files: [{ url: `${fake.base}/files/corte.jar`, filename: 'alvo.jar', primary: true, hashes: { sha512: 'x' } }] }
     await assert.rejects(Modrinth.update(original, fakeVersion))
     assert.deepEqual(await fs.readdir(path.join(dir, 'mods')), ['alvo.jar'])
+})
+
+test('update usa o tipo explícito em vez de adivinhar pela extensão antiga', async () => {
+    const dir = await tmpGameDir()
+    // "estranho.dat" has no jar/zip extension; inferring from it would guess a
+    // zip-based type and accept "novo.zip". Passing an explicit 'mod' type
+    // must be honored instead, rejecting a .zip file name for a mod.
+    const oldFile = path.join(dir, 'mods', 'estranho.dat')
+    await fs.outputFile(oldFile, 'antigo')
+    const fakeVersion = { files: [{ url: `${fake.base}/files/sumiu.jar`, filename: 'novo.zip', primary: true, hashes: { sha512: 'x' } }] }
+    await assert.rejects(
+        Modrinth.update(oldFile, fakeVersion, 'mod'),
+        err => err.code === 'BAD_FILENAME'
+    )
+})
+
+test('update rejeita quando o destino já existe e não baixa nem apaga nada', async () => {
+    const dir = await tmpGameDir()
+    const oldFile = path.join(dir, 'mods', 'antigo.jar')
+    const existing = path.join(dir, 'mods', 'novo.jar')
+    await fs.outputFile(oldFile, 'conteudo antigo')
+    await fs.outputFile(existing, 'ja existe')
+    const fakeVersion = { files: [{ url: `${fake.base}/files/sumiu.jar`, filename: 'novo.jar', primary: true, hashes: { sha512: 'x' } }] }
+    await assert.rejects(
+        Modrinth.update(oldFile, fakeVersion, 'mod'),
+        err => err.code === 'DESTINATION_EXISTS'
+    )
+    assert.equal(await fs.readFile(oldFile, 'utf8'), 'conteudo antigo')
+    assert.equal(await fs.readFile(existing, 'utf8'), 'ja existe')
 })
 
 test('identifyFiles reconhece todos os arquivos com o mesmo hash', async () => {

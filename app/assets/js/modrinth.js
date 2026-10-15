@@ -293,13 +293,17 @@ function primaryFile(ver) {
 
 // Characters that are reserved on Windows, plus control characters.
 const UNSAFE_NAME_CHARS = /[<>:"/\\|?*\x00-\x1f]/
+// Windows reserved device names (CON, PRN, AUX, NUL, COM1-9, LPT1-9), with
+// or without an extension — they are invalid regardless of what follows.
+const RESERVED_DEVICE_NAME = /^(con|prn|aux|nul|com\d|lpt\d)(\.|$)/i
 const EXTENSION_FOR_TYPE = { mod: '.jar', resourcepack: '.zip', shader: '.zip' }
 
 /**
  * Validate a file name announced by Modrinth before it is ever joined into a
  * real path. Rejects anything that could escape the destination folder
- * (path separators, "." / "..", Windows-reserved characters, control
- * characters) or that does not have the extension the content type expects.
+ * (path separators, "." / "..", Windows-reserved characters or device names,
+ * control characters) or that does not have the extension the content type
+ * expects.
  *
  * @param {string} name The file name as announced by Modrinth.
  * @param {string} type One of TYPES.
@@ -309,7 +313,7 @@ function safeFileName(name, type) {
     if(typeof name !== 'string' || name.length === 0 || name === '.' || name === '..') {
         throw new ModrinthError('BAD_FILENAME', `Invalid file name: ${JSON.stringify(name)}`)
     }
-    if(path.basename(name) !== name || UNSAFE_NAME_CHARS.test(name)) {
+    if(path.basename(name) !== name || UNSAFE_NAME_CHARS.test(name) || RESERVED_DEVICE_NAME.test(name)) {
         throw new ModrinthError('BAD_FILENAME', `Invalid file name: ${name}`)
     }
     if(path.extname(name).toLowerCase() !== EXTENSION_FOR_TYPE[type]) {
@@ -336,7 +340,13 @@ async function downloadVerified(file, dest) {
     })
     try {
         await pipeline(
-            got.stream(file.url, { headers: { 'user-agent': USER_AGENT }, timeout: 60000 }),
+            got.stream(file.url, {
+                headers: { 'user-agent': USER_AGENT },
+                // Per-phase timeouts instead of one overall cap, so a large file
+                // that keeps making progress is not killed by a fixed deadline.
+                // `socket` still bounds how long the connection may sit idle.
+                timeout: { lookup: 10000, connect: 15000, secureConnect: 15000, response: 30000, send: 30000, socket: 60000 }
+            }),
             hashingTransform,
             fs.createWriteStream(tmp)
         )
@@ -408,12 +418,17 @@ exports.resolveInstall = async function(projectId, target, installedProjects, bl
 /**
  * Install a project and its required dependencies into a game folder.
  * Everything is resolved first, so a blocked dependency leaves nothing behind.
- * Every announced file name is validated before it is written.
+ * Every announced file name is validated before anything is downloaded, so an
+ * invalid name anywhere in the plan (including the requested project itself,
+ * after its dependencies) never leaves an earlier download on disk.
  *
  * @returns {Promise<string[]>} File names written, dependencies first.
  */
 exports.install = async function(projectId, target, gameDir, installedProjects, blocklist, packProjects) {
     const plan = await exports.resolveInstall(projectId, target, installedProjects, blocklist, packProjects)
+    for(const step of plan) {
+        safeFileName(step.file.filename, step.type)
+    }
     const written = []
     for(const { project, version: ver, file, type } of plan) {
         const name = safeFileName(file.filename, type)
@@ -469,20 +484,31 @@ exports.checkUpdates = async function(files, target) {
 }
 
 /**
- * Replace a file with a newer version, keeping a ".disabled" suffix. The
- * content type is inferred from the old file's extension (".jar" is a mod,
- * anything else is a zip-based type), and the new file name is validated
- * before it is written.
+ * Replace a file with a newer version, keeping a ".disabled" suffix. The new
+ * file name is validated before it is written, and the download never
+ * overwrites an unrelated file that happens to already exist at the
+ * destination.
  *
+ * @param {string} filePath Path of the file being replaced.
+ * @param {Object} newVersion The Modrinth version to update to.
+ * @param {string} [type] One of TYPES. When omitted it is inferred from the
+ * old file's extension (".jar" is a mod, anything else is a zip-based type) —
+ * kept only for callers that do not already know the type.
  * @returns {Promise<string>} The new file name.
  */
-exports.update = async function(filePath, newVersion) {
+exports.update = async function(filePath, newVersion, type) {
     const file = primaryFile(newVersion)
     const suffix = filePath.endsWith('.disabled') ? '.disabled' : ''
-    const base = suffix ? filePath.slice(0, -suffix.length) : filePath
-    const oldType = path.extname(base).toLowerCase() === '.jar' ? 'mod' : 'resourcepack'
-    const name = safeFileName(file.filename, oldType)
+    let resolvedType = type
+    if(resolvedType == null) {
+        const base = suffix ? filePath.slice(0, -suffix.length) : filePath
+        resolvedType = path.extname(base).toLowerCase() === '.jar' ? 'mod' : 'resourcepack'
+    }
+    const name = safeFileName(file.filename, resolvedType)
     const dest = path.join(path.dirname(filePath), name + suffix)
+    if(path.resolve(dest) !== path.resolve(filePath) && await fs.pathExists(dest)) {
+        throw new ModrinthError('DESTINATION_EXISTS', `Destination already exists: ${path.basename(dest)}`)
+    }
     await downloadVerified(file, dest)
     if(path.resolve(dest) !== path.resolve(filePath)) {
         await fs.remove(filePath)

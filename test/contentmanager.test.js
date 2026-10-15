@@ -119,6 +119,21 @@ test('updateFile mantém o resource pack ativo com o nome novo', async () => {
     assert.deepEqual(await Content.getEnabledResourcePacks(dir), ['pacote-1.0.zip'])
 })
 
+test('updateFile propaga DESTINATION_EXISTS e não muda o estado habilitado', async () => {
+    const dir = await gameDir({
+        'resourcepacks/pacote-0.9.zip': 'antigo',
+        'resourcepacks/pacote-1.0.zip': 'ja existe'
+    })
+    await Content.setEnabled(dir, 'resourcepack', 'pacote-0.9.zip', true)
+    const fakeVersion = { files: [{ url: `${fake.base}/files/pacote-1.0.zip`, filename: 'pacote-1.0.zip', primary: true, hashes: fake.files['pacote-1.0.zip'].hashes }] }
+    await assert.rejects(
+        Content.updateFile(dir, 'resourcepack', 'pacote-0.9.zip', fakeVersion),
+        err => err.code === 'DESTINATION_EXISTS'
+    )
+    assert.deepEqual(await Content.getEnabledResourcePacks(dir), ['pacote-0.9.zip'])
+    assert.equal(await fs.readFile(path.join(dir, 'resourcepacks', 'pacote-1.0.zip'), 'utf8'), 'ja existe')
+})
+
 test('installedProjects e findBlocked olham todos os tipos', async () => {
     const dir = await gameDir({
         'mods/sodium-1.0.jar': 'sodium 1.0',
