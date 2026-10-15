@@ -1152,6 +1152,17 @@ async function loadNews(){
         loggerLanding.debug('No RSS feed provided.')
         return null
     }
+    // A placeholder or malformed value must not break the landing screen.
+    let feedUrl
+    try {
+        feedUrl = new URL(distroData.rawDistribution.rss)
+    } catch {
+        feedUrl = null
+    }
+    if(feedUrl == null || (feedUrl.protocol !== 'https:' && feedUrl.protocol !== 'http:')) {
+        loggerLanding.warn('Ignoring invalid RSS feed URL in the distribution:', distroData.rawDistribution.rss)
+        return null
+    }
 
     const promise = new Promise((resolve, reject) => {
         
