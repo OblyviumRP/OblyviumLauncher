@@ -39,13 +39,14 @@ exports.gameDir = function(instanceDir, serverId, profileId) {
 }
 
 exports.ensureServer = function(store, serverId, now = new Date()) {
-    if(store[serverId] == null || typeof store[serverId] !== 'object') {
+    if(store[serverId] == null || typeof store[serverId] !== 'object' || Array.isArray(store[serverId])) {
         store[serverId] = { selected: DEFAULT_ID, list: [] }
     }
     const entry = store[serverId]
     if(!Array.isArray(entry.list)) {
         entry.list = []
     }
+    entry.list = entry.list.filter(p => p != null && typeof p === 'object' && typeof p.id === 'string')
     if(!entry.list.some(p => p.id === DEFAULT_ID)) {
         entry.list.unshift({ id: DEFAULT_ID, name: DEFAULT_NAME, icon: ICONS[0], created: now.toISOString() })
     }
@@ -88,12 +89,24 @@ exports.newId = function() {
     return crypto.randomBytes(4).toString('hex')
 }
 
+/**
+ * True when any (valid) server entry in the store already lists this profile
+ * id, regardless of which server it belongs to. Ids must be unique across the
+ * whole store because instanceRoot keys the on-disk folder by id alone.
+ */
+function idExistsAnywhere(store, id) {
+    return Object.values(store).some(entry =>
+        entry != null && typeof entry === 'object' && !Array.isArray(entry) && Array.isArray(entry.list) &&
+        entry.list.some(p => p != null && typeof p === 'object' && p.id === id)
+    )
+}
+
 exports.createProfile = function(store, serverId, { name, icon }, { id = exports.newId(), now = new Date() } = {}) {
     const valid = exports.validateName(name)
     if(valid == null) {
         throw new Error('Invalid profile name')
     }
-    if(exports.getProfile(store, serverId, id) != null) {
+    if(idExistsAnywhere(store, id)) {
         throw new Error(`Duplicate profile id ${id}`)
     }
     const profile = { id, name: valid, icon: ICONS.includes(icon) ? icon : ICONS[0], created: now.toISOString() }

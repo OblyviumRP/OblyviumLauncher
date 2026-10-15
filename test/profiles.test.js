@@ -42,6 +42,20 @@ test('ensureServer tolera store[serverId] não-objeto', () => {
     assert.deepEqual(store.oblyvium.list.map(p => p.id), ['padrao'])
 })
 
+test('ensureServer trata array como corrompido e sobrevive ao JSON round-trip', () => {
+    const store = { oblyvium: [] }
+    Profiles.ensureServer(store, 'oblyvium', NOW)
+    const roundTrip = JSON.parse(JSON.stringify(store))
+    assert.equal(roundTrip.oblyvium.selected, 'padrao')
+    assert.deepEqual(roundTrip.oblyvium.list.map(p => p.id), ['padrao'])
+})
+
+test('ensureServer descarta itens corrompidos da list', () => {
+    const store = { oblyvium: { selected: 'padrao', list: [null, 'x', { id: 'padrao', name: 'Padrão', icon: 'espada', created: NOW.toISOString() }] } }
+    Profiles.ensureServer(store, 'oblyvium', NOW)
+    assert.deepEqual(store.oblyvium.list.map(p => p.id), ['padrao'])
+})
+
 test('ensureServer chamado duas vezes mantém um único Padrão e o created original', () => {
     const store = {}
     Profiles.ensureServer(store, 'oblyvium', NOW)
@@ -76,6 +90,12 @@ test('createProfile rejeita id duplicado no mesmo servidor', () => {
     const store = {}
     Profiles.createProfile(store, 'oblyvium', { name: 'Leve' }, { id: 'a1b2c3d4', now: NOW })
     assert.throws(() => Profiles.createProfile(store, 'oblyvium', { name: 'Outro' }, { id: 'a1b2c3d4', now: NOW }), /Duplicate profile id a1b2c3d4/)
+})
+
+test('createProfile rejeita id duplicado em outro servidor', () => {
+    const store = {}
+    Profiles.createProfile(store, 'oblyvium', { name: 'Leve' }, { id: 'a1b2c3d4', now: NOW })
+    assert.throws(() => Profiles.createProfile(store, 'outro-servidor', { name: 'Outro' }, { id: 'a1b2c3d4', now: NOW }), /Duplicate profile id a1b2c3d4/)
 })
 
 test('select, updateProfile e getSelected', () => {
