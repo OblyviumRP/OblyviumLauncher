@@ -3,6 +3,7 @@ const assert = require('node:assert/strict')
 const fs = require('fs-extra')
 const os = require('os')
 const path = require('path')
+const { Type } = require('helios-distribution-types')
 const Fake = require('./helpers/fakeModrinth')
 
 const TARGET = { gameVersion: '1.20.1', loader: 'forge' }
@@ -127,4 +128,126 @@ test('getServerTarget e getBlocklist', () => {
     assert.deepEqual(Modrinth.getServerTarget(serv), { gameVersion: '1.20.1', loader: 'forge' })
     assert.deepEqual([...Modrinth.getBlocklist(serv)], ['sodium', 'aanobbmi'])
     assert.ok(Modrinth.isBlocked(Modrinth.getBlocklist(serv), { id: 'AAAAAAAA', slug: 'sodium' }))
+})
+
+test('safeFileName rejeita nomes perigosos e aceita nomes válidos', () => {
+    assert.equal(Modrinth.safeFileName('sodium-1.0.jar', 'mod'), 'sodium-1.0.jar')
+    assert.equal(Modrinth.safeFileName('pacote-1.0.zip', 'resourcepack'), 'pacote-1.0.zip')
+    for(const bad of ['..', '.', '', 'a/../b.jar', 'x.jar:ads', 'a\\b.jar', 'a/b.jar']) {
+        assert.throws(() => Modrinth.safeFileName(bad, 'mod'), err => err.code === 'BAD_FILENAME')
+    }
+    // Right shape of name, wrong extension for the type.
+    assert.throws(() => Modrinth.safeFileName('sodium-1.0.zip', 'mod'), err => err.code === 'BAD_FILENAME')
+})
+
+test('install rejeita nome de arquivo perigoso anunciado pela Modrinth e não escreve nada', async () => {
+    const dir = await tmpGameDir()
+    await assert.rejects(
+        Modrinth.install('hostil', TARGET, dir, new Set(), new Set(), new Set()),
+        err => err.code === 'BAD_FILENAME'
+    )
+    assert.ok(!await fs.pathExists(path.join(dir, 'mods')))
+})
+
+test('update rejeita nomes de arquivo perigosos e não escreve nada', async () => {
+    const dir = await tmpGameDir()
+    const original = path.join(dir, 'mods', 'alvo.jar')
+    await fs.outputFile(original, 'original')
+    for(const bad of ['..', '', 'a/../b.jar', 'x.jar:ads']) {
+        const fakeVersion = { files: [{ url: `${fake.base}/files/sumiu.jar`, filename: bad, primary: true, hashes: { sha512: 'x' } }] }
+        await assert.rejects(
+            Modrinth.update(original, fakeVersion),
+            err => err.code === 'BAD_FILENAME'
+        )
+    }
+    assert.deepEqual(await fs.readdir(path.join(dir, 'mods')), ['alvo.jar'])
+})
+
+test('download que recebe 404 não deixa arquivo .part nem apaga o original', async () => {
+    const dir = await tmpGameDir()
+    const original = path.join(dir, 'mods', 'alvo.jar')
+    await fs.outputFile(original, 'original')
+    const fakeVersion = { files: [{ url: `${fake.base}/files/sumiu.jar`, filename: 'alvo.jar', primary: true, hashes: { sha512: 'x' } }] }
+    await assert.rejects(Modrinth.update(original, fakeVersion))
+    assert.deepEqual(await fs.readdir(path.join(dir, 'mods')), ['alvo.jar'])
+})
+
+test('download cortado no meio não deixa arquivo .part nem apaga o original', async () => {
+    const dir = await tmpGameDir()
+    const original = path.join(dir, 'mods', 'alvo.jar')
+    await fs.outputFile(original, 'original')
+    const fakeVersion = { files: [{ url: `${fake.base}/files/corte.jar`, filename: 'alvo.jar', primary: true, hashes: { sha512: 'x' } }] }
+    await assert.rejects(Modrinth.update(original, fakeVersion))
+    assert.deepEqual(await fs.readdir(path.join(dir, 'mods')), ['alvo.jar'])
+})
+
+test('identifyFiles reconhece todos os arquivos com o mesmo hash', async () => {
+    const dir = await tmpGameDir()
+    const a = path.join(dir, 'a.jar')
+    const b = path.join(dir, 'b.jar')
+    await fs.outputFile(a, 'sodium 1.0')
+    await fs.outputFile(b, 'sodium 1.0')
+    const ids = await Modrinth.identifyFiles([a, b])
+    assert.equal(ids.get(a).project_id, 'AAAAAAAA')
+    assert.equal(ids.get(b).project_id, 'AAAAAAAA')
+})
+
+test('checkUpdates atualiza todos os arquivos duplicados com o mesmo hash', async () => {
+    const dir = await tmpGameDir()
+    const a = path.join(dir, 'mods', 'a.jar.disabled')
+    const b = path.join(dir, 'mods', 'b.jar.disabled')
+    await fs.outputFile(a, 'iris 1.0')
+    await fs.outputFile(b, 'iris 1.0')
+    const updates = await Modrinth.checkUpdates([{ path: a, type: 'mod' }, { path: b, type: 'mod' }], TARGET)
+    assert.equal(updates.get(a).version_number, '2.0')
+    assert.equal(updates.get(b).version_number, '2.0')
+})
+
+test('getModpackProjects não guarda em cache quando falta um mod esperado no disco', async () => {
+    const dir = await tmpGameDir()
+    const missingPath = path.join(dir, 'iris.jar')
+    const presentPath = path.join(dir, 'sodium.jar')
+    await fs.outputFile(presentPath, 'sodium 1.0')
+    const serv = {
+        rawServer: { id: 'teste-cache-modpack', version: '1' },
+        modules: [
+            { rawModule: { type: Type.ForgeMod }, getPath: () => missingPath, subModules: [] },
+            { rawModule: { type: Type.ForgeMod }, getPath: () => presentPath, subModules: [] }
+        ]
+    }
+    const first = await Modrinth.getModpackProjects(serv)
+    assert.deepEqual([...first], ['AAAAAAAA'])
+
+    await fs.outputFile(missingPath, 'iris 1.0')
+    const second = await Modrinth.getModpackProjects(serv)
+    assert.deepEqual([...second].sort(), ['AAAAAAAA', 'BBBBBBBB'])
+})
+
+test('vanilla não busca mods na API', async () => {
+    const vanilla = { gameVersion: '1.20.1', loader: null }
+    const before = fake.requests.length
+    const res = await Modrinth.search({ type: 'mod' }, vanilla, new Set(), new Set())
+    assert.deepEqual(res, { hits: [], total: 0, offset: 0, pageSize: 20 })
+    assert.equal(fake.requests.length, before)
+})
+
+test('vanilla não tem versão compatível de mod', async () => {
+    const vanilla = { gameVersion: '1.20.1', loader: null }
+    assert.equal(await Modrinth.getCompatibleVersion('AAAAAAAA', 'mod', vanilla), null)
+})
+
+test('checkUpdates ignora mods em servidor vanilla', async () => {
+    const vanilla = { gameVersion: '1.20.1', loader: null }
+    const dir = await tmpGameDir()
+    const modPath = path.join(dir, 'mods', 'iris-1.0.jar.disabled')
+    await fs.outputFile(modPath, 'iris 1.0')
+    const updates = await Modrinth.checkUpdates([{ path: modPath, type: 'mod' }], vanilla)
+    assert.equal(updates.size, 0)
+})
+
+test('resolveInstall rejeita tipo de projeto não suportado', async () => {
+    await assert.rejects(
+        Modrinth.resolveInstall('extra', TARGET, new Set(), new Set(), new Set()),
+        err => err.code === 'UNSUPPORTED_TYPE' && err.data.title === 'Extra'
+    )
 })

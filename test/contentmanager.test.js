@@ -37,6 +37,16 @@ test('ligar e desligar mod renomeia o arquivo', async () => {
     assert.deepEqual(await fs.readdir(path.join(dir, 'mods')), ['a.jar'])
 })
 
+test('ligar mod não sobrescreve um arquivo que já existe com o nome de destino', async () => {
+    const dir = await gameDir({ 'mods/a.jar': 'ativo', 'mods/a.jar.disabled': 'inativo' })
+    await assert.rejects(
+        Content.setEnabled(dir, 'mod', 'a.jar.disabled', true),
+        err => err.message.includes('Destination exists')
+    )
+    assert.equal(await fs.readFile(path.join(dir, 'mods', 'a.jar'), 'utf8'), 'ativo')
+    assert.equal(await fs.readFile(path.join(dir, 'mods', 'a.jar.disabled'), 'utf8'), 'inativo')
+})
+
 test('resource packs ativos ficam no options.txt sem perder o resto', async () => {
     const dir = await gameDir({
         'resourcepacks/x.zip': 'x',
@@ -56,6 +66,16 @@ test('resource pack sem options.txt cria a linha', async () => {
     const dir = await gameDir({ 'resourcepacks/x.zip': 'x' })
     await Content.setEnabled(dir, 'resourcepack', 'x.zip', true)
     assert.equal(await fs.readFile(path.join(dir, 'options.txt'), 'utf8'), 'resourcePacks:["vanilla","file/x.zip"]\n')
+})
+
+test('resourcePacks inválido (null ou objeto) no options.txt vira lista vazia', async () => {
+    const dirNull = await gameDir({ 'resourcepacks/x.zip': 'x', 'options.txt': 'resourcePacks:null\n' })
+    assert.deepEqual(await Content.getEnabledResourcePacks(dirNull), [])
+    await Content.setEnabled(dirNull, 'resourcepack', 'x.zip', true)
+    assert.equal(await fs.readFile(path.join(dirNull, 'options.txt'), 'utf8'), 'resourcePacks:["vanilla","file/x.zip"]\n')
+
+    const dirObj = await gameDir({ 'options.txt': 'resourcePacks:{}\n' })
+    assert.deepEqual(await Content.getEnabledResourcePacks(dirObj), [])
 })
 
 test('só um shader fica ativo, gravado para OptiFine, Oculus e Iris', async () => {
@@ -112,4 +132,13 @@ test('installedProjects e findBlocked olham todos os tipos', async () => {
         ['mod', 'sodium-1.0.jar', 'Sodium'],
         ['resourcepack', 'pacote-1.0.zip', 'Pacote']
     ])
+})
+
+test('dois arquivos idênticos bloqueados aparecem os dois no findBlocked', async () => {
+    const dir = await gameDir({
+        'mods/sodium-1.0.jar': 'sodium 1.0',
+        'mods/sodium-copia.jar': 'sodium 1.0'
+    })
+    const blocked = await Content.findBlocked(dir, new Set(['sodium']))
+    assert.deepEqual(blocked.map(b => b.fileName).sort(), ['sodium-1.0.jar', 'sodium-copia.jar'])
 })

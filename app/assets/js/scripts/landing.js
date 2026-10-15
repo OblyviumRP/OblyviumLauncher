@@ -518,13 +518,22 @@ async function disableBlockedContent(serv, gameDir, logger) {
     if (blocked.length === 0) {
         return
     }
+    const disabled = []
     for (const item of blocked) {
-        await ContentManager.setEnabled(gameDir, item.type, item.fileName, false)
-        logger.warn(`Disabled blocked ${item.type} ${item.fileName} (${item.title}).`)
+        try {
+            await ContentManager.setEnabled(gameDir, item.type, item.fileName, false)
+            disabled.push(item)
+            logger.warn(`Disabled blocked ${item.type} ${item.fileName} (${item.title}).`)
+        } catch (err) {
+            logger.warn(`Could not disable blocked ${item.type} ${item.fileName} (${item.title}).`, err)
+        }
+    }
+    if (disabled.length === 0) {
+        return
     }
     setOverlayContent(
         Lang.queryJS('landing.dlAsync.blockedModsTitle'),
-        Lang.queryJS('landing.dlAsync.blockedModsMessage', { mods: blocked.map(m => escapeHtml(m.title)).join(', ') }),
+        Lang.queryJS('landing.dlAsync.blockedModsMessage', { mods: disabled.map(m => escapeHtml(m.title)).join(', ') }),
         Lang.queryJS('landing.launch.okay')
     )
     setOverlayHandler(null)

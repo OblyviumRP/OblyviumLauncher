@@ -23,7 +23,9 @@ const FILES = {
     'mapa-1.0.jar': makeFile('mapa-1.0.jar', 'mapa 1.0'),
     'pacote-1.0.zip': makeFile('pacote-1.0.zip', 'pacote 1.0'),
     'sombra-1.0.zip': makeFile('sombra-1.0.zip', 'sombra 1.0'),
-    'corrompido-1.0.jar': makeFile('corrompido-1.0.jar', 'conteudo real')
+    'corrompido-1.0.jar': makeFile('corrompido-1.0.jar', 'conteudo real'),
+    // Malicious filename announced by a version, used to test path safety.
+    '../evil.jar': makeFile('../evil.jar', 'conteudo hostil')
 }
 
 function project(id, slug, title, type, extra = {}){
@@ -47,7 +49,11 @@ const PROJECTS = [
     project('CCCCCCCC', 'mapa', 'Mapa', 'mod', { categories: ['utility'] }),
     project('DDDDDDDD', 'pacote', 'Pacote', 'resourcepack'),
     project('EEEEEEEE', 'sombra', 'Sombra', 'shader'),
-    project('FFFFFFFF', 'corrompido', 'Corrompido', 'mod')
+    project('FFFFFFFF', 'corrompido', 'Corrompido', 'mod'),
+    // Announces a path-traversal filename; used to test install() path safety.
+    project('GGGGGGGG', 'hostil', 'Hostil', 'mod'),
+    // A project type the launcher does not support (not in Modrinth.TYPES).
+    project('HHHHHHHH', 'extra', 'Extra', 'plugin')
 ]
 
 exports.start = async function(){
@@ -71,7 +77,8 @@ exports.start = async function(){
         CCCCCCCC: [version('vc1', 'CCCCCCCC', '1.0', ['forge'], 'mapa-1.0.jar')],
         DDDDDDDD: [version('vd1', 'DDDDDDDD', '1.0', ['minecraft'], 'pacote-1.0.zip')],
         EEEEEEEE: [version('ve1', 'EEEEEEEE', '1.0', ['iris'], 'sombra-1.0.zip')],
-        FFFFFFFF: [version('vf1', 'FFFFFFFF', '1.0', ['forge'], 'corrompido-1.0.jar')]
+        FFFFFFFF: [version('vf1', 'FFFFFFFF', '1.0', ['forge'], 'corrompido-1.0.jar')],
+        GGGGGGGG: [version('vg1', 'GGGGGGGG', '1.0', ['forge'], '../evil.jar')]
     })
     const findProject = idOrSlug => PROJECTS.find(p => p.id === idOrSlug || p.slug === idOrSlug)
     const requests = []
@@ -90,7 +97,19 @@ exports.start = async function(){
             let m
 
             if(p.startsWith('/files/')){
-                const file = FILES[decodeURIComponent(p.slice('/files/'.length))]
+                const name = decodeURIComponent(p.slice('/files/'.length))
+                // Always missing, for download-failure tests.
+                if(name === 'sumiu.jar'){
+                    return send(404, {})
+                }
+                // Sends a few bytes then kills the connection, for mid-stream failure tests.
+                if(name === 'corte.jar'){
+                    res.writeHead(200, { 'content-type': 'application/octet-stream' })
+                    res.write(Buffer.from('parte de um arquivo'))
+                    res.destroy()
+                    return
+                }
+                const file = FILES[name]
                 if(file == null) return send(404, {})
                 res.writeHead(200, { 'content-type': 'application/octet-stream' })
                 return res.end(file.buf)
