@@ -703,14 +703,21 @@ async function dlAsync(login = true) {
         // const SERVER_JOINED_REGEX = /\[.+\]: \[CHAT\] [a-zA-Z0-9_]{1,16} joined the game/
         const SERVER_JOINED_REGEX = new RegExp(`\\[.+\\]: \\[CHAT\\] ${authUser.displayName} joined the game`)
 
+        // This launch's process. The global `proc` may be cleared (or replaced by
+        // a newer launch) before the delayed onLoadComplete runs.
+        let gameProc = null
+
         const onLoadComplete = () => {
             toggleLaunchArea(false)
-            if(hasRPC){
-                DiscordWrapper.updateDetails(Lang.queryJS('landing.discord.loading'))
-                proc.stdout.on('data', gameStateChange)
+            if(gameProc == null){
+                return
             }
-            proc.stdout.removeListener('data', tempListener)
-            proc.stderr.removeListener('data', gameErrorListener)
+            if(hasRPC && gameProc.exitCode == null){
+                DiscordWrapper.updateDetails(Lang.queryJS('landing.discord.loading'))
+                gameProc.stdout.on('data', gameStateChange)
+            }
+            gameProc.stdout.removeListener('data', tempListener)
+            gameProc.stderr.removeListener('data', gameErrorListener)
         }
         const start = Date.now()
 
@@ -750,7 +757,7 @@ async function dlAsync(login = true) {
         try {
             // Build Minecraft process.
             proc = pb.build()
-            const gameProc = proc
+            gameProc = proc
             gameRunning++
             let released = false
             const releaseGameLock = () => {
@@ -770,8 +777,8 @@ async function dlAsync(login = true) {
             })
 
             // Bind listeners to stdout.
-            proc.stdout.on('data', tempListener)
-            proc.stderr.on('data', gameErrorListener)
+            gameProc.stdout.on('data', tempListener)
+            gameProc.stderr.on('data', gameErrorListener)
 
             setLaunchDetails(Lang.queryJS('landing.dlAsync.doneEnjoyServer'))
 
@@ -779,11 +786,13 @@ async function dlAsync(login = true) {
             if(distro.rawDistribution.discord != null && serv.rawServer.discord != null){
                 DiscordWrapper.initRPC(distro.rawDistribution.discord, serv.rawServer.discord)
                 hasRPC = true
-                proc.on('close', (code, signal) => {
+                gameProc.on('close', (code, signal) => {
                     loggerLaunchSuite.info('Shutting down Discord Rich Presence..')
                     DiscordWrapper.shutdownRPC()
                     hasRPC = false
-                    proc = null
+                    if(proc === gameProc){
+                        proc = null
+                    }
                 })
             }
 
