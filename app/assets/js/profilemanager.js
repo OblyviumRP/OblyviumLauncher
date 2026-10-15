@@ -3,6 +3,7 @@
  * Pure logic lives in profiles.js.
  */
 const fs                = require('fs-extra')
+const path              = require('path')
 const { ipcRenderer }   = require('electron')
 const ConfigManager     = require('./configmanager')
 const Profiles          = require('./profiles')
@@ -133,7 +134,11 @@ exports.remove = async function(serverId, profileId){
     if(exports.get(serverId, profileId) == null){
         throw new Error(`Unknown profile ${profileId} for ${serverId}`)
     }
-    const root = exports.getInstanceRoot(profileId)
+    const root = path.resolve(exports.getInstanceRoot(profileId))
+    const perfisDir = path.resolve(path.join(ConfigManager.getInstanceDirectory(), '.perfis'))
+    if(path.dirname(root) !== perfisDir || path.basename(root) !== profileId){
+        throw new Error(`Refusing to trash ${root}: not a profile folder`)
+    }
     if(await fs.pathExists(root)){
         const res = await ipcRenderer.invoke(SHELL_OPCODE.TRASH_ITEM, root)
         if(!res.result){

@@ -170,6 +170,27 @@ test('install valida todos os nomes do plano antes de baixar qualquer arquivo', 
     assert.ok(!await fs.pathExists(path.join(dir, 'mods')))
 })
 
+test('install que falha no meio remove os arquivos já baixados nesta instalação', async () => {
+    const dir = await tmpGameDir()
+    await assert.rejects(Modrinth.install('quebrado', TARGET, dir, new Set(), new Set(), new Set()))
+    // sodium (the dependency) downloaded first; it must not be left behind.
+    assert.deepEqual(await fs.readdir(path.join(dir, 'mods')), [])
+})
+
+test('install rejeita destino existente antes de baixar qualquer arquivo', async () => {
+    const dir = await tmpGameDir()
+    const existing = path.join(dir, 'mods', 'iris-2.0.jar')
+    await fs.outputFile(existing, 'ja existe')
+    const before = fake.requests.filter(r => r.url.pathname.startsWith('/files/')).length
+    await assert.rejects(
+        Modrinth.install('iris', TARGET, dir, new Set(), new Set(), new Set()),
+        err => err.code === 'DESTINATION_EXISTS'
+    )
+    assert.equal(fake.requests.filter(r => r.url.pathname.startsWith('/files/')).length, before)
+    assert.deepEqual(await fs.readdir(path.join(dir, 'mods')), ['iris-2.0.jar'])
+    assert.equal(await fs.readFile(existing, 'utf8'), 'ja existe')
+})
+
 test('update rejeita nomes de arquivo perigosos e não escreve nada', async () => {
     const dir = await tmpGameDir()
     const original = path.join(dir, 'mods', 'alvo.jar')

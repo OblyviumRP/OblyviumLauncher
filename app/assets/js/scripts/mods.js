@@ -5,7 +5,7 @@
  * Globals from other scripts: ConfigManager, DistroAPI, ProfileManager,
  * Modrinth, ContentManager, Type, path (uibinder.js); Lang, LoggerUtil, shell,
  * ipcRenderer (uicore.js); switchView, getCurrentView, VIEWS (uibinder.js);
- * renderProfileSelection, escapeHtml (landing.js); toggleServerSelection,
+ * renderProfileSelection, escapeHtml, isLaunchLocked (landing.js); toggleServerSelection,
  * setOverlayContent, setOverlayHandler, setDismissHandler, toggleOverlay
  * (overlay.js); initSettingsValidators, initSettingsValues, saveSettingsValues,
  * prepareJavaTab (settings.js, loaded after this script but only called on
@@ -69,7 +69,7 @@ const modsPanels = {}
 // True while openModsView is doing its async setup, to ignore re-entrant calls.
 let modsOpening = false
 
-// The search result element that opened the current project page (Task 13),
+// The search result element that opened the current project page,
 // so leaving it can restore focus there instead of always landing on the tab.
 let modsProjectOrigin = null
 
@@ -213,7 +213,7 @@ function modsRenderHeader(){
     }
     const modTypeBtn = document.querySelector('.mods-types [data-type="mod"]')
     modTypeBtn.disabled = modsState.target.loader == null
-    modTypeBtn.title = modTypeBtn.disabled ? 'Este servidor não usa Forge nem Fabric.' : ''
+    modTypeBtn.title = modTypeBtn.disabled ? Lang.queryJS('mods.vanillaModsDisabled') : ''
 }
 
 /**
@@ -266,6 +266,10 @@ function modsSwitchProfile(profileId){
  * @param {{createProfile?: boolean}} options createProfile opens the profile editor in create mode.
  */
 async function openModsView({ createProfile = false } = {}){
+    // The profile must not change while the game is opening or running.
+    if(isLaunchLocked()){
+        return
+    }
     if(getCurrentView() === VIEWS.mods && !createProfile){
         return
     }
@@ -1059,7 +1063,7 @@ function modsSearchRow(hit, installed){
     rowStatus.setAttribute('role', 'status')
     info.append(
         titleBtn,
-        modsText('span', 'mods-row-meta', `${Lang.queryJS('mods.explore.by', { author: hit.author })} · ${Lang.queryJS('mods.explore.downloads', { count: hit.downloads.toLocaleString('pt-BR') })}`),
+        modsText('span', 'mods-row-meta', `${Lang.queryJS('mods.explore.by', { author: hit.author })} · ${Lang.queryJS('mods.explore.downloads', { count: (hit.downloads ?? 0).toLocaleString('pt-BR') })}`),
         modsText('span', 'mods-row-desc', hit.description),
         tags,
         rowStatus

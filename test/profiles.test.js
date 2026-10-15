@@ -56,6 +56,14 @@ test('ensureServer descarta itens corrompidos da list', () => {
     assert.deepEqual(store.oblyvium.list.map(p => p.id), ['padrao'])
 })
 
+test('ensureServer descarta ids fora do formato de newId', () => {
+    const mk = id => ({ id, name: 'X', icon: 'espada', created: NOW.toISOString() })
+    const store = { oblyvium: { selected: '..', list: [mk('padrao'), mk(''), mk('..'), mk('../..'), mk('ABC'), mk('a1b2c3d4')] } }
+    Profiles.ensureServer(store, 'oblyvium', NOW)
+    assert.deepEqual(store.oblyvium.list.map(p => p.id), ['padrao', 'a1b2c3d4'])
+    assert.equal(store.oblyvium.selected, 'padrao')
+})
+
 test('ensureServer chamado duas vezes mantém um único Padrão e o created original', () => {
     const store = {}
     Profiles.ensureServer(store, 'oblyvium', NOW)

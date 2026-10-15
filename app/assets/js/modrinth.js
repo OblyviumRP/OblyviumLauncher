@@ -418,23 +418,39 @@ exports.resolveInstall = async function(projectId, target, installedProjects, bl
 /**
  * Install a project and its required dependencies into a game folder.
  * Everything is resolved first, so a blocked dependency leaves nothing behind.
- * Every announced file name is validated before anything is downloaded, so an
- * invalid name anywhere in the plan (including the requested project itself,
- * after its dependencies) never leaves an earlier download on disk.
+ * Every announced file name and destination is validated before anything is
+ * downloaded, so an invalid name or an existing file anywhere in the plan
+ * (including the requested project itself, after its dependencies) never
+ * leaves an earlier download on disk. If a download fails partway, the files
+ * already written by this install are removed (best effort).
  *
  * @returns {Promise<string[]>} File names written, dependencies first.
  */
 exports.install = async function(projectId, target, gameDir, installedProjects, blocklist, packProjects) {
     const plan = await exports.resolveInstall(projectId, target, installedProjects, blocklist, packProjects)
-    for(const step of plan) {
-        safeFileName(step.file.filename, step.type)
+    const steps = plan.map(step => {
+        const name = safeFileName(step.file.filename, step.type)
+        return { ...step, name, dest: path.join(gameDir, TYPES[step.type].folder, name) }
+    })
+    for(const { dest } of steps) {
+        if(await fs.pathExists(dest)) {
+            throw new ModrinthError('DESTINATION_EXISTS', `Destination already exists: ${path.basename(dest)}`)
+        }
     }
     const written = []
-    for(const { project, version: ver, file, type } of plan) {
-        const name = safeFileName(file.filename, type)
-        await downloadVerified(file, path.join(gameDir, TYPES[type].folder, name))
-        written.push(name)
-        logger.info(`Installed ${project.slug} ${ver.version_number} (${name}).`)
+    const writtenPaths = []
+    try {
+        for(const { project, version: ver, file, name, dest } of steps) {
+            await downloadVerified(file, dest)
+            written.push(name)
+            writtenPaths.push(dest)
+            logger.info(`Installed ${project.slug} ${ver.version_number} (${name}).`)
+        }
+    } catch(err) {
+        for(const dest of writtenPaths) {
+            await fs.remove(dest).catch(() => {})
+        }
+        throw err
     }
     return written
 }
