@@ -1064,7 +1064,8 @@ function modsSearchRow(hit, installed){
         tags,
         rowStatus
     )
-    row.append(modsIcon(hit.icon_url), info, modsInstallButton(hit.project_id, hit.title, installed, rowStatus))
+    // Dependencies installed along with it get re-badged in the other rows.
+    row.append(modsIcon(hit.icon_url), info, modsInstallButton(hit.project_id, hit.title, installed, rowStatus, modsRebadgeResults))
     return row
 }
 

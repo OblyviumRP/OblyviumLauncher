@@ -44,18 +44,29 @@ const loggerLanding = LoggerUtil.getLogger('Landing')
 
 /* Launch Progress Wrapper Functions */
 
+// True while the loading area is shown (Java scan, file checks, downloads,
+// game start). The profile and its content must not change meanwhile.
+let launchAreaShown = false
+
 /**
  * Show/hide the loading area.
- * 
+ *
  * @param {boolean} loading True if the loading area should be shown, otherwise false.
  */
 function toggleLaunchArea(loading){
+    launchAreaShown = loading
     if(loading){
         launch_details.style.display = 'flex'
         launch_content.style.display = 'none'
     } else {
         launch_details.style.display = 'none'
         launch_content.style.display = 'inline-flex'
+    }
+    document.getElementById('modsMediaButton').disabled = loading
+    if(loading){
+        document.getElementById('profile_selection').disabled = true
+    } else {
+        renderProfileSelection()
     }
 }
 
@@ -209,7 +220,8 @@ function renderProfileSelection(){
         select.disabled = true
         return
     }
-    select.disabled = false
+    // dlAsync refreshes the distro mid-launch, which re-renders this selector.
+    select.disabled = launchAreaShown
     const selected = ProfileManager.getSelected(serverId)
     for(const profile of ProfileManager.list(serverId)){
         select.add(new Option(profile.name, profile.id, false, profile.id === selected.id))
@@ -564,6 +576,11 @@ async function dlAsync(login = true) {
     }
 
     const serv = distro.getServerById(ConfigManager.getSelectedServer())
+    if(serv == null){
+        loggerLaunchSuite.error('The selected server is not in the distribution index.')
+        showLaunchFailure(Lang.queryJS('landing.dlAsync.fatalError'), Lang.queryJS('landing.dlAsync.unableToLoadDistributionIndex'))
+        return
+    }
 
     const profile = ProfileManager.getSelected(serv.rawServer.id)
     const gameDir = ProfileManager.getGameDir(serv.rawServer.id, profile.id)
@@ -580,11 +597,14 @@ async function dlAsync(login = true) {
     toggleLaunchArea(true)
     setLaunchPercentage(0, 100)
 
+    // The child process resolves File-type pack modules under this profile's
+    // instance root. Renderer-side mdl.getPath() for File modules still points
+    // at the default instance, so don't rely on it for other profiles.
     const fullRepairModule = new FullRepair(
         ConfigManager.getCommonDirectory(),
         ProfileManager.getInstanceRoot(profile.id),
         ConfigManager.getLauncherDirectory(),
-        ConfigManager.getSelectedServer(),
+        serv.rawServer.id,
         DistroAPI.isDevMode()
     )
 

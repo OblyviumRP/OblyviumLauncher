@@ -451,10 +451,11 @@ button.mods-row-title:hover { color: var(--primary-light); text-decoration: unde
 .mods-project-actions { flex: none; display: flex; gap: 8px; align-items: center; }
 .mods-project-facts { margin: 0; color: var(--muted-foreground); font: 11px var(--font-mono); }
 .mods-gallery { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
-.mods-gallery img { height: 120px; border-radius: 6px; border: 1px solid var(--border-2); }
+.mods-gallery img { flex: none; width: 213px; height: 120px; object-fit: cover; background: var(--surface-2); border-radius: 6px; border: 1px solid var(--border-2); }
 .mods-project-body { background: var(--card); border: 1px solid var(--border-2); border-radius: 6px; padding: 16px; font-size: 13px; line-height: 1.55; overflow-wrap: anywhere; }
 .mods-project-body img { max-width: 100%; height: auto; }
 .mods-project-body a { color: var(--primary-light); }
+.mods-project-body a:not([href]) { color: inherit; text-decoration: none; cursor: default; }
 .mods-project-body pre, .mods-project-body code { font: 12px var(--font-mono); background: var(--surface-2); border-radius: 4px; }
 .mods-project-body pre { padding: 10px; overflow-x: auto; }
 .mods-project-body table { border-collapse: collapse; }
