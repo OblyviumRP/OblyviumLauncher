@@ -41,7 +41,7 @@ test('ligar mod não sobrescreve um arquivo que já existe com o nome de destino
     const dir = await gameDir({ 'mods/a.jar': 'ativo', 'mods/a.jar.disabled': 'inativo' })
     await assert.rejects(
         Content.setEnabled(dir, 'mod', 'a.jar.disabled', true),
-        err => err.message.includes('Destination exists')
+        err => err.message.includes('Destination exists') && err.code === 'DESTINATION_EXISTS'
     )
     assert.equal(await fs.readFile(path.join(dir, 'mods', 'a.jar'), 'utf8'), 'ativo')
     assert.equal(await fs.readFile(path.join(dir, 'mods', 'a.jar.disabled'), 'utf8'), 'inativo')
