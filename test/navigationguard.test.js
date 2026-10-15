@@ -52,3 +52,21 @@ test('attach bloqueia will-navigate externo e nega janelas novas', () => {
     assert.deepEqual(openHandler({ url: 'file:///C:/x' }), { action: 'deny' })
     assert.deepEqual(opened, ['https://evil.example/', 'https://modrinth.com/mod/x'])
 })
+
+test('escapes malformados são negados sem lançar erro', () => {
+    assert.doesNotThrow(() => Guard.decideNavigation('file:///C:/a%E0', APP))
+    assert.deepEqual(Guard.decideNavigation('file:///C:/a%E0', APP), { allow: false, external: null })
+    assert.deepEqual(Guard.decideNavigation(APP, 'file:///C:/a%E0'), { allow: false, external: null })
+})
+
+test('caminho com espaços e acentos (Windows) é reconhecido como o app', () => {
+    // Built by hand so the test is identical on every OS.
+    const winPath = path.win32.join('C:/','Program Files', 'Oblyvium Launcher', 'résumé', 'app.ejs')
+    const app = 'file:///' + winPath.split(path.win32.sep).map((part, i) => i === 0 ? part : encodeURIComponent(part)).join('/')
+    assert.equal(app, 'file:///C:/Program%20Files/Oblyvium%20Launcher/r%C3%A9sum%C3%A9/app.ejs')
+    assert.deepEqual(Guard.decideNavigation(app, app), { allow: true, external: null })
+    assert.deepEqual(Guard.decideNavigation(app + '#news', app), { allow: true, external: null })
+    // Chromium may report the same page with the raw characters unescaped.
+    assert.deepEqual(Guard.decideNavigation('file:///C:/Program Files/Oblyvium Launcher/résumé/app.ejs#x', app), { allow: true, external: null })
+    assert.deepEqual(Guard.decideNavigation('file:///C:/Program%20Files/Oblyvium%20Launcher/other.ejs', app), { allow: false, external: null })
+})

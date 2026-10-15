@@ -21,8 +21,9 @@ function parse(value, base) {
 function isAppUrl(target, appUrl) {
     const url = parse(target)
     const app = parse(appUrl)
+    // WHATWG pathnames are already canonical; decoding could throw.
     return url != null && app != null && url.protocol === 'file:' && app.protocol === 'file:'
-        && url.host === app.host && decodeURIComponent(url.pathname) === decodeURIComponent(app.pathname)
+        && url.host === app.host && url.pathname === app.pathname
 }
 
 /**
@@ -32,10 +33,15 @@ function isAppUrl(target, appUrl) {
  * navigation happen, and which URL (if any) to open in the system browser.
  */
 function decideNavigation(target, appUrl) {
-    if(isAppUrl(target, appUrl)) {
-        return { allow: true, external: null }
+    try {
+        if(isAppUrl(target, appUrl)) {
+            return { allow: true, external: null }
+        }
+        return { allow: false, external: externalUrl(target) }
+    } catch {
+        // Fail closed: an unexpected error must never let a navigation through.
+        return { allow: false, external: null }
     }
-    return { allow: false, external: externalUrl(target) }
 }
 
 /**
