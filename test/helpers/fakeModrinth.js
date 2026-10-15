@@ -25,7 +25,9 @@ const FILES = {
     'sombra-1.0.zip': makeFile('sombra-1.0.zip', 'sombra 1.0'),
     'corrompido-1.0.jar': makeFile('corrompido-1.0.jar', 'conteudo real'),
     // Malicious filename announced by a version, used to test path safety.
-    '../evil.jar': makeFile('../evil.jar', 'conteudo hostil')
+    '../evil.jar': makeFile('../evil.jar', 'conteudo hostil'),
+    // Invalid filename ("..") for a project whose dependency has a valid name.
+    '..': makeFile('..', 'conteudo invalido')
 }
 
 function project(id, slug, title, type, extra = {}){
@@ -53,7 +55,10 @@ const PROJECTS = [
     // Announces a path-traversal filename; used to test install() path safety.
     project('GGGGGGGG', 'hostil', 'Hostil', 'mod'),
     // A project type the launcher does not support (not in Modrinth.TYPES).
-    project('HHHHHHHH', 'extra', 'Extra', 'plugin')
+    project('HHHHHHHH', 'extra', 'Extra', 'plugin'),
+    // Valid dependency (sodium), but its own file name is invalid; used to test
+    // that install() validates every step before downloading any of them.
+    project('IIIIIIII', 'invalido', 'Invalido', 'mod')
 ]
 
 exports.start = async function(){
@@ -78,7 +83,8 @@ exports.start = async function(){
         DDDDDDDD: [version('vd1', 'DDDDDDDD', '1.0', ['minecraft'], 'pacote-1.0.zip')],
         EEEEEEEE: [version('ve1', 'EEEEEEEE', '1.0', ['iris'], 'sombra-1.0.zip')],
         FFFFFFFF: [version('vf1', 'FFFFFFFF', '1.0', ['forge'], 'corrompido-1.0.jar')],
-        GGGGGGGG: [version('vg1', 'GGGGGGGG', '1.0', ['forge'], '../evil.jar')]
+        GGGGGGGG: [version('vg1', 'GGGGGGGG', '1.0', ['forge'], '../evil.jar')],
+        IIIIIIII: [version('vi1', 'IIIIIIII', '1.0', ['forge'], '..', [{ project_id: 'AAAAAAAA', dependency_type: 'required' }])]
     })
     const findProject = idOrSlug => PROJECTS.find(p => p.id === idOrSlug || p.slug === idOrSlug)
     const requests = []

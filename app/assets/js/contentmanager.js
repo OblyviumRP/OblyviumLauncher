@@ -238,7 +238,7 @@ exports.describe = async function(gameDir, type) {
 exports.updateFile = async function(gameDir, type, fileName, newVersion) {
     const enabledPacks = type === 'resourcepack' ? await exports.getEnabledResourcePacks(gameDir) : []
     const wasActiveShader = type === 'shader' && await exports.getActiveShader(gameDir) === fileName
-    const next = await Modrinth.update(path.join(exports.folder(gameDir, type), fileName), newVersion)
+    const next = await Modrinth.update(path.join(exports.folder(gameDir, type), fileName), newVersion, type)
     if(enabledPacks.includes(fileName)) {
         await setEnabledResourcePacks(gameDir, enabledPacks.map(n => n === fileName ? next : n))
     }
