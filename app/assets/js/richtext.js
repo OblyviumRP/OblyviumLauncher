@@ -15,7 +15,29 @@ const ALLOWED_TAGS = [
 ]
 const ALLOWED_ATTR = ['href', 'src', 'alt', 'title', 'width', 'height', 'align']
 
+// DOMPurify tests ALLOWED_URI_REGEXP case-insensitively and with whitespace
+// stripped, but keeps the original value. Re-parse it the way the browser
+// will and keep only the normalised https URL (lowercase scheme, no tabs).
+function safeHttps(value) {
+    try {
+        const url = new URL(value)
+        return url.protocol === 'https:' ? url.href : null
+    } catch {
+        return null
+    }
+}
+
 DOMPurify.addHook('afterSanitizeAttributes', node => {
+    for(const attr of ['href', 'src']) {
+        if(node.hasAttribute(attr)) {
+            const safe = safeHttps(node.getAttribute(attr))
+            if(safe) {
+                node.setAttribute(attr, safe)
+            } else {
+                node.removeAttribute(attr)
+            }
+        }
+    }
     if(node.tagName === 'IMG') {
         node.setAttribute('loading', 'lazy')
     }
