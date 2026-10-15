@@ -12,6 +12,7 @@ const ConfigManager = require('./assets/js/configmanager')
 const { DistroAPI } = require('./assets/js/distromanager')
 const ProfileManager = require('./assets/js/profilemanager')
 const Modrinth      = require('./assets/js/modrinth')
+const ContentManager = require('./assets/js/contentmanager')
 
 let rscShouldLoad = false
 let fatalStartupError = false

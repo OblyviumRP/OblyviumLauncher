@@ -198,8 +198,8 @@ javaInstalled = "Java Instalado!"
 new = "+ Novo perfil…"
 
 [js.landing.dlAsync]
-blockedModsTitle = "Mods Proibidos Desativados"
-blockedModsMessage = "A staff proíbe estes mods, então eles foram desativados: <strong>{mods}</strong>.<br><br>O jogo vai abrir normalmente sem eles."
+blockedModsTitle = "Conteúdo Proibido Desativado"
+blockedModsMessage = "A staff proíbe estes itens, então eles foram desativados: <strong>{mods}</strong>.<br><br>O jogo vai abrir normalmente sem eles."
 loadingServerInfo = "Carregando informações do servidor.."
 fatalError = "Erro Fatal"
 unableToLoadDistributionIndex = "Não foi possível carregar o índice de distribuição. Veja o console (CTRL + Shift + i) para mais detalhes."
