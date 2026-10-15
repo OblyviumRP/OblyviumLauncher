@@ -161,6 +161,11 @@
                         <span id="server_selection_name"><%- lang('landing.launchButtonPlaceholder') %></span>
                         <svg class="server-selector-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
                     </button>
+                    <label id="profile_selection_wrap" class="profile-selector">
+                        <span class="server-selector-label"><%- lang('landing.profileLabel') %></span>
+                        <select id="profile_selection" aria-label="<%- lang('landing.profileLabel') %>"></select>
+                        <svg class="server-selector-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+                    </label>
                     <button id="launch_button"><%- lang('landing.launchButton') %></button>
                 </div>
                 <div id="launch_details">

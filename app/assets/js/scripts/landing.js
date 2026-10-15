@@ -190,7 +190,42 @@ function updateSelectedServer(serv){
 
     setLaunchEnabled(serv != null && serv.rawServer.id !== 'SELECT')
 
+    renderProfileSelection()
+
 }
+const PROFILE_NEW_VALUE = '__novo__'
+
+/**
+ * Fill the profile selector with the selected server's profiles.
+ */
+function renderProfileSelection(){
+    const select = document.getElementById('profile_selection')
+    const serverId = ConfigManager.getSelectedServer()
+    select.replaceChildren()
+    if(serverId == null || serverId === 'SELECT'){
+        select.disabled = true
+        return
+    }
+    select.disabled = false
+    const selected = ProfileManager.getSelected(serverId)
+    for(const profile of ProfileManager.list(serverId)){
+        select.add(new Option(profile.name, profile.id, false, profile.id === selected.id))
+    }
+    if(typeof modsOpenEditor === 'function'){
+        select.add(new Option(Lang.queryJS('landing.profile.new'), PROFILE_NEW_VALUE))
+    }
+}
+
+document.getElementById('profile_selection').addEventListener('change', async e => {
+    const serverId = ConfigManager.getSelectedServer()
+    if(e.target.value === PROFILE_NEW_VALUE){
+        renderProfileSelection()
+        await openModsView({ createProfile: true })
+        return
+    }
+    ProfileManager.select(serverId, e.target.value)
+})
+
 // Real text is set in uibinder.js on distributionIndexDone.
 document.getElementById('server_selection_name').textContent = Lang.queryJS('landing.selectedServer.loading')
 server_selection_button.onclick = async e => {
