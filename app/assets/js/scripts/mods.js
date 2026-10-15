@@ -44,7 +44,7 @@ const modsState = {
     updates: new Map(),
     updatingAll: false,
     installedRequest: 0,
-    search: { query: '', sort: 'relevance', categories: new Set(), offset: 0, request: 0 },
+    search: { query: '', sort: 'relevance', categories: new Set(), offset: 0, request: 0, lastKey: null },
     projectRequest: 0,
     editing: null
 }
@@ -54,6 +54,10 @@ const modsPanels = {}
 
 // True while openModsView is doing its async setup, to ignore re-entrant calls.
 let modsOpening = false
+
+// The search result element that opened the current project page (Task 13),
+// so leaving it can restore focus there instead of always landing on the tab.
+let modsProjectOrigin = null
 
 function modsEl(id){
     return document.getElementById(id)
@@ -262,6 +266,7 @@ async function openModsView({ createProfile = false } = {}){
         modsState.installedProjects = null
         modsState.search.query = ''
         modsState.search.offset = 0
+        modsState.search.lastKey = null
         modsState.updates = new Map()
         modsState.installed = []
         modsEl('modsSearchQuery').value = ''
@@ -331,8 +336,7 @@ document.addEventListener('keydown', e => {
     if(modsState.editing != null && typeof modsCloseEditor === 'function'){
         modsCloseEditor()
     } else if(modsState.tab === 'project'){
-        modsShowTab('explore', false)
-        modsEl('modsTabExplore').focus()
+        modsLeaveProject()
     } else {
         closeModsView()
     }
@@ -667,3 +671,311 @@ function modsSetPackModEnabled(ids, enabled, toggleInput){
         }
     }
 }
+
+// Explore tab
+
+modsPanels.explore = { show: () => modsPrepareExplore() }
+modsPanels.project = { show: () => {} }
+
+function modsCategoryLabel(name){
+    return MODS_CATEGORY_LABELS[name] ?? name.replace(/-/g, ' ').replace(/^./, c => c.toUpperCase())
+}
+
+async function modsGetPackProjects(){
+    if(modsState.packProjects == null){
+        try {
+            modsState.packProjects = await Modrinth.getModpackProjects(modsState.serv)
+        } catch(err) {
+            loggerMods.warn('Could not identify modpack mods.', err)
+            return new Set()
+        }
+    }
+    return modsState.packProjects
+}
+
+async function modsGetInstalledProjects(){
+    if(modsState.installedProjects == null){
+        try {
+            modsState.installedProjects = await ContentManager.installedProjects(modsGameDir())
+        } catch(err) {
+            loggerMods.warn('Could not identify installed content.', err)
+            return new Set()
+        }
+    }
+    return modsState.installedProjects
+}
+
+/**
+ * Identifies the search currently reflected by modsState.search (server,
+ * profile, type, query, sort, categories). Used to skip a redundant
+ * re-search when the Explore tab is merely re-shown with nothing changed —
+ * arrow-key tab cycling used to refire a full search on every press.
+ */
+function modsSearchKey(){
+    const s = modsState.search
+    return JSON.stringify([modsState.serverId, modsState.profileId, modsState.type, s.query, s.sort, [...s.categories].sort()])
+}
+
+function modsPrepareExplore(){
+    modsEl('modsSearchQuery').placeholder = Lang.queryJS(`mods.explore.placeholder.${modsState.type}`)
+    if(modsSearchKey() === modsState.search.lastKey){
+        return
+    }
+    modsRenderCategories()
+    modsRunSearch()
+}
+
+async function modsRenderCategories(){
+    const type = modsState.type
+    const box = modsEl('modsCategoryList')
+    box.replaceChildren(modsText('span', 'mods-muted', Lang.queryJS('mods.explore.loadingCategories')))
+    let names
+    try {
+        names = await Modrinth.getCategories(type)
+    } catch(err) {
+        loggerMods.warn('Could not load categories.', err)
+        if(type === modsState.type){
+            box.replaceChildren(modsText('span', 'mods-muted', Lang.queryJS('mods.explore.categoriesError')))
+        }
+        return
+    }
+    if(type !== modsState.type){
+        return
+    }
+    box.replaceChildren(...names.map(name => {
+        const label = document.createElement('label')
+        label.className = 'mods-check'
+        const input = document.createElement('input')
+        input.type = 'checkbox'
+        input.value = name
+        input.checked = modsState.search.categories.has(name)
+        input.onchange = () => {
+            if(input.checked){
+                modsState.search.categories.add(name)
+            } else {
+                modsState.search.categories.delete(name)
+            }
+            modsRunSearch()
+        }
+        label.append(input, modsText('span', '', modsCategoryLabel(name)))
+        return label
+    }))
+}
+
+async function modsRunSearch(append = false){
+    const s = modsState.search
+    const request = ++s.request
+    const results = modsEl('modsSearchResults')
+    const more = modsEl('modsSearchMore')
+    if(!append){
+        s.query = modsEl('modsSearchQuery').value.trim()
+        s.sort = modsEl('modsSearchSort').value
+        s.offset = 0
+        results.replaceChildren()
+    }
+    more.hidden = true
+    modsSetStatus('modsSearchStatus', Lang.queryJS('mods.explore.loading'))
+    try {
+        const [pack, installed] = await Promise.all([modsGetPackProjects(), modsGetInstalledProjects()])
+        const res = await Modrinth.search(
+            { query: s.query, type: modsState.type, categories: [...s.categories], sort: s.sort, offset: s.offset },
+            modsState.target, modsState.blocklist, pack
+        )
+        if(request !== s.request){
+            return
+        }
+        for(const hit of res.hits){
+            results.appendChild(modsSearchRow(hit, installed.has(hit.project_id)))
+        }
+        s.offset = res.offset + res.pageSize
+        more.hidden = s.offset >= res.total
+        modsSetStatus('modsSearchStatus', results.childElementCount === 0 && more.hidden ? Lang.queryJS('mods.explore.empty') : '')
+        s.lastKey = modsSearchKey()
+    } catch(err) {
+        if(request !== s.request){
+            return
+        }
+        loggerMods.error('Search failed.', err)
+        s.lastKey = null
+        modsSetStatus('modsSearchStatus', modsErrorMessage(err), () => modsRunSearch(append))
+    }
+}
+
+function modsInstalledBadge(){
+    return modsText('span', 'mods-badge mods-badge-success', Lang.queryJS('mods.explore.installed'))
+}
+
+/**
+ * Install button for a project; shows the outcome in rowStatus.
+ */
+function modsInstallButton(projectId, title, installed, rowStatus){
+    if(installed){
+        return modsInstalledBadge()
+    }
+    const btn = modsText('button', 'mods-btn mods-btn-primary', Lang.queryJS('mods.explore.install'))
+    btn.type = 'button'
+    btn.setAttribute('aria-label', Lang.queryJS('mods.explore.installLabel', { title }))
+    btn.onclick = async () => {
+        btn.disabled = true
+        btn.textContent = Lang.queryJS('mods.explore.installing')
+        rowStatus.textContent = ''
+        rowStatus.removeAttribute('error')
+        try {
+            const [pack, installedSet] = await Promise.all([modsGetPackProjects(), modsGetInstalledProjects()])
+            await Modrinth.install(projectId, modsState.target, modsGameDir(), installedSet, modsState.blocklist, pack)
+            modsState.installedProjects = null
+            btn.replaceWith(modsInstalledBadge())
+            rowStatus.textContent = Lang.queryJS('mods.explore.installedStatus', { title })
+        } catch(err) {
+            if(!(err instanceof Modrinth.ModrinthError)){
+                loggerMods.error('Install failed.', err)
+            }
+            if(err.code === 'ALREADY_INSTALLED'){
+                btn.replaceWith(modsInstalledBadge())
+            } else {
+                btn.disabled = false
+                btn.textContent = Lang.queryJS('mods.explore.install')
+            }
+            rowStatus.textContent = modsErrorMessage(err)
+            rowStatus.toggleAttribute('error', err.code !== 'ALREADY_INSTALLED')
+        }
+    }
+    return btn
+}
+
+function modsSearchRow(hit, installed){
+    const row = document.createElement('div')
+    row.className = 'mods-row'
+    const info = document.createElement('div')
+    info.className = 'mods-row-info'
+    const titleBtn = modsText('button', 'mods-row-title', hit.title)
+    titleBtn.type = 'button'
+    titleBtn.onclick = () => modsOpenProject(hit.project_id, titleBtn)
+    const tags = document.createElement('div')
+    tags.className = 'mods-tags'
+    for(const c of hit.categories.filter(c => MODS_CATEGORY_LABELS[c] != null).slice(0, 3)){
+        tags.appendChild(modsText('span', 'mods-tag', modsCategoryLabel(c)))
+    }
+    const rowStatus = modsText('span', 'mods-row-status', '')
+    rowStatus.setAttribute('role', 'status')
+    info.append(
+        titleBtn,
+        modsText('span', 'mods-row-meta', `${Lang.queryJS('mods.explore.by', { author: hit.author })} · ${Lang.queryJS('mods.explore.downloads', { count: hit.downloads.toLocaleString('pt-BR') })}`),
+        modsText('span', 'mods-row-desc', hit.description),
+        tags,
+        rowStatus
+    )
+    row.append(modsIcon(hit.icon_url), info, modsInstallButton(hit.project_id, hit.title, installed, rowStatus))
+    return row
+}
+
+modsEl('modsSearchForm').addEventListener('submit', e => {
+    e.preventDefault()
+    modsRunSearch()
+})
+modsEl('modsSearchSort').addEventListener('change', () => modsRunSearch())
+modsEl('modsSearchMore').onclick = () => modsRunSearch(true)
+
+// Project page
+
+function modsLeaveProject(){
+    modsShowTab('explore', false)
+    const origin = modsProjectOrigin
+    modsProjectOrigin = null
+    if(origin != null && document.contains(origin)){
+        origin.focus()
+    } else {
+        modsEl('modsTabExplore').focus()
+    }
+}
+
+async function modsOpenProject(projectId, originEl = null){
+    modsProjectOrigin = originEl
+    modsShowTab('project')
+    const request = ++modsState.projectRequest
+    const article = modsEl('modsProject')
+    article.replaceChildren()
+    modsSetStatus('modsProjectStatus', Lang.queryJS('mods.project.loading'))
+    try {
+        const [project, pack, installed] = await Promise.all([Modrinth.getProject(projectId), modsGetPackProjects(), modsGetInstalledProjects()])
+        let plan = null
+        let planError = null
+        try {
+            plan = await Modrinth.resolveInstall(project.id, modsState.target, installed, modsState.blocklist, pack)
+        } catch(err) {
+            planError = err
+        }
+        if(request !== modsState.projectRequest){
+            return
+        }
+        modsSetStatus('modsProjectStatus', '')
+        article.replaceChildren(...modsProjectContent(project, plan, planError, installed.has(project.id)))
+        modsEl('modsProjectBack').focus()
+    } catch(err) {
+        if(request !== modsState.projectRequest){
+            return
+        }
+        loggerMods.error('Could not load project.', err)
+        modsSetStatus('modsProjectStatus', modsErrorMessage(err), () => modsOpenProject(projectId, originEl))
+    }
+}
+
+function modsProjectContent(project, plan, planError, installed){
+    const rowStatus = modsText('span', 'mods-row-status', '')
+    rowStatus.setAttribute('role', 'status')
+
+    const heading = document.createElement('div')
+    heading.className = 'mods-project-heading'
+    heading.append(modsText('h2', '', project.title), modsText('p', '', project.description), rowStatus)
+
+    const actions = document.createElement('div')
+    actions.className = 'mods-project-actions'
+    const alreadyInstalled = installed || planError?.code === 'ALREADY_INSTALLED'
+    if(planError != null && !alreadyInstalled){
+        rowStatus.textContent = modsErrorMessage(planError)
+        rowStatus.setAttribute('error', '')
+    } else {
+        actions.appendChild(modsInstallButton(project.id, project.title, alreadyInstalled, rowStatus))
+    }
+    const site = modsText('a', 'mods-btn', Lang.queryJS('mods.project.openSite'))
+    site.href = `https://modrinth.com/${project.project_type}/${encodeURIComponent(project.slug)}`
+    actions.appendChild(site)
+
+    const header = document.createElement('div')
+    header.className = 'mods-project-header'
+    header.append(modsIcon(project.icon_url), heading, actions)
+
+    const parts = [header]
+    if(plan != null){
+        const main = plan[plan.length - 1]
+        parts.push(modsText('p', 'mods-project-facts', Lang.queryJS('mods.project.version', { version: main.version.version_number })))
+        const deps = plan.slice(0, -1)
+        if(deps.length > 0){
+            parts.push(modsText('p', 'mods-project-facts', Lang.queryJS('mods.project.dependencies', { list: deps.map(d => d.project.title).join(', ') })))
+        }
+    }
+
+    const gallery = (project.gallery ?? [])
+        .filter(g => /^https:\/\//i.test(g.url))
+        .sort((a, b) => (a.ordering ?? 0) - (b.ordering ?? 0))
+    if(gallery.length > 0){
+        const strip = document.createElement('div')
+        strip.className = 'mods-gallery'
+        for(const g of gallery.slice(0, 8)){
+            const img = document.createElement('img')
+            img.src = g.url
+            img.alt = g.title ?? ''
+            img.loading = 'lazy'
+            strip.appendChild(img)
+        }
+        parts.push(strip)
+    }
+
+    const body = document.createElement('div')
+    body.className = 'mods-project-body'
+    body.innerHTML = RichText.render(project.body)
+    parts.push(body)
+    return parts
+}
+
+modsEl('modsProjectBack').onclick = modsLeaveProject
