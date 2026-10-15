@@ -17,6 +17,7 @@ newsErrorLoadSpan = "Verificando Notícias.."
 newsErrorFailedSpan = "Falha ao Carregar Notícias"
 newsErrorRetryButton = "Tentar Novamente"
 newsErrorNoneSpan = "Sem Notícias"
+profileLabel = "Perfil"
 
 [ejs.login]
 loginCancelText = "Cancelar"
@@ -192,6 +193,9 @@ findJdkFailure = "Falha ao encontrar uma distribuição OpenJDK."
 javaDownloadCorruptedError = "O JDK baixado possui hash inválido, o arquivo pode estar corrompido."
 extractingJava = "Extraindo Java"
 javaInstalled = "Java Instalado!"
+
+[js.landing.profile]
+new = "+ Novo perfil…"
 
 [js.landing.dlAsync]
 blockedModsTitle = "Mods Proibidos Desativados"
