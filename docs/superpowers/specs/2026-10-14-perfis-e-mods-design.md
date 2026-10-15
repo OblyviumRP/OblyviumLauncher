@@ -34,19 +34,23 @@ excluído e usa a pasta de hoje. Perfis novos ganham um id curto aleatório.
     "<serverId>": {
         "selected": "padrao",
         "list": [
-            {
-                "id": "padrao",
-                "name": "Padrão",
-                "icon": "espada",            // um dos ícones prontos
-                "created": "2026-10-14T19:00:00Z",
-                "java": { "minRAM": "2G", "maxRAM": "4G", "executable": null, "jvmOptions": [] },
-                "game": { "resWidth": 1280, "resHeight": 720, "fullscreen": false },
-                "modConfiguration": { /* opcionais do pack, mesmo formato de hoje */ }
-            }
+            { "id": "padrao", "name": "Padrão", "icon": "espada", "created": "2026-10-14T19:00:00Z" }
         ]
     }
 }
 ```
+
+Os ajustes de cada perfil ficam onde os ajustes por servidor já ficam hoje, indexados por uma **chave de
+configuração**: `<serverId>` para o Padrão e `<serverId>@<profileId>` para os outros.
+
+| Ajuste | Onde fica |
+|---|---|
+| Memória, Java, argumentos da JVM | `javaConfig[<chave>]` (já existente) |
+| Mods opcionais do pack | `modConfigurations[]` com `id: <chave>` (já existente) |
+| Resolução e tela cheia | `gameConfig[<chave>]` (novo; começa com os valores globais de hoje) |
+
+Assim o Padrão reaproveita sem cópia tudo o que o jogador já configurou, e o código atual continua funcionando
+trocando só o argumento `serverId` pela chave.
 
 ### Pastas
 
@@ -61,9 +65,9 @@ do perfil**, e cada perfil recebe os próprios arquivos do pack sem duplicar mod
 
 ### Migração
 
-Na primeira abertura com a versão nova, para cada servidor da distribuição sem `profiles[serverId]`, o launcher cria
-o Padrão copiando `javaConfig[serverId]`, a resolução atual e `modConfigurations[serverId]`. Os campos antigos ficam
-no `config.json` sem uso até uma limpeza futura, para permitir voltar de versão.
+Na primeira abertura com a versão nova, cada servidor da distribuição sem `profiles[serverId]` ganha o Padrão. Como a
+chave do Padrão é o próprio `serverId`, memória, Java e mods opcionais já salvos continuam valendo sem cópia; a
+resolução global vira a resolução inicial de cada perfil.
 
 ### Ciclo de vida
 
