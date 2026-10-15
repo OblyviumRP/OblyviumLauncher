@@ -47,14 +47,21 @@ DOMPurify.addHook('afterSanitizeAttributes', node => {
 })
 
 /**
- * @param {string} markdown Project body from Modrinth.
+ * @param {string} html Untrusted HTML (e.g. an RSS article body).
  * @returns {string} Sanitised HTML, safe for innerHTML.
  */
-exports.render = function(markdown) {
-    const html = marked.parse(String(markdown ?? ''), { gfm: true, async: false })
-    return DOMPurify.sanitize(html, {
+exports.sanitizeHtml = function(html) {
+    return DOMPurify.sanitize(String(html ?? ''), {
         ALLOWED_TAGS,
         ALLOWED_ATTR,
         ALLOWED_URI_REGEXP: /^https:\/\//i
     })
+}
+
+/**
+ * @param {string} markdown Project body from Modrinth.
+ * @returns {string} Sanitised HTML, safe for innerHTML.
+ */
+exports.render = function(markdown) {
+    return exports.sanitizeHtml(marked.parse(String(markdown ?? ''), { gfm: true, async: false }))
 }

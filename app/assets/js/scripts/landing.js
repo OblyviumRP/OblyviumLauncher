@@ -932,10 +932,10 @@ function updateLandingNewsNotice(article){
         notice.hidden = true
         return
     }
-    const summary = document.createElement('template')
-    summary.innerHTML = article.content || ''
-    summary.content.querySelectorAll('script, style').forEach(element => element.remove())
-    const text = (summary.content.textContent || '').replace(/\s+/g, ' ').trim()
+    // DOMParser documents are inert: no scripts run and no handlers fire.
+    const summary = new DOMParser().parseFromString(String(article.content || ''), 'text/html')
+    summary.querySelectorAll('script, style').forEach(element => element.remove())
+    const text = (summary.body.textContent || '').replace(/\s+/g, ' ').trim()
     document.getElementById('landingNewsTitle').textContent = article.title
     document.getElementById('landingNewsTitle').title = article.title
     document.getElementById('landingNewsSummary').textContent = text.length > 180 ? text.slice(0, 177) + '…' : text
@@ -1064,13 +1064,16 @@ document.addEventListener('keydown', (e) => {
  * @param {number} index The article index.
  */
 function displayArticle(articleObject, index){
-    newsArticleTitle.innerHTML = articleObject.title
+    // Feed fields are untrusted and this renderer has Node access: plain
+    // fields go in as text, the body through RichText. RichText is the global
+    // declared by mods.js (shared script scope); redeclaring it would throw.
+    newsArticleTitle.textContent = articleObject.title
     newsArticleTitle.href = articleObject.link
-    newsArticleAuthor.innerHTML = 'by ' + articleObject.author
-    newsArticleDate.innerHTML = articleObject.date
-    newsArticleComments.innerHTML = articleObject.comments
+    newsArticleAuthor.textContent = 'by ' + articleObject.author
+    newsArticleDate.textContent = articleObject.date
+    newsArticleComments.textContent = articleObject.comments
     newsArticleComments.href = articleObject.commentsLink
-    newsArticleContentScrollable.innerHTML = '<div id="newsArticleContentWrapper"><div class="newsArticleSpacerTop"></div>' + articleObject.content + '<div class="newsArticleSpacerBot"></div></div>'
+    newsArticleContentScrollable.innerHTML = '<div id="newsArticleContentWrapper"><div class="newsArticleSpacerTop"></div>' + RichText.sanitizeHtml(articleObject.content) + '<div class="newsArticleSpacerBot"></div></div>'
     Array.from(newsArticleContentScrollable.getElementsByClassName('bbCodeSpoilerButton')).forEach(v => {
         v.onclick = () => {
             const text = v.parentElement.getElementsByClassName('bbCodeSpoilerText')[0]
