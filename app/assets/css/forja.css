@@ -503,6 +503,8 @@ button.mods-row-title:hover { color: var(--primary-light); text-decoration: unde
 #modsEditGame input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
 #modsEditGame input[error] { color: var(--danger-fg); border-color: var(--danger-fg); background: var(--danger-soft); }
 #modsEditGame a { color: var(--primary-light); }
+/* launcher.css sizes the resolution block (and its divider) to 75% of the settings tab; in the editor card it spans the card. */
+#modsEditGame #settingsGameResolutionContainer { width: 100%; border-color: var(--border); }
 
 /* Modrinth mod browser (settings > Mods). */
 #settingsModrinthContainer { width: 100%; padding-bottom: 25px; }

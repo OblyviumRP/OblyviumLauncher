@@ -40,8 +40,18 @@ const modsState = {
     serv: null,
     target: null,
     blocklist: new Set(),
+    // { serv, promise } and { gameDir, promise }: a lookup is only reused for
+    // the server / game folder it was started for.
     packProjects: null,
     installedProjects: null,
+    // Bumped whenever installed content changes, so a search that was in
+    // flight across the change doesn't mark its (stale) badges as current.
+    installedEpoch: 0,
+    // Type whose categories are currently rendered in the Explore sidebar.
+    categoriesFor: null,
+    // Set when something was installed from the project page, so leaving it
+    // re-badges the search results.
+    projectInstalled: false,
     tab: 'installed',
     type: 'mod',
     installed: [],
@@ -62,6 +72,13 @@ let modsOpening = false
 // The search result element that opened the current project page (Task 13),
 // so leaving it can restore focus there instead of always landing on the tab.
 let modsProjectOrigin = null
+
+// Installs run one at a time: two installs sharing a dependency would
+// otherwise download it to the same .part file at once.
+let modsInstallQueue = Promise.resolve()
+
+// Extra pages fetched automatically when a page has no visible results.
+const MODS_MAX_AUTO_PAGES = 3
 
 function modsEl(id){
     return document.getElementById(id)
@@ -221,6 +238,8 @@ function modsShowTab(tab, refresh = true){
 function modsSetType(type, refresh = true){
     modsState.type = type
     modsState.search.categories.clear()
+    modsState.search.request++
+    modsState.categoriesFor = null
     for(const btn of document.querySelectorAll('.mods-types [data-type]')){
         btn.setAttribute('aria-pressed', String(btn.dataset.type === type))
     }
@@ -232,10 +251,11 @@ function modsSetType(type, refresh = true){
 function modsSwitchProfile(profileId){
     ProfileManager.select(modsState.serverId, profileId)
     modsState.profileId = profileId
-    modsState.installedProjects = null
+    modsInvalidateInstalled()
     modsState.updates = new Map()
     modsState.installed = []
     modsState.installedRequest++
+    modsState.search.request++
     modsRenderHeader()
     modsShowTab(modsState.tab === 'project' ? 'explore' : modsState.tab)
 }
@@ -267,7 +287,7 @@ async function openModsView({ createProfile = false } = {}){
         modsState.target = Modrinth.getServerTarget(modsState.serv)
         modsState.blocklist = Modrinth.getBlocklist(modsState.serv)
         modsState.packProjects = null
-        modsState.installedProjects = null
+        modsInvalidateInstalled()
         modsState.search.query = ''
         modsState.search.offset = 0
         modsState.search.lastKey = null
@@ -482,7 +502,7 @@ function modsInstalledRow(file){
         setRowDisabled(true)
         try {
             await action()
-            modsState.installedProjects = null
+            modsInvalidateInstalled()
             await modsRefreshInstalled()
         } catch(err) {
             loggerMods.error('Content action failed.', err)
@@ -550,6 +570,7 @@ modsEl('modsUpdateAll').onclick = async () => {
             }
         }
     } finally {
+        modsInvalidateInstalled()
         modsState.updatingAll = false
         btn.disabled = false
         await modsRefreshInstalled()
@@ -696,28 +717,94 @@ function modsCategoryLabel(name){
     return MODS_CATEGORY_LABELS[name] ?? name.replace(/-/g, ' ').replace(/^./, c => c.toUpperCase())
 }
 
-async function modsGetPackProjects(){
-    if(modsState.packProjects == null){
-        try {
-            modsState.packProjects = await Modrinth.getModpackProjects(modsState.serv)
-        } catch(err) {
-            loggerMods.warn('Could not identify modpack mods.', err)
-            return new Set()
-        }
-    }
-    return modsState.packProjects
+/**
+ * Forget which projects are installed (after an install, remove, toggle or
+ * update) and mark the Explore results as needing a fresh search.
+ */
+function modsInvalidateInstalled(){
+    modsState.installedProjects = null
+    modsState.installedEpoch++
+    modsState.search.lastKey = null
 }
 
-async function modsGetInstalledProjects(){
-    if(modsState.installedProjects == null){
-        try {
-            modsState.installedProjects = await ContentManager.installedProjects(modsGameDir())
-        } catch(err) {
-            loggerMods.warn('Could not identify installed content.', err)
-            return new Set()
+/**
+ * Await a project-set lookup. Display callers get an empty set on failure;
+ * strict callers (installs) get the error, so they never act on an unknown set.
+ */
+async function modsSettleLookup(promise, strict, message){
+    try {
+        return await promise
+    } catch(err) {
+        if(strict){
+            throw err
+        }
+        loggerMods.warn(message, err)
+        return new Set()
+    }
+}
+
+function modsGetPackProjects(serv = modsState.serv, strict = false){
+    let cache = modsState.packProjects
+    if(cache == null || cache.serv !== serv){
+        const entry = { serv, promise: Modrinth.getModpackProjects(serv) }
+        entry.promise.catch(() => {
+            if(modsState.packProjects === entry){
+                modsState.packProjects = null
+            }
+        })
+        modsState.packProjects = cache = entry
+    }
+    return modsSettleLookup(cache.promise, strict, 'Could not identify modpack mods.')
+}
+
+function modsGetInstalledProjects(gameDir = modsGameDir(), strict = false){
+    let cache = modsState.installedProjects
+    if(cache == null || cache.gameDir !== gameDir){
+        const entry = { gameDir, promise: ContentManager.installedProjects(gameDir) }
+        entry.promise.catch(() => {
+            if(modsState.installedProjects === entry){
+                modsState.installedProjects = null
+            }
+        })
+        modsState.installedProjects = cache = entry
+    }
+    return modsSettleLookup(cache.promise, strict, 'Could not identify installed content.')
+}
+
+/**
+ * Run an install after every earlier one has finished.
+ */
+function modsEnqueueInstall(task){
+    const run = modsInstallQueue.then(task)
+    modsInstallQueue = run.catch(() => {})
+    return run
+}
+
+/**
+ * True if `el` had focus when an action started and focus hasn't moved
+ * elsewhere since (a disabled or removed element drops focus to the body).
+ */
+function modsStillFocused(el, hadFocus){
+    const active = document.activeElement
+    return hadFocus && (active === el || active == null || active === document.body)
+}
+
+/**
+ * Swap the Install button of visible result rows for the Installed badge,
+ * from a fresh installed set, without searching again.
+ */
+async function modsRebadgeResults(){
+    const request = modsState.search.request
+    const installed = await modsGetInstalledProjects()
+    if(request !== modsState.search.request){
+        return
+    }
+    for(const row of modsEl('modsSearchResults').querySelectorAll('.mods-row[data-project-id]')){
+        const btn = row.querySelector('button[data-install]')
+        if(btn != null && !btn.disabled && installed.has(row.dataset.projectId)){
+            btn.replaceWith(modsInstalledBadge())
         }
     }
-    return modsState.installedProjects
 }
 
 /**
@@ -733,10 +820,14 @@ function modsSearchKey(){
 
 function modsPrepareExplore(){
     modsEl('modsSearchQuery').placeholder = Lang.queryJS(`mods.explore.placeholder.${modsState.type}`)
+    // Categories are tracked apart from the search, so a failed load is
+    // retried on the next visit even when the search itself is still current.
+    if(modsState.categoriesFor !== modsState.type){
+        modsRenderCategories()
+    }
     if(modsSearchKey() === modsState.search.lastKey){
         return
     }
-    modsRenderCategories()
     modsRunSearch()
 }
 
@@ -757,6 +848,7 @@ async function modsRenderCategories(){
     if(type !== modsState.type){
         return
     }
+    modsState.categoriesFor = type
     box.replaceChildren(...names.map(name => {
         const label = document.createElement('label')
         label.className = 'mods-check'
@@ -777,79 +869,169 @@ async function modsRenderCategories(){
     }))
 }
 
+function modsSetMoreBusy(more, busy){
+    more.disabled = busy
+    if(busy){
+        more.setAttribute('aria-busy', 'true')
+    } else {
+        more.removeAttribute('aria-busy')
+    }
+}
+
 async function modsRunSearch(append = false){
     const s = modsState.search
     const request = ++s.request
+    const epoch = modsState.installedEpoch
     const results = modsEl('modsSearchResults')
     const more = modsEl('modsSearchMore')
-    if(!append){
+    // "Carregar mais" stays visible (busy) while it loads, so it keeps focus.
+    const moreHadFocus = append && document.activeElement === more
+    let key = null
+    if(append){
+        modsSetMoreBusy(more, true)
+    } else {
         s.query = modsEl('modsSearchQuery').value.trim()
         s.sort = modsEl('modsSearchSort').value
         s.offset = 0
         results.replaceChildren()
+        // Captured now: by the time this finishes, the context may have
+        // moved on to a search this one didn't fetch.
+        key = modsSearchKey()
+        s.lastKey = null
+        more.hidden = true
+        modsSetMoreBusy(more, false)
     }
-    more.hidden = true
     modsSetStatus('modsSearchStatus', Lang.queryJS('mods.explore.loading'))
     try {
         const [pack, installed] = await Promise.all([modsGetPackProjects(), modsGetInstalledProjects()])
-        const res = await Modrinth.search(
-            { query: s.query, type: modsState.type, categories: [...s.categories], sort: s.sort, offset: s.offset },
-            modsState.target, modsState.blocklist, pack
-        )
-        if(request !== s.request){
-            return
+        let firstNew = null
+        let autoPages = 0
+        let res
+        for(;;){
+            res = await Modrinth.search(
+                { query: s.query, type: modsState.type, categories: [...s.categories], sort: s.sort, offset: s.offset },
+                modsState.target, modsState.blocklist, pack
+            )
+            if(request !== s.request){
+                return
+            }
+            for(const hit of res.hits){
+                const row = modsSearchRow(hit, installed.has(hit.project_id))
+                results.appendChild(row)
+                firstNew ??= row
+            }
+            s.offset = res.offset + res.pageSize
+            // A page whose hits were all filtered out (blocked, in the pack)
+            // would leave an empty list with only "Carregar mais".
+            if(firstNew != null || s.offset >= res.total || autoPages >= MODS_MAX_AUTO_PAGES){
+                break
+            }
+            autoPages++
         }
-        for(const hit of res.hits){
-            results.appendChild(modsSearchRow(hit, installed.has(hit.project_id)))
-        }
-        s.offset = res.offset + res.pageSize
         more.hidden = s.offset >= res.total
+        modsSetMoreBusy(more, false)
         modsSetStatus('modsSearchStatus', results.childElementCount === 0 && more.hidden ? Lang.queryJS('mods.explore.empty') : '')
-        s.lastKey = modsSearchKey()
+        if(!append && epoch === modsState.installedEpoch){
+            s.lastKey = key
+        }
+        if(modsStillFocused(more, moreHadFocus)){
+            if(!more.hidden){
+                more.focus()
+            } else {
+                (firstNew?.querySelector('.mods-row-title') ?? modsEl('modsSearchQuery')).focus()
+            }
+        }
     } catch(err) {
         if(request !== s.request){
             return
         }
         loggerMods.error('Search failed.', err)
         s.lastKey = null
-        modsSetStatus('modsSearchStatus', modsErrorMessage(err), () => modsRunSearch(append))
+        if(append){
+            modsSetMoreBusy(more, false)
+            if(modsStillFocused(more, moreHadFocus)){
+                more.focus()
+            }
+        }
+        // The Retry button is destroyed by the next status update, so focus
+        // goes to a control that survives it.
+        modsSetStatus('modsSearchStatus', modsErrorMessage(err), () => {
+            (append ? more : modsEl('modsSearchQuery')).focus()
+            modsRunSearch(append)
+        })
     }
 }
 
-function modsInstalledBadge(){
-    return modsText('span', 'mods-badge mods-badge-success', Lang.queryJS('mods.explore.installed'))
+/**
+ * @param {boolean} focusable Allow script focus (tabindex -1), for when it
+ * replaces the button that had focus.
+ */
+function modsInstalledBadge(focusable = false){
+    const badge = modsText('span', 'mods-badge mods-badge-success', Lang.queryJS('mods.explore.installed'))
+    if(focusable){
+        badge.tabIndex = -1
+    }
+    return badge
 }
 
 /**
  * Install button for a project; shows the outcome in rowStatus.
+ *
+ * @param {Function} onInstalled Called once the project is installed (or found
+ * to be already installed).
  */
-function modsInstallButton(projectId, title, installed, rowStatus){
+function modsInstallButton(projectId, title, installed, rowStatus, onInstalled = null){
     if(installed){
         return modsInstalledBadge()
     }
     const btn = modsText('button', 'mods-btn mods-btn-primary', Lang.queryJS('mods.explore.install'))
     btn.type = 'button'
+    btn.dataset.install = ''
     btn.setAttribute('aria-label', Lang.queryJS('mods.explore.installLabel', { title }))
     btn.onclick = async () => {
+        // Everything the install depends on is captured now: the profile or
+        // server may change while it waits in the queue.
+        const gameDir = modsGameDir()
+        const { serv, target, blocklist } = modsState
+        const hadFocus = document.activeElement === btn
         btn.disabled = true
         btn.textContent = Lang.queryJS('mods.explore.installing')
         rowStatus.textContent = ''
         rowStatus.removeAttribute('error')
+        const toBadge = () => {
+            const refocus = modsStillFocused(btn, hadFocus)
+            const badge = modsInstalledBadge(true)
+            btn.replaceWith(badge)
+            if(refocus){
+                badge.focus()
+            }
+            onInstalled?.()
+        }
         try {
-            const [pack, installedSet] = await Promise.all([modsGetPackProjects(), modsGetInstalledProjects()])
-            await Modrinth.install(projectId, modsState.target, modsGameDir(), installedSet, modsState.blocklist, pack)
-            modsState.installedProjects = null
-            btn.replaceWith(modsInstalledBadge())
+            await modsEnqueueInstall(async () => {
+                try {
+                    // Strict: never install against an unknown pack or installed set.
+                    const [pack, installedSet] = await Promise.all([modsGetPackProjects(serv, true), modsGetInstalledProjects(gameDir, true)])
+                    await Modrinth.install(projectId, target, gameDir, installedSet, blocklist, pack)
+                } finally {
+                    modsInvalidateInstalled()
+                }
+            })
+            toBadge()
             rowStatus.textContent = Lang.queryJS('mods.explore.installedStatus', { title })
         } catch(err) {
             if(!(err instanceof Modrinth.ModrinthError)){
                 loggerMods.error('Install failed.', err)
             }
             if(err.code === 'ALREADY_INSTALLED'){
-                btn.replaceWith(modsInstalledBadge())
+                toBadge()
             } else {
+                const refocus = modsStillFocused(btn, hadFocus)
                 btn.disabled = false
                 btn.textContent = Lang.queryJS('mods.explore.install')
+                if(refocus){
+                    btn.focus()
+                }
             }
             rowStatus.textContent = modsErrorMessage(err)
             rowStatus.toggleAttribute('error', err.code !== 'ALREADY_INSTALLED')
@@ -861,6 +1043,7 @@ function modsInstallButton(projectId, title, installed, rowStatus){
 function modsSearchRow(hit, installed){
     const row = document.createElement('div')
     row.className = 'mods-row'
+    row.dataset.projectId = hit.project_id
     const info = document.createElement('div')
     info.className = 'mods-row-info'
     const titleBtn = modsText('button', 'mods-row-title', hit.title)
@@ -894,6 +1077,8 @@ modsEl('modsSearchMore').onclick = () => modsRunSearch(true)
 // Project page
 
 function modsLeaveProject(){
+    // A load still in flight must not render into the hidden page.
+    modsState.projectRequest++
     modsShowTab('explore', false)
     const origin = modsProjectOrigin
     modsProjectOrigin = null
@@ -902,35 +1087,64 @@ function modsLeaveProject(){
     } else {
         modsEl('modsTabExplore').focus()
     }
+    if(modsState.projectInstalled){
+        modsState.projectInstalled = false
+        modsRebadgeResults()
+    }
+}
+
+function modsProjectInstalled(){
+    if(modsState.tab === 'project'){
+        modsState.projectInstalled = true
+    } else {
+        // Finished after the page was left.
+        modsRebadgeResults()
+    }
 }
 
 async function modsOpenProject(projectId, originEl = null){
     modsProjectOrigin = originEl
     modsShowTab('project')
+    modsEl('modsProjectBack').focus()
     const request = ++modsState.projectRequest
     const article = modsEl('modsProject')
     article.replaceChildren()
     modsSetStatus('modsProjectStatus', Lang.queryJS('mods.project.loading'))
     try {
-        const [project, pack, installed] = await Promise.all([Modrinth.getProject(projectId), modsGetPackProjects(), modsGetInstalledProjects()])
+        const gameDir = modsGameDir()
+        // Strict lookups: the plan (and its Install button) is only offered
+        // against a known pack and installed set.
+        const [project, lookups] = await Promise.all([
+            Modrinth.getProject(projectId),
+            Promise.all([modsGetPackProjects(modsState.serv, true), modsGetInstalledProjects(gameDir, true)])
+                .then(sets => ({ sets }), err => ({ err }))
+        ])
         let plan = null
-        let planError = null
-        try {
-            plan = await Modrinth.resolveInstall(project.id, modsState.target, installed, modsState.blocklist, pack)
-        } catch(err) {
-            planError = err
+        let planError = lookups.err ?? null
+        let installed = false
+        if(lookups.sets != null){
+            const [pack, installedSet] = lookups.sets
+            installed = installedSet.has(project.id)
+            try {
+                plan = await Modrinth.resolveInstall(project.id, modsState.target, installedSet, modsState.blocklist, pack)
+            } catch(err) {
+                planError = err
+            }
+        } else {
+            loggerMods.warn('Could not identify installed content for the project page.', lookups.err)
         }
         if(request !== modsState.projectRequest){
             return
         }
         modsSetStatus('modsProjectStatus', '')
-        article.replaceChildren(...modsProjectContent(project, plan, planError, installed.has(project.id)))
-        modsEl('modsProjectBack').focus()
+        article.replaceChildren(...modsProjectContent(project, plan, planError, installed))
     } catch(err) {
         if(request !== modsState.projectRequest){
             return
         }
         loggerMods.error('Could not load project.', err)
+        // modsOpenProject moves focus to the Back button before the Retry
+        // button is destroyed by the status update.
         modsSetStatus('modsProjectStatus', modsErrorMessage(err), () => modsOpenProject(projectId, originEl))
     }
 }
@@ -950,7 +1164,7 @@ function modsProjectContent(project, plan, planError, installed){
         rowStatus.textContent = modsErrorMessage(planError)
         rowStatus.setAttribute('error', '')
     } else {
-        actions.appendChild(modsInstallButton(project.id, project.title, alreadyInstalled, rowStatus))
+        actions.appendChild(modsInstallButton(project.id, project.title, alreadyInstalled, rowStatus, modsProjectInstalled))
     }
     const site = modsText('a', 'mods-btn', Lang.queryJS('mods.project.openSite'))
     site.href = `https://modrinth.com/${project.project_type}/${encodeURIComponent(project.slug)}`
