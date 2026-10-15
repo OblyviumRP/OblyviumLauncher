@@ -504,24 +504,23 @@ function escapeHtml(text) {
 }
 
 /**
- * Disable enabled drop-in mods that the staff has blocked, then tell the
- * player. If Modrinth cannot be reached the launch carries on.
+ * Disable enabled content that the staff has blocked, then tell the player.
+ * If Modrinth cannot be reached the launch carries on.
  */
-async function disableBlockedDropins(serv, gameDir, logger) {
-    const modsDir = path.join(gameDir, 'mods')
+async function disableBlockedContent(serv, gameDir, logger) {
     let blocked
     try {
-        blocked = await Modrinth.findBlockedDropins(modsDir, Modrinth.getBlocklist(serv))
+        blocked = await ContentManager.findBlocked(gameDir, Modrinth.getBlocklist(serv))
     } catch (err) {
-        logger.warn('Could not check drop-in mods against the blocklist.', err)
+        logger.warn('Could not check content against the blocklist.', err)
         return
     }
     if (blocked.length === 0) {
         return
     }
-    for (const mod of blocked) {
-        await DropinModUtil.toggleDropinMod(modsDir, mod.fileName, false)
-        logger.warn(`Disabled blocked drop-in mod ${mod.fileName} (${mod.title}).`)
+    for (const item of blocked) {
+        await ContentManager.setEnabled(gameDir, item.type, item.fileName, false)
+        logger.warn(`Disabled blocked ${item.type} ${item.fileName} (${item.title}).`)
     }
     setOverlayContent(
         Lang.queryJS('landing.dlAsync.blockedModsTitle'),
@@ -628,7 +627,7 @@ async function dlAsync(login = true) {
 
     fullRepairModule.destroyReceiver()
 
-    await disableBlockedDropins(serv, gameDir, loggerLaunchSuite)
+    await disableBlockedContent(serv, gameDir, loggerLaunchSuite)
 
     setLaunchDetails(Lang.queryJS('landing.dlAsync.preparingToLaunch'))
 
