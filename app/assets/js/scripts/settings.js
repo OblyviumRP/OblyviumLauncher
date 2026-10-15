@@ -91,8 +91,8 @@ bindFileSelectors()
  * will be disabled until the value is corrected. This is an automated
  * process. More complex UI may need to be bound separately.
  */
-function initSettingsValidators() {
-    const sEls = document.getElementById('settingsContainer').querySelectorAll('[cValue]')
+function initSettingsValidators(root = document.getElementById('settingsContainer'), state = settingsState, setDisabled = settingsSaveDisabled) {
+    const sEls = root.querySelectorAll('[cValue]')
     Array.from(sEls).map((v, index, arr) => {
         const vFn = ConfigManager['validate' + v.getAttribute('cValue')]
         if (typeof vFn === 'function') {
@@ -101,17 +101,17 @@ function initSettingsValidators() {
                     v.addEventListener('keyup', (e) => {
                         const v = e.target
                         if (!vFn(v.value)) {
-                            settingsState.invalid.add(v.id)
+                            state.invalid.add(v.id)
                             v.setAttribute('error', '')
                             v.setAttribute('aria-invalid', 'true')
-                            settingsSaveDisabled(true)
+                            setDisabled(true)
                         } else {
                             if (v.hasAttribute('error')) {
                                 v.removeAttribute('error')
                                 v.removeAttribute('aria-invalid')
-                                settingsState.invalid.delete(v.id)
-                                if (settingsState.invalid.size === 0) {
-                                    settingsSaveDisabled(false)
+                                state.invalid.delete(v.id)
+                                if (state.invalid.size === 0) {
+                                    setDisabled(false)
                                 }
                             }
                         }
@@ -126,8 +126,8 @@ function initSettingsValidators() {
 /**
  * Load configuration values onto the UI. This is an automated process.
  */
-async function initSettingsValues() {
-    const sEls = document.getElementById('settingsContainer').querySelectorAll('[cValue]')
+async function initSettingsValues(root = document.getElementById('settingsContainer'), key = ProfileManager.getSelectedConfigKey()) {
+    const sEls = root.querySelectorAll('[cValue]')
 
     for (const v of sEls) {
         const cVal = v.getAttribute('cValue')
@@ -135,7 +135,7 @@ async function initSettingsValues() {
         const gFn = ConfigManager['get' + cVal]
         const gFnOpts = []
         if (serverDependent) {
-            gFnOpts.push(ProfileManager.getSelectedConfigKey())
+            gFnOpts.push(key)
         }
         if (typeof gFn === 'function') {
             if (v.tagName === 'INPUT') {
@@ -179,15 +179,15 @@ async function initSettingsValues() {
 /**
  * Save the settings values.
  */
-function saveSettingsValues() {
-    const sEls = document.getElementById('settingsContainer').querySelectorAll('[cValue]')
+function saveSettingsValues(root = document.getElementById('settingsContainer'), key = ProfileManager.getSelectedConfigKey()) {
+    const sEls = root.querySelectorAll('[cValue]')
     Array.from(sEls).map((v, index, arr) => {
         const cVal = v.getAttribute('cValue')
         const serverDependent = v.hasAttribute('serverDependent') // Means the first argument is the server id.
         const sFn = ConfigManager['set' + cVal]
         const sFnOpts = []
         if (serverDependent) {
-            sFnOpts.push(ProfileManager.getSelectedConfigKey())
+            sFnOpts.push(key)
         }
         if (typeof sFn === 'function') {
             if (v.tagName === 'INPUT') {
@@ -1754,7 +1754,6 @@ async function prepareSettings(first = false) {
     }
     await initSettingsValues()
     prepareAccountsTab()
-    await prepareJavaTab()
     prepareAboutTab()
 }
 

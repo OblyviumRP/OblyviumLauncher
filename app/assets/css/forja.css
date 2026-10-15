@@ -478,6 +478,31 @@ button.mods-row-title:hover { color: var(--primary-light); text-decoration: unde
 #modsMediaButton { width: auto; height: 44px; gap: 6px; padding: 8px 10px; color: var(--foreground); font: 500 12px var(--font-sans); cursor: pointer; }
 #modsMediaButton .mediaSVG { width: 18px; height: 18px; fill: none; }
 #modsMediaButton:hover .mediaSVG { fill: none; color: var(--primary-light); }
+#modsPanelEdit { display: flex; flex-direction: column; gap: 16px; }
+#modsPanelEdit[hidden] { display: none; }
+#modsEditTitle { margin: 0; font-size: 18px; font-weight: 600; }
+.mods-edit-section { display: flex; flex-direction: column; gap: 12px; padding: 16px; background: var(--card); border: 1px solid var(--border-2); border-radius: 6px; }
+.mods-edit-section[hidden] { display: none; }
+.mods-edit-section h3 { margin: 0; font-size: 13px; font-weight: 600; }
+.mods-field { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: var(--muted-foreground); border: 0; margin: 0; padding: 0; }
+.mods-field[hidden] { display: none; }
+.mods-field legend { padding: 0; margin-bottom: 6px; }
+#modsEditName, #modsEditCopyFrom { max-width: 340px; min-height: 32px; padding: 0 10px; color: var(--foreground); background: var(--sidebar); border: 1px solid var(--input-border); border-radius: 4px; font: 13px var(--font-sans); }
+#modsEditName[aria-invalid=true] { border-color: var(--danger-fg); }
+.mods-field-error { color: var(--danger-fg); font-size: 12px; min-height: 0; }
+.mods-field-error:empty { display: none; }
+.mods-icon-picker { display: flex; gap: 8px; flex-wrap: wrap; }
+.mods-icon-option { position: relative; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 6px; border: 1px solid var(--border-2); background: var(--surface-2); color: var(--muted-foreground); cursor: pointer; }
+.mods-icon-option input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
+.mods-icon-option svg { width: 22px; height: 22px; }
+.mods-icon-option:has(input:checked) { background: var(--primary-soft); border-color: var(--primary-line); color: var(--primary-fg); }
+.mods-icon-option:focus-within { outline: 2px solid var(--ring); outline-offset: 2px; }
+.mods-edit-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.mods-spacer { flex: 1; }
+#modsEditGame input[type=number], #modsEditGame input[type=text] { color: var(--foreground); background: var(--sidebar); border: 1px solid var(--input-border); border-radius: 4px; font-family: var(--font-sans); }
+#modsEditGame input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
+#modsEditGame input[error] { color: var(--danger-fg); border-color: var(--danger-fg); background: var(--danger-soft); }
+#modsEditGame a { color: var(--primary-light); }
 
 /* Modrinth mod browser (settings > Mods). */
 #settingsModrinthContainer { width: 100%; padding-bottom: 25px; }
