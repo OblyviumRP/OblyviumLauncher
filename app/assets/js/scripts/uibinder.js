@@ -24,6 +24,7 @@ const VIEWS = {
     loginOffline: '#loginOfflineContainer',
     login: '#loginContainer',
     settings: '#settingsContainer',
+    mods: '#modsContainer',
     welcome: '#welcomeContainer',
     waiting: '#waitingContainer'
 }

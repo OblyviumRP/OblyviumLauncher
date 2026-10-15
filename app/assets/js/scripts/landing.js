@@ -133,6 +133,9 @@ document.getElementById('settingsMediaButton').onclick = async e => {
     switchView(getCurrentView(), VIEWS.settings)
 }
 
+// Bind mods button
+document.getElementById('modsMediaButton').onclick = () => openModsView()
+
 // Bind avatar overlay button.
 document.getElementById('avatarOverlay').onclick = async e => {
     await prepareSettings()
