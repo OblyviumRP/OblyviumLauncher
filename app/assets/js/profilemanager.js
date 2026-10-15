@@ -71,21 +71,24 @@ exports.getSelectedGameDir = function(serverId = ConfigManager.getSelectedServer
  * Java and game settings always come from copyFrom, or from the default profile.
  */
 exports.create = async function(serverId, { name, icon, copyFrom = null }){
+    if(copyFrom != null && exports.get(serverId, copyFrom) == null){
+        throw new Error(`Unknown profile ${copyFrom} for ${serverId}`)
+    }
     const profile = Profiles.createProfile(store(), serverId, { name, icon })
     const dstKey = Profiles.configKey(serverId, profile.id)
-    ConfigManager.copyProfileConfig(
-        Profiles.configKey(serverId, copyFrom ?? Profiles.DEFAULT_ID),
-        dstKey
-    )
-    if(copyFrom != null){
-        try {
+    try {
+        ConfigManager.copyProfileConfig(
+            Profiles.configKey(serverId, copyFrom ?? Profiles.DEFAULT_ID),
+            dstKey
+        )
+        if(copyFrom != null){
             await Profiles.copySettingsFiles(exports.getGameDir(serverId, copyFrom), exports.getGameDir(serverId, profile.id))
-        } catch(err){
-            Profiles.removeProfile(store(), serverId, profile.id)
-            ConfigManager.removeProfileConfig(dstKey)
-            await fs.remove(exports.getInstanceRoot(profile.id))
-            throw err
         }
+    } catch(err){
+        Profiles.removeProfile(store(), serverId, profile.id)
+        ConfigManager.removeProfileConfig(dstKey)
+        await fs.remove(exports.getInstanceRoot(profile.id)).catch(() => {})
+        throw err
     }
     ConfigManager.save()
     return profile
@@ -99,13 +102,13 @@ exports.duplicate = async function(serverId, profileId){
     const name = `${source.name} (cópia)`.slice(0, 32)
     const profile = Profiles.createProfile(store(), serverId, { name, icon: source.icon })
     const dstKey = Profiles.configKey(serverId, profile.id)
-    ConfigManager.copyProfileConfig(Profiles.configKey(serverId, profileId), dstKey)
     try {
+        ConfigManager.copyProfileConfig(Profiles.configKey(serverId, profileId), dstKey)
         await Profiles.copyGameDir(exports.getGameDir(serverId, profileId), exports.getGameDir(serverId, profile.id))
     } catch(err){
         Profiles.removeProfile(store(), serverId, profile.id)
         ConfigManager.removeProfileConfig(dstKey)
-        await fs.remove(exports.getInstanceRoot(profile.id))
+        await fs.remove(exports.getInstanceRoot(profile.id)).catch(() => {})
         throw err
     }
     ConfigManager.save()
