@@ -1,9 +1,9 @@
 <div id="modsContainer" style="display: none;">
     <header class="mods-topbar">
-        <button id="modsBackButton" type="button" data-view-focus>
+        <button id="modsBackButton" type="button" data-view-focus aria-keyshortcuts="Escape">
             <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m11 5-5 5 5 5M6 10h10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
             <span><%- lang('mods.back') %></span>
-            <kbd>Esc</kbd>
+            <kbd aria-hidden="true">Esc</kbd>
         </button>
     </header>
     <main id="modsMain">
@@ -25,7 +25,7 @@
         </section>
 
         <div id="modsBrowse">
-            <div class="mods-tabs" role="tablist">
+            <div class="mods-tabs" role="tablist" aria-label="Conteúdo do perfil">
                 <button id="modsTabInstalled" role="tab" type="button" aria-controls="modsPanelInstalled" aria-selected="true"><%- lang('mods.tabInstalled') %></button>
                 <button id="modsTabExplore" role="tab" type="button" aria-controls="modsPanelExplore" aria-selected="false" tabindex="-1"><%- lang('mods.tabExplore') %></button>
             </div>
@@ -77,7 +77,7 @@
                 </div>
             </section>
 
-            <section id="modsPanelProject" hidden>
+            <section id="modsPanelProject" role="tabpanel" aria-labelledby="modsTabExplore" hidden>
                 <button id="modsProjectBack" type="button" class="mods-link-btn"><%- lang('mods.backToSearch') %></button>
                 <div id="modsProjectStatus" class="mods-status" role="status" aria-live="polite"></div>
                 <article id="modsProject"></article>

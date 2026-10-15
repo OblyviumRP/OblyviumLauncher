@@ -5,7 +5,7 @@
  * Globals from other scripts: ConfigManager, DistroAPI, ProfileManager,
  * Modrinth, ContentManager, Type (uibinder.js); Lang, LoggerUtil, shell
  * (uicore.js); switchView, getCurrentView, VIEWS (uibinder.js);
- * renderProfileSelection (landing.js).
+ * renderProfileSelection (landing.js); toggleServerSelection (overlay.js).
  */
 const modsFs        = require('fs-extra')
 const RichText      = require('./assets/js/richtext')
@@ -49,6 +49,9 @@ const modsState = {
 
 // Each tab registers { show() } here (Tasks 12 and 13).
 const modsPanels = {}
+
+// True while openModsView is doing its async setup, to ignore re-entrant calls.
+let modsOpening = false
 
 function modsEl(id){
     return document.getElementById(id)
@@ -160,7 +163,9 @@ function modsRenderHeader(){
     if(typeof modsOpenEditor === 'function'){
         select.add(new Option(Lang.queryJS('landing.profile.new'), MODS_NEW_PROFILE))
     }
-    document.querySelector('.mods-types [data-type="mod"]').disabled = modsState.target.loader == null
+    const modTypeBtn = document.querySelector('.mods-types [data-type="mod"]')
+    modTypeBtn.disabled = modsState.target.loader == null
+    modTypeBtn.title = modTypeBtn.disabled ? 'Este servidor não usa Forge nem Fabric.' : ''
 }
 
 /**
@@ -197,6 +202,9 @@ function modsSwitchProfile(profileId){
     ProfileManager.select(modsState.serverId, profileId)
     modsState.profileId = profileId
     modsState.installedProjects = null
+    modsState.updates = new Map()
+    modsState.installed = []
+    modsState.installedRequest++
     modsRenderHeader()
     modsShowTab(modsState.tab === 'project' ? 'explore' : modsState.tab)
 }
@@ -207,21 +215,47 @@ function modsSwitchProfile(profileId){
  * @param {{createProfile?: boolean}} options createProfile opens the profile editor in create mode.
  */
 async function openModsView({ createProfile = false } = {}){
-    const distro = await DistroAPI.getDistribution()
-    const serverId = ConfigManager.getSelectedServer()
-    modsState.serverId = serverId
-    modsState.serv = distro.getServerById(serverId)
-    modsState.profileId = ProfileManager.getSelected(serverId).id
-    modsState.target = Modrinth.getServerTarget(modsState.serv)
-    modsState.blocklist = Modrinth.getBlocklist(modsState.serv)
-    modsState.packProjects = null
-    modsState.installedProjects = null
-    modsSetType(modsState.target.loader == null ? 'resourcepack' : 'mod', false)
-    modsRenderHeader()
-    modsShowTab('installed')
-    switchView(getCurrentView(), VIEWS.mods)
-    if(createProfile && typeof modsOpenEditor === 'function'){
-        modsOpenEditor('create')
+    if(getCurrentView() === VIEWS.mods && !createProfile){
+        return
+    }
+    if(modsOpening){
+        return
+    }
+    modsOpening = true
+    try {
+        const distro = await DistroAPI.getDistribution()
+        const serverId = ConfigManager.getSelectedServer()
+        const serv = serverId != null && serverId !== 'SELECT' ? distro.getServerById(serverId) : null
+        if(serv == null){
+            await toggleServerSelection(true)
+            return
+        }
+        modsState.serverId = serverId
+        modsState.serv = serv
+        modsState.profileId = ProfileManager.getSelected(serverId).id
+        modsState.target = Modrinth.getServerTarget(modsState.serv)
+        modsState.blocklist = Modrinth.getBlocklist(modsState.serv)
+        modsState.packProjects = null
+        modsState.installedProjects = null
+        modsState.search.query = ''
+        modsState.search.offset = 0
+        modsState.updates = new Map()
+        modsState.installed = []
+        modsEl('modsSearchQuery').value = ''
+        modsState.installedRequest++
+        modsState.search.request++
+        modsState.projectRequest++
+        modsSetType(modsState.target.loader == null ? 'resourcepack' : 'mod', false)
+        modsRenderHeader()
+        modsShowTab('installed')
+        switchView(getCurrentView(), VIEWS.mods)
+        if(createProfile && typeof modsOpenEditor === 'function'){
+            modsOpenEditor('create')
+        }
+    } catch(err) {
+        loggerMods.error('Could not open the mods screen.', err)
+    } finally {
+        modsOpening = false
     }
 }
 
@@ -267,11 +301,15 @@ document.addEventListener('keydown', e => {
     if(e.defaultPrevented || e.key !== 'Escape' || isOverlayVisible() || getCurrentView() !== VIEWS.mods){
         return
     }
+    if(e.target.matches('input[type=search]') && e.target.value !== ''){
+        return
+    }
     e.preventDefault()
     if(modsState.editing != null && typeof modsCloseEditor === 'function'){
         modsCloseEditor()
     } else if(modsState.tab === 'project'){
         modsShowTab('explore', false)
+        modsEl('modsTabExplore').focus()
     } else {
         closeModsView()
     }
