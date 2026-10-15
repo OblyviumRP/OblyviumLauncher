@@ -104,9 +104,9 @@
             <div id="settingsGameResolutionContainer">
                 <span class="settingsFieldTitle"><%- lang('settings.gameResolutionTitle') %></span>
                 <div id="settingsGameResolutionContent">
-                    <input type="number" id="settingsGameWidth" min="0" cValue="GameWidth">
+                    <input type="number" id="settingsGameWidth" min="0" cValue="ProfileGameWidth" serverDependent>
                     <div id="settingsGameResolutionCross">&#10006;</div>
-                    <input type="number" id="settingsGameHeight" min="0" cValue="GameHeight">
+                    <input type="number" id="settingsGameHeight" min="0" cValue="ProfileGameHeight" serverDependent>
                 </div>
             </div>
             <div class="settingsFieldContainer">
@@ -115,7 +115,7 @@
                 </div>
                 <div class="settingsFieldRight">
                     <label class="toggleSwitch">
-                        <input type="checkbox" cValue="Fullscreen">
+                        <input type="checkbox" cValue="ProfileFullscreen" serverDependent>
                         <span class="toggleSwitchSlider"></span>
                     </label>
                 </div>
