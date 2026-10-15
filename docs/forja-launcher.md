@@ -92,3 +92,13 @@ Testes: `npm test` (módulos de perfis, conteúdo e Modrinth, contra uma Modrint
 - O botão **Mods** e o seletor de perfil ficam bloqueados enquanto o jogo está abrindo ou rodando, para o perfil não mudar por baixo do jogo.
 - Memória, executável do Java, argumentos da JVM e resolução saíram de Configurações e agora ficam em **Editar perfil**, por perfil.
 
+## Versão do Java
+
+O launcher usa a versão do Java que cada servidor precisa e baixa a certa (Temurin) se ela não estiver instalada. A helios-core só conhece até o Java 21 (Minecraft 1.20.5+); o launcher completa a regra em `app/assets/js/javadefaults.js`: **Minecraft 26 em diante usa Java 25**.
+
+Se um servidor precisar de outra versão, a staff define na entrada dele no `distribution.json`, e isso tem prioridade sobre a regra:
+
+```json
+"javaOptions": { "supported": ">=25.x", "suggestedMajor": 25 }
+```
+
