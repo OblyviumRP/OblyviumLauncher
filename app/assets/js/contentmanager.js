@@ -175,7 +175,9 @@ exports.setEnabled = async function(gameDir, type, fileName, enabled) {
         const destPath = path.join(dir, next)
         // fs.rename overwrites silently on Windows; refuse instead of losing a file.
         if(await fs.pathExists(destPath)) {
-            throw new Error(`Destination exists: ${next}`)
+            const err = new Error(`Destination exists: ${next}`)
+            err.code = 'DESTINATION_EXISTS'
+            throw err
         }
         await fs.rename(path.join(dir, fileName), destPath)
         return next

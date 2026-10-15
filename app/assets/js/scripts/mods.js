@@ -3,13 +3,14 @@
  * search, project pages and the profile editor.
  *
  * Globals from other scripts: ConfigManager, DistroAPI, ProfileManager,
- * Modrinth, ContentManager, Type (uibinder.js); Lang, LoggerUtil, shell
- * (uicore.js); switchView, getCurrentView, VIEWS (uibinder.js);
+ * Modrinth, ContentManager, Type, path (uibinder.js); Lang, LoggerUtil, shell,
+ * ipcRenderer (uicore.js); switchView, getCurrentView, VIEWS (uibinder.js);
  * renderProfileSelection (landing.js); toggleServerSelection (overlay.js).
  */
-const modsFs        = require('fs-extra')
-const RichText      = require('./assets/js/richtext')
-const ProfileIcons  = require('./assets/js/profileicons')
+const modsFs         = require('fs-extra')
+const RichText       = require('./assets/js/richtext')
+const ProfileIcons   = require('./assets/js/profileicons')
+const { SHELL_OPCODE } = require('./assets/js/ipcconstants')
 
 const loggerMods = LoggerUtil.getLogger('Mods')
 
@@ -41,6 +42,7 @@ const modsState = {
     type: 'mod',
     installed: [],
     updates: new Map(),
+    updatingAll: false,
     installedRequest: 0,
     search: { query: '', sort: 'relevance', categories: new Set(), offset: 0, request: 0 },
     projectRequest: 0,
@@ -98,9 +100,30 @@ function modsErrorMessage(err){
             return Lang.queryJS('mods.error.hashMismatch')
         case 'RATE_LIMITED':
             return Lang.queryJS('mods.error.rateLimited')
-        default:
-            return Lang.queryJS('mods.error.generic')
+        case 'DESTINATION_EXISTS':
+            return Lang.queryJS('mods.error.destinationExists')
+        case 'BAD_FILENAME':
+            return Lang.queryJS('mods.error.badFile')
+        case 'UNSUPPORTED_TYPE':
+            return Lang.queryJS('mods.error.unsupported')
+        case 'ENOENT':
+        case 'ENOSPC':
+            return Lang.queryJS('mods.error.disk')
+        case 'EBUSY':
+        case 'EPERM':
+        case 'EACCES':
+            return Lang.queryJS('mods.error.fileInUse')
+        case 'ENOTFOUND':
+        case 'ETIMEDOUT':
+        case 'ECONNREFUSED':
+        case 'ECONNRESET':
+        case 'EAI_AGAIN':
+            return Lang.queryJS('mods.error.offline')
     }
+    if(err?.name === 'RequestError' || err?.name === 'TimeoutError' || err?.name === 'HTTPError'){
+        return Lang.queryJS('mods.error.offline')
+    }
+    return Lang.queryJS('mods.error.generic')
 }
 
 function modsIcon(url){
@@ -347,7 +370,18 @@ async function modsRefreshInstalled(){
     modsState.installed = files
     modsRenderInstalled()
 
-    const described = await ContentManager.describe(gameDir, type)
+    let described
+    try {
+        described = await ContentManager.describe(gameDir, type)
+    } catch(err) {
+        loggerMods.error('Could not describe content.', err)
+        if(request === modsState.installedRequest){
+            modsState.installed = []
+            modsRenderInstalled()
+            modsSetStatus('modsInstalledStatus', Lang.queryJS('mods.error.disk'))
+        }
+        return
+    }
     if(request !== modsState.installedRequest){
         return
     }
@@ -384,8 +418,26 @@ function modsRenderInstalled(){
     modsSetStatus('modsInstalledStatus', status)
 }
 
+/**
+ * Send a profile content file to the trash, disabling it first for types
+ * whose state lives outside the file itself (resource packs, shaders) so
+ * options.txt/shader configs never keep pointing at a missing file. Falls
+ * back to a permanent delete if the trash operation fails.
+ */
+async function modsRemoveFile(gameDir, type, fileName){
+    if(type !== 'mod'){
+        await ContentManager.setEnabled(gameDir, type, fileName, false)
+    }
+    const dest = path.join(ContentManager.folder(gameDir, type), fileName)
+    const res = await ipcRenderer.invoke(SHELL_OPCODE.TRASH_ITEM, dest)
+    if(!res.result){
+        loggerMods.warn('Could not send content to the trash, deleting instead.', res.error)
+        await ContentManager.remove(gameDir, type, fileName)
+    }
+}
+
 function modsInstalledRow(file){
-    const { type } = modsState
+    const { type } = file
     const title = modsDisplayName(file)
     const row = document.createElement('div')
     row.className = 'mods-row'
@@ -400,8 +452,15 @@ function modsInstalledRow(file){
         rowStatus
     )
 
+    const setRowDisabled = disabled => {
+        for(const control of row.querySelectorAll('input, button')){
+            control.disabled = disabled
+        }
+    }
+
     const run = async action => {
         row.setAttribute('busy', '')
+        setRowDisabled(true)
         try {
             await action()
             modsState.installedProjects = null
@@ -409,6 +468,8 @@ function modsInstalledRow(file){
         } catch(err) {
             loggerMods.error('Content action failed.', err)
             row.removeAttribute('busy')
+            setRowDisabled(false)
+            toggleInput.checked = file.enabled
             rowStatus.textContent = modsErrorMessage(err)
             rowStatus.setAttribute('error', '')
         }
@@ -421,24 +482,28 @@ function modsInstalledRow(file){
         const btn = modsText('button', 'mods-btn mods-btn-primary', Lang.queryJS('mods.installed.update', { version: update.version_number }))
         btn.type = 'button'
         btn.onclick = () => {
-            btn.disabled = true
             btn.textContent = Lang.queryJS('mods.installed.updating')
             run(() => ContentManager.updateFile(modsGameDir(), type, file.fileName, update))
         }
         actions.appendChild(btn)
     }
-    actions.appendChild(modsToggle(
+    const toggleWrap = modsToggle(
         file.enabled,
         Lang.queryJS(type === 'shader' ? 'mods.installed.useShader' : 'mods.installed.enable', { title }),
         checked => run(() => ContentManager.setEnabled(modsGameDir(), type, file.fileName, checked))
-    ))
+    )
+    const toggleInput = toggleWrap.querySelector('input')
+    actions.appendChild(toggleWrap)
     const remove = modsText('button', 'mods-btn mods-btn-danger', Lang.queryJS('mods.installed.remove'))
     remove.type = 'button'
     remove.setAttribute('aria-label', Lang.queryJS('mods.installed.removeLabel', { title }))
-    remove.onclick = () => run(() => ContentManager.remove(modsGameDir(), type, file.fileName))
+    remove.onclick = () => run(() => modsRemoveFile(modsGameDir(), type, file.fileName))
     actions.appendChild(remove)
 
     row.append(modsIcon(file.project?.iconUrl), info, actions)
+    if(modsState.updatingAll){
+        setRowDisabled(true)
+    }
     return row
 }
 
@@ -446,24 +511,30 @@ modsEl('modsInstalledFilter').addEventListener('input', modsRenderInstalled)
 
 modsEl('modsUpdateAll').onclick = async () => {
     const btn = modsEl('modsUpdateAll')
-    btn.disabled = true
     const gameDir = modsGameDir()
-    const { type } = modsState
+    // Snapshot now: the live state (and the rows built from it) will be
+    // disabled for the whole bulk run, so nothing here should shift under us.
+    const snapshot = modsState.installed
+        .filter(f => modsState.updates.has(f.path))
+        .map(f => ({ fileName: f.fileName, type: f.type, version: modsState.updates.get(f.path) }))
+    btn.disabled = true
+    modsState.updatingAll = true
+    modsRenderInstalled()
     let failed = 0
-    for(const file of modsState.installed){
-        const update = modsState.updates.get(file.path)
-        if(update == null){
-            continue
+    try {
+        for(const { fileName, type, version } of snapshot){
+            try {
+                await ContentManager.updateFile(gameDir, type, fileName, version)
+            } catch(err) {
+                failed++
+                loggerMods.error('Update failed.', err)
+            }
         }
-        try {
-            await ContentManager.updateFile(gameDir, type, file.fileName, update)
-        } catch(err) {
-            failed++
-            loggerMods.error('Update failed.', err)
-        }
+    } finally {
+        modsState.updatingAll = false
+        btn.disabled = false
+        await modsRefreshInstalled()
     }
-    btn.disabled = false
-    await modsRefreshInstalled()
     if(failed > 0){
         modsSetStatus('modsInstalledStatus', Lang.queryJS('mods.installed.updateAllFailed', { count: failed }))
     }
@@ -496,7 +567,27 @@ function modsRenderPackGroup(){
     modsEl('modsPackSummary').textContent = Lang.queryJS('mods.pack.summary', { count })
 }
 
-function modsAppendPackModules(parent, mdls, conf, ids){
+/**
+ * Mirrors ProcessBuilder.isModEnabled (processbuilder.js) so the pack group
+ * shows the same on/off state the launcher will actually use at launch:
+ * missing config falls back to the module's declared default, a boolean
+ * config is used as-is, and an object config without "value" counts as on.
+ */
+function modsPackModValue(conf, id, required){
+    const modCfg = conf[id]
+    if(modCfg == null){
+        return Boolean(required.def)
+    }
+    if(typeof modCfg === 'boolean'){
+        return modCfg
+    }
+    if(typeof modCfg === 'object'){
+        return modCfg.value !== undefined ? Boolean(modCfg.value) : true
+    }
+    return Boolean(required.def)
+}
+
+function modsAppendPackModules(parent, mdls, conf, ids, parentActive = true){
     for(const mdl of mdls){
         if(!modsIsPackMod(mdl)){
             continue
@@ -511,39 +602,68 @@ function modsAppendPackModules(parent, mdls, conf, ids){
             modsText('span', 'mods-row-meta', `v${mdl.mavenComponents.version}`)
         )
         row.appendChild(info)
-        if(mdl.getRequired().value){
+        const required = mdl.getRequired()
+        let active = parentActive
+        if(required.value){
             row.appendChild(modsText('span', 'mods-badge', Lang.queryJS('mods.pack.required')))
         } else {
-            const value = typeof conf[id] === 'object' ? conf[id].value : conf[id]
-            row.appendChild(modsToggle(
-                Boolean(value),
+            const value = modsPackModValue(conf, id, required)
+            let toggleInput
+            const toggleWrap = modsToggle(
+                value,
                 Lang.queryJS('mods.installed.enable', { title: mdl.rawModule.name }),
-                checked => modsSetPackModEnabled([...ids, id], checked)
-            ))
+                checked => modsSetPackModEnabled([...ids, id], checked, toggleInput)
+            )
+            toggleInput = toggleWrap.querySelector('input')
+            toggleInput.disabled = !parentActive
+            row.appendChild(toggleWrap)
+            active = parentActive && value
         }
         parent.appendChild(row)
         if(mdl.subModules.length > 0){
             const sub = document.createElement('div')
             sub.className = 'mods-pack-sub'
             parent.appendChild(sub)
-            modsAppendPackModules(sub, mdl.subModules, typeof conf[id] === 'object' ? (conf[id].mods ?? {}) : {}, [...ids, id])
+            modsAppendPackModules(sub, mdl.subModules, typeof conf[id] === 'object' ? (conf[id].mods ?? {}) : {}, [...ids, id], active)
         }
     }
 }
 
-function modsSetPackModEnabled(ids, enabled){
-    const key = modsConfigKey()
-    const cfg = ConfigManager.getModConfiguration(key)
-    let level = cfg.mods
-    for(const id of ids.slice(0, -1)){
-        level = level[id].mods
+/**
+ * Defensively walk/create the mod configuration tree down to `ids` and set
+ * the leaf's enabled value, tolerating a missing configuration, a missing
+ * intermediate level, or a level that is still a plain boolean from an older
+ * save. Reverts the toggle and logs instead of throwing into an event handler.
+ */
+function modsSetPackModEnabled(ids, enabled, toggleInput){
+    try {
+        const key = modsConfigKey()
+        let cfg = ConfigManager.getModConfiguration(key)
+        if(cfg == null){
+            cfg = { id: key, mods: {} }
+        }
+        let level = cfg.mods
+        for(const id of ids.slice(0, -1)){
+            if(level[id] == null || typeof level[id] !== 'object'){
+                level[id] = { value: level[id] ?? true, mods: {} }
+            } else if(level[id].mods == null){
+                level[id].mods = {}
+            }
+            level = level[id].mods
+        }
+        const last = ids[ids.length - 1]
+        if(level[last] != null && typeof level[last] === 'object'){
+            level[last].value = enabled
+        } else {
+            level[last] = enabled
+        }
+        ConfigManager.setModConfiguration(key, cfg)
+        ConfigManager.save()
+        modsRenderPackGroup()
+    } catch(err) {
+        loggerMods.error('Could not update the pack mod configuration.', err)
+        if(toggleInput != null){
+            toggleInput.checked = !enabled
+        }
     }
-    const last = ids[ids.length - 1]
-    if(typeof level[last] === 'object'){
-        level[last].value = enabled
-    } else {
-        level[last] = enabled
-    }
-    ConfigManager.setModConfiguration(key, cfg)
-    ConfigManager.save()
 }
