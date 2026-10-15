@@ -3,7 +3,6 @@ const os = require('os')
 const semver = require('semver')
 
 const DropinModUtil = require('./assets/js/dropinmodutil')
-const Modrinth = require('./assets/js/modrinth')
 
 const loggerModrinth = LoggerUtil.getLogger('Modrinth')
 const {MSFT_OPCODE, MSFT_REPLY_TYPE, MSFT_ERROR} = require('./assets/js/ipcconstants')
@@ -136,7 +135,7 @@ async function initSettingsValues() {
         const gFn = ConfigManager['get' + cVal]
         const gFnOpts = []
         if (serverDependent) {
-            gFnOpts.push(ConfigManager.getSelectedServer())
+            gFnOpts.push(ProfileManager.getSelectedConfigKey())
         }
         if (typeof gFn === 'function') {
             if (v.tagName === 'INPUT') {
@@ -188,7 +187,7 @@ function saveSettingsValues() {
         const sFn = ConfigManager['set' + cVal]
         const sFnOpts = []
         if (serverDependent) {
-            sFnOpts.push(ConfigManager.getSelectedServer())
+            sFnOpts.push(ProfileManager.getSelectedConfigKey())
         }
         if (typeof sFn === 'function') {
             if (v.tagName === 'INPUT') {
@@ -755,7 +754,7 @@ async function resolveModsForUI() {
     const serv = ConfigManager.getSelectedServer()
 
     const distro = await DistroAPI.getDistribution()
-    const servConf = ConfigManager.getModConfiguration(serv)
+    const servConf = ConfigManager.getModConfiguration(ProfileManager.getSelectedConfigKey())
 
     const modStr = parseModulesForUI(distro.getServerById(serv).modules, false, servConf.mods)
 
@@ -857,10 +856,10 @@ function bindModsToggleSwitch() {
  * Save the mod configuration based on the UI values.
  */
 function saveModConfiguration() {
-    const serv = ConfigManager.getSelectedServer()
-    const modConf = ConfigManager.getModConfiguration(serv)
+    const key = ProfileManager.getSelectedConfigKey()
+    const modConf = ConfigManager.getModConfiguration(key)
     modConf.mods = _saveModConfiguration(modConf.mods)
-    ConfigManager.setModConfiguration(serv, modConf)
+    ConfigManager.setModConfiguration(key, modConf)
 }
 
 /**
@@ -898,7 +897,7 @@ let CACHE_DROPIN_MODS
  */
 async function resolveDropinModsForUI() {
     const serv = (await DistroAPI.getDistribution()).getServerById(ConfigManager.getSelectedServer())
-    CACHE_SETTINGS_MODS_DIR = path.join(ConfigManager.getInstanceDirectory(), serv.rawServer.id, 'mods')
+    CACHE_SETTINGS_MODS_DIR = path.join(ProfileManager.getSelectedGameDir(serv.rawServer.id), 'mods')
     CACHE_DROPIN_MODS = DropinModUtil.scanForDropinMods(CACHE_SETTINGS_MODS_DIR, serv.rawServer.minecraftVersion)
 
     let dropinMods = ''
@@ -1199,7 +1198,7 @@ let CACHE_SELECTED_SHADERPACK
  */
 async function resolveShaderpacksForUI() {
     const serv = (await DistroAPI.getDistribution()).getServerById(ConfigManager.getSelectedServer())
-    CACHE_SETTINGS_INSTANCE_DIR = path.join(ConfigManager.getInstanceDirectory(), serv.rawServer.id)
+    CACHE_SETTINGS_INSTANCE_DIR = ProfileManager.getSelectedGameDir(serv.rawServer.id)
     CACHE_SHADERPACKS = DropinModUtil.scanForShaderpacks(CACHE_SETTINGS_INSTANCE_DIR)
     CACHE_SELECTED_SHADERPACK = DropinModUtil.getEnabledShaderpack(CACHE_SETTINGS_INSTANCE_DIR)
 

@@ -23,8 +23,13 @@ const logger = LoggerUtil.getLogger('ProcessBuilder')
  */
 class ProcessBuilder {
 
-    constructor(distroServer, vanillaManifest, modManifest, authUser, launcherVersion){
-        this.gameDir = path.join(ConfigManager.getInstanceDirectory(), distroServer.rawServer.id)
+    /**
+     * @param {{gameDir: string, configKey: string} | null} profile Profile to launch.
+     * Without it, the server's default folder and settings are used.
+     */
+    constructor(distroServer, vanillaManifest, modManifest, authUser, launcherVersion, profile = null){
+        this.gameDir = profile?.gameDir ?? path.join(ConfigManager.getInstanceDirectory(), distroServer.rawServer.id)
+        this.configKey = profile?.configKey ?? distroServer.rawServer.id
         this.commonDir = ConfigManager.getCommonDirectory()
         this.server = distroServer
         this.vanillaManifest = vanillaManifest
@@ -52,7 +57,7 @@ class ProcessBuilder {
         logger.info('Using liteloader:', this.usingLiteLoader)
         this.usingFabricLoader = this.server.modules.some(mdl => mdl.rawModule.type === Type.Fabric)
         logger.info('Using fabric loader:', this.usingFabricLoader)
-        const modObj = this.resolveModConfiguration(ConfigManager.getModConfiguration(this.server.rawServer.id).mods, this.server.modules)
+        const modObj = this.resolveModConfiguration(ConfigManager.getModConfiguration(this.configKey).mods, this.server.modules)
         
         // Mod list below 1.13
         // Fabric only supports 1.14+
@@ -77,7 +82,7 @@ class ProcessBuilder {
 
         logger.info('Launch Arguments:', loggableArgs)
 
-        const child = child_process.spawn(ConfigManager.getJavaExecutable(this.server.rawServer.id), args, {
+        const child = child_process.spawn(ConfigManager.getJavaExecutable(this.configKey), args, {
             cwd: this.gameDir,
             detached: ConfigManager.getLaunchDetached()
         })
@@ -151,7 +156,7 @@ class ProcessBuilder {
         for(let ll of this.server.modules){
             if(ll.rawModule.type === Type.LiteLoader){
                 if(!ll.getRequired().value){
-                    const modCfg = ConfigManager.getModConfiguration(this.server.rawServer.id).mods
+                    const modCfg = ConfigManager.getModConfiguration(this.configKey).mods
                     if(ProcessBuilder.isModEnabled(modCfg[ll.getVersionlessMavenIdentifier()], ll.getRequired())){
                         if(fs.existsSync(ll.getPath())){
                             this.usingLiteLoader = true
@@ -375,9 +380,9 @@ class ProcessBuilder {
             args.push('-Xdock:name=Oblyvium')
             args.push('-Xdock:icon=' + path.join(__dirname, '..', 'images', 'minecraft.icns'))
         }
-        args.push('-Xmx' + ConfigManager.getMaxRAM(this.server.rawServer.id))
-        args.push('-Xms' + ConfigManager.getMinRAM(this.server.rawServer.id))
-        args = args.concat(ConfigManager.getJVMOptions(this.server.rawServer.id))
+        args.push('-Xmx' + ConfigManager.getMaxRAM(this.configKey))
+        args.push('-Xms' + ConfigManager.getMinRAM(this.configKey))
+        args = args.concat(ConfigManager.getJVMOptions(this.configKey))
         args.push('-Djava.library.path=' + tempNativePath)
 
         // Main Java Class
@@ -426,9 +431,9 @@ class ProcessBuilder {
             args.push('-Xdock:name=Oblyvium')
             args.push('-Xdock:icon=' + path.join(__dirname, '..', 'images', 'minecraft.icns'))
         }
-        args.push('-Xmx' + ConfigManager.getMaxRAM(this.server.rawServer.id))
-        args.push('-Xms' + ConfigManager.getMinRAM(this.server.rawServer.id))
-        args = args.concat(ConfigManager.getJVMOptions(this.server.rawServer.id))
+        args.push('-Xmx' + ConfigManager.getMaxRAM(this.configKey))
+        args.push('-Xms' + ConfigManager.getMinRAM(this.configKey))
+        args = args.concat(ConfigManager.getJVMOptions(this.configKey))
 
         // Main Java Class
         args.push(this.modManifest.mainClass)
@@ -456,7 +461,7 @@ class ProcessBuilder {
                         // We don't have many 'features' in the index at the moment.
                         // This should be fine for a while.
                         if(rule.features.has_custom_resolution != null && rule.features.has_custom_resolution === true){
-                            if(ConfigManager.getFullscreen()){
+                            if(ConfigManager.getProfileFullscreen(this.configKey)){
                                 args[i].value = [
                                     '--fullscreen',
                                     'true'
@@ -516,10 +521,10 @@ class ProcessBuilder {
                             val = this.vanillaManifest.type
                             break
                         case 'resolution_width':
-                            val = ConfigManager.getGameWidth()
+                            val = ConfigManager.getProfileGameWidth(this.configKey)
                             break
                         case 'resolution_height':
-                            val = ConfigManager.getGameHeight()
+                            val = ConfigManager.getProfileGameHeight(this.configKey)
                             break
                         case 'natives_directory':
                             val = args[i].replace(argDiscovery, tempNativePath)
@@ -617,14 +622,14 @@ class ProcessBuilder {
         this._processAutoConnectArg(mcArgs)
 
         // Prepare game resolution
-        if(ConfigManager.getFullscreen()){
+        if(ConfigManager.getProfileFullscreen(this.configKey)){
             mcArgs.push('--fullscreen')
             mcArgs.push(true)
         } else {
             mcArgs.push('--width')
-            mcArgs.push(ConfigManager.getGameWidth())
+            mcArgs.push(ConfigManager.getProfileGameWidth(this.configKey))
             mcArgs.push('--height')
-            mcArgs.push(ConfigManager.getGameHeight())
+            mcArgs.push(ConfigManager.getProfileGameHeight(this.configKey))
         }
         
         // Mod List File Argument

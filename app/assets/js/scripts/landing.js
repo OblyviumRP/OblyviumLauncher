@@ -103,7 +103,7 @@ document.getElementById('launch_button').addEventListener('click', async e => {
     loggerLanding.info('Launching game..')
     try {
         const server = (await DistroAPI.getDistribution()).getServerById(ConfigManager.getSelectedServer())
-        const jExe = ConfigManager.getJavaExecutable(ConfigManager.getSelectedServer())
+        const jExe = ConfigManager.getJavaExecutable(ProfileManager.getSelectedConfigKey())
         if(jExe == null){
             await asyncSystemScan(server.effectiveJavaOptions)
         } else {
@@ -376,13 +376,8 @@ async function asyncSystemScan(effectiveJavaOptions, launchAfter = true){
     } else {
         // Java installation found, use this to launch the game.
         const javaExec = javaExecFromRoot(jvmDetails.path)
-        ConfigManager.setJavaExecutable(ConfigManager.getSelectedServer(), javaExec)
+        ConfigManager.setJavaExecutable(ProfileManager.getSelectedConfigKey(), javaExec)
         ConfigManager.save()
-
-        // We need to make sure that the updated value is on the settings UI.
-        // Just incase the settings UI is already open.
-        settingsJavaExecVal.value = javaExec
-        await populateJavaExecDetails(settingsJavaExecVal.value)
 
         // TODO Callback hell, refactor
         // TODO Move this out, separate concerns.
@@ -445,7 +440,7 @@ async function downloadJava(effectiveJavaOptions, launchAfter = true) {
     remote.getCurrentWindow().setProgressBar(-1)
 
     // Extraction completed successfully.
-    ConfigManager.setJavaExecutable(ConfigManager.getSelectedServer(), newJavaExec)
+    ConfigManager.setJavaExecutable(ProfileManager.getSelectedConfigKey(), newJavaExec)
     ConfigManager.save()
 
     clearInterval(extractListener)
@@ -477,8 +472,8 @@ function escapeHtml(text) {
  * Disable enabled drop-in mods that the staff has blocked, then tell the
  * player. If Modrinth cannot be reached the launch carries on.
  */
-async function disableBlockedDropins(serv, logger) {
-    const modsDir = path.join(ConfigManager.getInstanceDirectory(), serv.rawServer.id, 'mods')
+async function disableBlockedDropins(serv, gameDir, logger) {
+    const modsDir = path.join(gameDir, 'mods')
     let blocked
     try {
         blocked = await Modrinth.findBlockedDropins(modsDir, Modrinth.getBlocklist(serv))
@@ -524,6 +519,10 @@ async function dlAsync(login = true) {
 
     const serv = distro.getServerById(ConfigManager.getSelectedServer())
 
+    const profile = ProfileManager.getSelected(serv.rawServer.id)
+    const gameDir = ProfileManager.getGameDir(serv.rawServer.id, profile.id)
+    const configKey = ProfileManager.configKey(serv.rawServer.id, profile.id)
+
     if(login) {
         if(ConfigManager.getSelectedAccount() == null){
             loggerLanding.error('You must be logged into an account.')
@@ -537,7 +536,7 @@ async function dlAsync(login = true) {
 
     const fullRepairModule = new FullRepair(
         ConfigManager.getCommonDirectory(),
-        ConfigManager.getInstanceDirectory(),
+        ProfileManager.getInstanceRoot(profile.id),
         ConfigManager.getLauncherDirectory(),
         ConfigManager.getSelectedServer(),
         DistroAPI.isDevMode()
@@ -594,7 +593,7 @@ async function dlAsync(login = true) {
 
     fullRepairModule.destroyReceiver()
 
-    await disableBlockedDropins(serv, loggerLaunchSuite)
+    await disableBlockedDropins(serv, gameDir, loggerLaunchSuite)
 
     setLaunchDetails(Lang.queryJS('landing.dlAsync.preparingToLaunch'))
 
@@ -613,7 +612,7 @@ async function dlAsync(login = true) {
     if(login) {
         const authUser = ConfigManager.getSelectedAccount()
         loggerLaunchSuite.info(`Sending selected account (${authUser.displayName}) to ProcessBuilder.`)
-        let pb = new ProcessBuilder(serv, versionData, modLoaderData, authUser, remote.app.getVersion())
+        let pb = new ProcessBuilder(serv, versionData, modLoaderData, authUser, remote.app.getVersion(), { gameDir, configKey })
         setLaunchDetails(Lang.queryJS('landing.dlAsync.launchingGame'))
 
         // const SERVER_JOINED_REGEX = /\[.+\]: \[CHAT\] [a-zA-Z0-9_]{1,16} joined the game/
