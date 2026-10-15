@@ -503,6 +503,11 @@ button.mods-row-title:hover { color: var(--primary-light); text-decoration: unde
 #modsEditGame input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
 #modsEditGame input[error] { color: var(--danger-fg); border-color: var(--danger-fg); background: var(--danger-soft); }
 #modsEditGame a { color: var(--primary-light); }
+#modsEditGame input[type=number]:focus, #modsEditGame input[type=text]:focus { outline: none; border-color: var(--ring); }
+#modsEditGame a:hover { text-decoration: underline; }
+#modsEditGame a:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; border-radius: 2px; }
+#modsEditGame[aria-busy] { opacity: .6; }
+#modsEditGameStatus { margin: 0; padding: 12px 16px; border: 1px solid var(--danger-line); border-radius: 6px; background: var(--danger-soft); }
 /* launcher.css sizes the resolution block (and its divider) to 75% of the settings tab; in the editor card it spans the card. */
 #modsEditGame #settingsGameResolutionContainer { width: 100%; border-color: var(--border); }
 

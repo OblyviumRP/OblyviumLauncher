@@ -323,8 +323,9 @@ async function openModsView({ createProfile = false } = {}){
 }
 
 function closeModsView(){
-    if(modsState.editing != null && typeof modsCloseEditor === 'function'){
-        modsCloseEditor()
+    // An editor action still running (save, duplicate, delete) keeps the screen open.
+    if(modsState.editing != null && typeof modsCloseEditor === 'function' && !modsCloseEditor()){
+        return
     }
     switchView(getCurrentView(), VIEWS.landing)
     renderProfileSelection()
@@ -1211,10 +1212,30 @@ modsEl('modsProjectBack').onclick = modsLeaveProject
 
 // Profile editor
 
-const modsEditorState = { invalid: new Set(), validatorsBound: false }
+const modsEditorState = {
+    invalid: new Set(),
+    validatorsBound: false,
+    // Bumped on every open/close so a slow load of the game fields can tell it is stale.
+    load: 0,
+    // True while the game fields are being filled from the profile's config.
+    loading: false,
+    // True once the game fields hold this profile's values and may be saved.
+    loaded: false,
+    // True while Save, Duplicate or Delete is running.
+    busy: false
+}
 
-function modsSetEditorSaveDisabled(disabled){
-    modsEl('modsEditSave').disabled = disabled
+/**
+ * Enable the editor buttons from the editor state. Save and Duplicate (which
+ * saves first) wait for the game fields to load and for every field to be
+ * valid; nothing else can start while an action is pending.
+ */
+function modsSyncEditorButtons(){
+    const { busy, loading, invalid } = modsEditorState
+    modsEl('modsEditSave').disabled = busy || loading || invalid.size > 0
+    modsEl('modsEditDuplicate').disabled = busy || loading || invalid.size > 0
+    modsEl('modsEditDelete').disabled = busy
+    modsEl('modsEditCancel').disabled = busy
 }
 
 function modsRenderIconPicker(selected){
@@ -1233,12 +1254,59 @@ function modsRenderIconPicker(selected){
     }))
 }
 
+function modsEditGameStatus(){
+    let el = modsEl('modsEditGameStatus')
+    if(el == null){
+        el = modsText('p', 'mods-field-error', '')
+        el.id = 'modsEditGameStatus'
+        el.setAttribute('role', 'alert')
+        modsEl('modsEditGame').after(el)
+    }
+    return el
+}
+
+function modsSetGameLoading(loading){
+    const game = modsEl('modsEditGame')
+    modsEditorState.loading = loading
+    game.inert = loading
+    game.toggleAttribute('aria-busy', loading)
+    modsSyncEditorButtons()
+}
+
+/**
+ * Fill the game fields with this profile's values. Until that finishes, the
+ * fields still hold whatever was shown last, so saving is blocked.
+ */
+async function modsLoadGameFields(){
+    const load = ++modsEditorState.load
+    const key = modsConfigKey()
+    modsEditorState.loaded = false
+    modsSetGameLoading(true)
+    try {
+        await initSettingsValues(modsEl('modsEditGame'), key)
+        await prepareJavaTab()
+        if(load !== modsEditorState.load){
+            return
+        }
+        modsEditorState.loaded = true
+        modsSetGameLoading(false)
+    } catch(err) {
+        if(load !== modsEditorState.load){
+            return
+        }
+        loggerMods.error('Could not load the profile game settings.', err)
+        modsEl('modsEditGame').hidden = true
+        modsEditGameStatus().textContent = Lang.queryJS('mods.editor.loadFailed')
+        modsSetGameLoading(false)
+    }
+}
+
 /**
  * @param {'create' | 'edit'} mode
  */
 async function modsOpenEditor(mode){
     if(modsState.editing != null){
-        modsCloseEditor()
+        modsCloseEditor(false, true)
     }
     modsState.editing = { mode }
     const profile = mode === 'edit' ? ProfileManager.get(modsState.serverId, modsState.profileId) : null
@@ -1270,30 +1338,37 @@ async function modsOpenEditor(mode){
 
     if(mode === 'edit'){
         if(!modsEditorState.validatorsBound){
-            initSettingsValidators(modsEl('modsEditGame'), modsEditorState, modsSetEditorSaveDisabled)
+            initSettingsValidators(modsEl('modsEditGame'), modsEditorState, () => modsSyncEditorButtons())
             modsEditorState.validatorsBound = true
         }
-        try {
-            await initSettingsValues(modsEl('modsEditGame'), modsConfigKey())
-            await prepareJavaTab()
-        } catch(err) {
-            loggerMods.error('Could not load the profile game settings.', err)
-        }
+        const loading = modsLoadGameFields()
+        modsEl('modsEditName').focus()
+        await loading
+    } else {
+        modsSyncEditorButtons()
+        modsEl('modsEditName').focus()
     }
-    modsEl('modsEditName').focus()
 }
 
 /**
  * @param {boolean} restoreFocus Put focus back on the Edit profile button.
+ * @param {boolean} force Close even while an action is pending (used by the action itself).
+ * @returns {boolean} False if the editor stayed open because an action is pending.
  */
-function modsCloseEditor(restoreFocus = false){
+function modsCloseEditor(restoreFocus = false, force = false){
+    if(modsEditorState.busy && !force){
+        return false
+    }
     modsState.editing = null
+    modsEditorState.load++
+    modsEditorState.loaded = false
     modsEl('modsPanelEdit').hidden = true
     modsEl('modsBrowse').hidden = false
     document.querySelector('.mods-profile-actions').hidden = false
     modsEl('modsProfileSelect').disabled = false
     modsEditorState.invalid.clear()
-    modsSetEditorSaveDisabled(false)
+    modsSetGameLoading(false)
+    modsEditGameStatus().textContent = ''
     for(const el of modsEl('modsEditGame').querySelectorAll('[error]')){
         el.removeAttribute('error')
         el.removeAttribute('aria-invalid')
@@ -1301,6 +1376,7 @@ function modsCloseEditor(restoreFocus = false){
     if(restoreFocus){
         modsEl('modsEditProfile').focus()
     }
+    return true
 }
 
 function modsEditorFailed(key, err){
@@ -1308,63 +1384,135 @@ function modsEditorFailed(key, err){
     modsEl('modsEditNameError').textContent = Lang.queryJS(key)
 }
 
-modsEl('modsEditProfile').onclick = () => modsOpenEditor('edit')
-modsEl('modsEditCancel').onclick = () => modsCloseEditor(true)
-
-modsEl('modsEditName').addEventListener('keydown', e => {
-    if(e.key === 'Enter'){
-        e.preventDefault()
-        modsEl('modsEditSave').click()
+/**
+ * Run one editor action at a time. Save, Duplicate, Delete and Cancel stay
+ * disabled until it settles.
+ *
+ * @param {HTMLButtonElement} btn The button that started the action.
+ * @param {string | null} busyLabel Text shown on the button while it runs.
+ * @param {string} errorKey Message shown if the action throws.
+ * @param {() => Promise<void>} action
+ */
+async function modsEditorAction(btn, busyLabel, errorKey, action){
+    if(modsEditorState.busy){
+        return
     }
-})
+    modsEditorState.busy = true
+    const label = btn.textContent
+    if(busyLabel != null){
+        btn.textContent = busyLabel
+    }
+    modsSyncEditorButtons()
+    try {
+        await action()
+    } catch(err) {
+        modsEditorFailed(errorKey, err)
+    } finally {
+        modsEditorState.busy = false
+        btn.textContent = label
+        modsSyncEditorButtons()
+    }
+}
 
-modsEl('modsEditSave').onclick = async () => {
+/**
+ * @returns {string | null} The validated name, or null after showing the error.
+ */
+function modsEditorName(){
     const nameInput = modsEl('modsEditName')
     const name = ProfileManager.validateName(nameInput.value)
     if(name == null){
         modsEl('modsEditNameError').textContent = Lang.queryJS('mods.editor.nameError')
         nameInput.setAttribute('aria-invalid', 'true')
         nameInput.focus()
-        return
+        return null
     }
     nameInput.removeAttribute('aria-invalid')
     modsEl('modsEditNameError').textContent = ''
-    const icon = document.querySelector('input[name="modsEditIcon"]:checked')?.value
-    const btn = modsEl('modsEditSave')
-    btn.disabled = true
-    try {
-        if(modsState.editing.mode === 'create'){
-            const copyFrom = modsEl('modsEditCopyFrom').value || null
-            const profile = await ProfileManager.create(modsState.serverId, { name, icon, copyFrom })
-            modsCloseEditor()
-            modsSwitchProfile(profile.id)
-        } else {
-            ProfileManager.update(modsState.serverId, modsState.profileId, { name, icon })
-            saveSettingsValues(modsEl('modsEditGame'), modsConfigKey())
-            ConfigManager.save()
-            modsCloseEditor()
-            modsRenderHeader()
-        }
-        modsEl('modsEditProfile').focus()
-    } catch(err) {
-        modsEditorFailed('mods.editor.saveFailed', err)
-    } finally {
-        btn.disabled = modsEditorState.invalid.size > 0
+    return name
+}
+
+function modsEditorIcon(){
+    return document.querySelector('input[name="modsEditIcon"]:checked')?.value
+}
+
+/**
+ * Save the edit-mode fields into the current profile. The game fields are
+ * only written when they were loaded for this profile.
+ */
+function modsSaveEdits(name){
+    // update() saves the config itself, so the name and icon stick even if
+    // writing the game fields fails below (the editor then stays open).
+    ProfileManager.update(modsState.serverId, modsState.profileId, { name, icon: modsEditorIcon() })
+    modsRenderHeader()
+    if(modsEditorState.loaded){
+        saveSettingsValues(modsEl('modsEditGame'), modsConfigKey())
+        ConfigManager.save()
     }
 }
 
-modsEl('modsEditDuplicate').onclick = async () => {
-    try {
+modsEl('modsEditProfile').onclick = () => modsOpenEditor('edit')
+modsEl('modsEditCancel').onclick = () => modsCloseEditor(true)
+
+modsEl('modsEditName').addEventListener('keydown', e => {
+    if(e.key !== 'Enter'){
+        return
+    }
+    e.preventDefault()
+    const save = modsEl('modsEditSave')
+    if(save.disabled){
+        modsEl('modsEditGame').querySelector('[aria-invalid=true], [error]')?.focus()
+        return
+    }
+    save.click()
+})
+
+modsEl('modsEditSave').onclick = () => {
+    const btn = modsEl('modsEditSave')
+    if(btn.disabled){
+        return
+    }
+    const name = modsEditorName()
+    if(name == null){
+        return
+    }
+    return modsEditorAction(btn, null, 'mods.editor.saveFailed', async () => {
+        if(modsState.editing.mode === 'create'){
+            const copyFrom = modsEl('modsEditCopyFrom').value || null
+            const profile = await ProfileManager.create(modsState.serverId, { name, icon: modsEditorIcon(), copyFrom })
+            modsCloseEditor(false, true)
+            modsSwitchProfile(profile.id)
+        } else {
+            modsSaveEdits(name)
+            modsCloseEditor(false, true)
+        }
+        modsEl('modsEditProfile').focus()
+    })
+}
+
+// Duplicate copies the saved profile, so pending edits are saved first.
+modsEl('modsEditDuplicate').onclick = () => {
+    const btn = modsEl('modsEditDuplicate')
+    if(btn.disabled){
+        return
+    }
+    const name = modsEditorName()
+    if(name == null){
+        return
+    }
+    return modsEditorAction(btn, Lang.queryJS('mods.editor.duplicating'), 'mods.editor.saveFailed', async () => {
+        modsSaveEdits(name)
         const profile = await ProfileManager.duplicate(modsState.serverId, modsState.profileId)
-        modsCloseEditor()
+        modsCloseEditor(false, true)
         modsSwitchProfile(profile.id)
         modsEl('modsEditProfile').focus()
-    } catch(err) {
-        modsEditorFailed('mods.editor.saveFailed', err)
-    }
+    })
 }
 
 modsEl('modsEditDelete').onclick = () => {
+    const btn = modsEl('modsEditDelete')
+    if(btn.disabled){
+        return
+    }
     const profile = ProfileManager.get(modsState.serverId, modsState.profileId)
     setOverlayContent(
         Lang.queryJS('mods.editor.deleteTitle', { name: escapeHtml(profile.name) }),
@@ -1372,16 +1520,14 @@ modsEl('modsEditDelete').onclick = () => {
         Lang.queryJS('mods.editor.deleteConfirm'),
         Lang.queryJS('mods.editor.deleteCancel')
     )
-    setOverlayHandler(async () => {
+    setOverlayHandler(() => {
         toggleOverlay(false)
-        try {
+        return modsEditorAction(btn, null, 'mods.editor.deleteFailed', async () => {
             await ProfileManager.remove(modsState.serverId, profile.id)
-            modsCloseEditor()
+            modsCloseEditor(false, true)
             modsSwitchProfile(ProfileManager.DEFAULT_ID)
             modsEl('modsEditProfile').focus()
-        } catch(err) {
-            modsEditorFailed('mods.editor.deleteFailed', err)
-        }
+        })
     })
     setDismissHandler(() => toggleOverlay(false))
     toggleOverlay(true, true)
