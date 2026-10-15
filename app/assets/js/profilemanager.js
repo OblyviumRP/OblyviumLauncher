@@ -72,12 +72,20 @@ exports.getSelectedGameDir = function(serverId = ConfigManager.getSelectedServer
  */
 exports.create = async function(serverId, { name, icon, copyFrom = null }){
     const profile = Profiles.createProfile(store(), serverId, { name, icon })
+    const dstKey = Profiles.configKey(serverId, profile.id)
     ConfigManager.copyProfileConfig(
         Profiles.configKey(serverId, copyFrom ?? Profiles.DEFAULT_ID),
-        Profiles.configKey(serverId, profile.id)
+        dstKey
     )
     if(copyFrom != null){
-        await Profiles.copySettingsFiles(exports.getGameDir(serverId, copyFrom), exports.getGameDir(serverId, profile.id))
+        try {
+            await Profiles.copySettingsFiles(exports.getGameDir(serverId, copyFrom), exports.getGameDir(serverId, profile.id))
+        } catch(err){
+            Profiles.removeProfile(store(), serverId, profile.id)
+            ConfigManager.removeProfileConfig(dstKey)
+            await fs.remove(exports.getInstanceRoot(profile.id))
+            throw err
+        }
     }
     ConfigManager.save()
     return profile
@@ -85,10 +93,21 @@ exports.create = async function(serverId, { name, icon, copyFrom = null }){
 
 exports.duplicate = async function(serverId, profileId){
     const source = exports.get(serverId, profileId)
+    if(source == null){
+        throw new Error(`Unknown profile ${profileId} for ${serverId}`)
+    }
     const name = `${source.name} (cópia)`.slice(0, 32)
     const profile = Profiles.createProfile(store(), serverId, { name, icon: source.icon })
-    ConfigManager.copyProfileConfig(Profiles.configKey(serverId, profileId), Profiles.configKey(serverId, profile.id))
-    await Profiles.copyGameDir(exports.getGameDir(serverId, profileId), exports.getGameDir(serverId, profile.id))
+    const dstKey = Profiles.configKey(serverId, profile.id)
+    ConfigManager.copyProfileConfig(Profiles.configKey(serverId, profileId), dstKey)
+    try {
+        await Profiles.copyGameDir(exports.getGameDir(serverId, profileId), exports.getGameDir(serverId, profile.id))
+    } catch(err){
+        Profiles.removeProfile(store(), serverId, profile.id)
+        ConfigManager.removeProfileConfig(dstKey)
+        await fs.remove(exports.getInstanceRoot(profile.id))
+        throw err
+    }
     ConfigManager.save()
     return profile
 }
@@ -101,16 +120,24 @@ exports.update = function(serverId, profileId, changes){
 
 /**
  * Remove a profile and send its folder to the trash.
+ * The folder is trashed before any config state is touched, so a failed
+ * trash operation leaves the profile and its settings intact.
  */
 exports.remove = async function(serverId, profileId){
+    if(profileId === Profiles.DEFAULT_ID){
+        throw new Error('The default profile cannot be removed')
+    }
+    if(exports.get(serverId, profileId) == null){
+        throw new Error(`Unknown profile ${profileId} for ${serverId}`)
+    }
     const root = exports.getInstanceRoot(profileId)
-    Profiles.removeProfile(store(), serverId, profileId)
-    ConfigManager.removeProfileConfig(Profiles.configKey(serverId, profileId))
-    ConfigManager.save()
     if(await fs.pathExists(root)){
         const res = await ipcRenderer.invoke(SHELL_OPCODE.TRASH_ITEM, root)
         if(!res.result){
             throw res.error
         }
     }
+    Profiles.removeProfile(store(), serverId, profileId)
+    ConfigManager.removeProfileConfig(Profiles.configKey(serverId, profileId))
+    ConfigManager.save()
 }
