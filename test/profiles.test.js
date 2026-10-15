@@ -21,6 +21,36 @@ test('ensureServer recupera seleção inválida', () => {
     assert.equal(store.oblyvium.list[0].id, 'padrao')
 })
 
+test('ensureServer tolera entry sem list (objeto vazio)', () => {
+    const store = { oblyvium: {} }
+    Profiles.ensureServer(store, 'oblyvium', NOW)
+    assert.equal(store.oblyvium.selected, 'padrao')
+    assert.deepEqual(store.oblyvium.list.map(p => p.id), ['padrao'])
+})
+
+test('ensureServer tolera list corrompida (null)', () => {
+    const store = { oblyvium: { list: null } }
+    Profiles.ensureServer(store, 'oblyvium', NOW)
+    assert.equal(store.oblyvium.selected, 'padrao')
+    assert.deepEqual(store.oblyvium.list.map(p => p.id), ['padrao'])
+})
+
+test('ensureServer tolera store[serverId] não-objeto', () => {
+    const store = { oblyvium: 'corrompido' }
+    Profiles.ensureServer(store, 'oblyvium', NOW)
+    assert.equal(store.oblyvium.selected, 'padrao')
+    assert.deepEqual(store.oblyvium.list.map(p => p.id), ['padrao'])
+})
+
+test('ensureServer chamado duas vezes mantém um único Padrão e o created original', () => {
+    const store = {}
+    Profiles.ensureServer(store, 'oblyvium', NOW)
+    const firstCreated = store.oblyvium.list[0].created
+    Profiles.ensureServer(store, 'oblyvium', new Date('2030-01-01T00:00:00Z'))
+    assert.equal(store.oblyvium.list.length, 1)
+    assert.equal(store.oblyvium.list[0].created, firstCreated)
+})
+
 test('configKey usa o id do servidor para o Padrão', () => {
     assert.equal(Profiles.configKey('oblyvium', 'padrao'), 'oblyvium')
     assert.equal(Profiles.configKey('oblyvium', 'a1b2c3d4'), 'oblyvium@a1b2c3d4')
@@ -42,6 +72,12 @@ test('createProfile valida nome e ícone', () => {
     assert.throws(() => Profiles.createProfile(store, 'oblyvium', { name: 'x'.repeat(33) }), /Invalid profile name/)
 })
 
+test('createProfile rejeita id duplicado no mesmo servidor', () => {
+    const store = {}
+    Profiles.createProfile(store, 'oblyvium', { name: 'Leve' }, { id: 'a1b2c3d4', now: NOW })
+    assert.throws(() => Profiles.createProfile(store, 'oblyvium', { name: 'Outro' }, { id: 'a1b2c3d4', now: NOW }), /Duplicate profile id a1b2c3d4/)
+})
+
 test('select, updateProfile e getSelected', () => {
     const store = {}
     Profiles.createProfile(store, 'oblyvium', { name: 'Leve', icon: 'livro' }, { id: 'a1b2c3d4', now: NOW })
@@ -51,6 +87,24 @@ test('select, updateProfile e getSelected', () => {
     assert.equal(Profiles.getProfile(store, 'oblyvium', 'a1b2c3d4').name, 'Completo')
     assert.equal(Profiles.getProfile(store, 'oblyvium', 'a1b2c3d4').icon, 'coroa')
     assert.throws(() => Profiles.select(store, 'oblyvium', 'nao-existe'), /Unknown profile/)
+})
+
+test('updateProfile com nome inválido lança erro', () => {
+    const store = {}
+    Profiles.createProfile(store, 'oblyvium', { name: 'Leve' }, { id: 'a1b2c3d4', now: NOW })
+    assert.throws(() => Profiles.updateProfile(store, 'oblyvium', 'a1b2c3d4', { name: '   ' }), /Invalid profile name/)
+})
+
+test('updateProfile com ícone desconhecido mantém o ícone anterior', () => {
+    const store = {}
+    Profiles.createProfile(store, 'oblyvium', { name: 'Leve', icon: 'livro' }, { id: 'a1b2c3d4', now: NOW })
+    Profiles.updateProfile(store, 'oblyvium', 'a1b2c3d4', { icon: 'nao-existe' })
+    assert.equal(Profiles.getProfile(store, 'oblyvium', 'a1b2c3d4').icon, 'livro')
+})
+
+test('getProfile retorna null para id desconhecido', () => {
+    const store = {}
+    assert.equal(Profiles.getProfile(store, 'oblyvium', 'nao-existe'), null)
 })
 
 test('removeProfile protege o Padrão e volta a seleção para ele', () => {
@@ -63,8 +117,14 @@ test('removeProfile protege o Padrão e volta a seleção para ele', () => {
     assert.equal(store.oblyvium.list.length, 1)
 })
 
-test('copySettingsFiles copia só opções e config', async () => {
+test('removeProfile com id desconhecido lança erro', () => {
+    const store = {}
+    assert.throws(() => Profiles.removeProfile(store, 'oblyvium', 'nao-existe'), /Unknown profile/)
+})
+
+test('copySettingsFiles copia só opções e config', async (t) => {
     const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'perfis-'))
+    t.after(() => fs.remove(tmp))
     const src = path.join(tmp, 'src')
     const dst = path.join(tmp, 'dst')
     await fs.outputFile(path.join(src, 'options.txt'), 'key_key.jump:key.keyboard.space\n')
@@ -76,8 +136,17 @@ test('copySettingsFiles copia só opções e config', async () => {
     assert.ok(!await fs.pathExists(path.join(dst, 'mods')))
 })
 
-test('copyGameDir copia tudo menos logs e crash-reports', async () => {
+test('copySettingsFiles com arquivos ausentes não lança erro', async (t) => {
     const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'perfis-'))
+    t.after(() => fs.remove(tmp))
+    const src = path.join(tmp, 'src')
+    const dst = path.join(tmp, 'dst')
+    await assert.doesNotReject(Profiles.copySettingsFiles(src, dst))
+})
+
+test('copyGameDir copia tudo menos logs e crash-reports', async (t) => {
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'perfis-'))
+    t.after(() => fs.remove(tmp))
     const src = path.join(tmp, 'src')
     const dst = path.join(tmp, 'dst')
     await fs.outputFile(path.join(src, 'mods', 'x.jar'), 'jar')
@@ -91,8 +160,9 @@ test('copyGameDir copia tudo menos logs e crash-reports', async () => {
     assert.ok(!await fs.pathExists(path.join(dst, 'crash-reports')))
 })
 
-test('copyGameDir aceita origem inexistente', async () => {
+test('copyGameDir aceita origem inexistente', async (t) => {
     const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'perfis-'))
+    t.after(() => fs.remove(tmp))
     await Profiles.copyGameDir(path.join(tmp, 'nao-existe'), path.join(tmp, 'dst'))
     assert.ok(await fs.pathExists(path.join(tmp, 'dst')))
 })

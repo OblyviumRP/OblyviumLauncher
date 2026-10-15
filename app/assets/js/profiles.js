@@ -7,6 +7,8 @@
  *
  * Java, game and optional-mod settings stay in ConfigManager, keyed by
  * configKey(serverId, profileId).
+ *
+ * Accessors normalise the server entry in place (they call ensureServer).
  */
 const crypto = require('crypto')
 const fs     = require('fs-extra')
@@ -26,6 +28,8 @@ exports.configKey = function(serverId, profileId) {
     return profileId === DEFAULT_ID ? serverId : `${serverId}@${profileId}`
 }
 
+// Profile ids are unique across all servers, not just within one: removing a
+// profile trashes the whole .perfis/<id> folder, keyed by id alone.
 exports.instanceRoot = function(instanceDir, profileId) {
     return profileId === DEFAULT_ID ? instanceDir : path.join(instanceDir, PROFILES_DIR, profileId)
 }
@@ -35,10 +39,13 @@ exports.gameDir = function(instanceDir, serverId, profileId) {
 }
 
 exports.ensureServer = function(store, serverId, now = new Date()) {
-    if(store[serverId] == null) {
+    if(store[serverId] == null || typeof store[serverId] !== 'object') {
         store[serverId] = { selected: DEFAULT_ID, list: [] }
     }
     const entry = store[serverId]
+    if(!Array.isArray(entry.list)) {
+        entry.list = []
+    }
     if(!entry.list.some(p => p.id === DEFAULT_ID)) {
         entry.list.unshift({ id: DEFAULT_ID, name: DEFAULT_NAME, icon: ICONS[0], created: now.toISOString() })
     }
@@ -85,6 +92,9 @@ exports.createProfile = function(store, serverId, { name, icon }, { id = exports
     const valid = exports.validateName(name)
     if(valid == null) {
         throw new Error('Invalid profile name')
+    }
+    if(exports.getProfile(store, serverId, id) != null) {
+        throw new Error(`Duplicate profile id ${id}`)
     }
     const profile = { id, name: valid, icon: ICONS.includes(icon) ? icon : ICONS[0], created: now.toISOString() }
     exports.listProfiles(store, serverId).push(profile)
