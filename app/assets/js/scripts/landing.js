@@ -51,6 +51,8 @@ let launchAreaShown = false
 // once the game window is up, but the game keeps using the profile folder
 // until it exits.
 let gameRunning = 0
+// True while the game owns the Discord status (launcher status otherwise).
+let hasRPC = false
 
 /**
  * @returns {boolean} True while the game is opening or running.
@@ -125,11 +127,56 @@ function setDownloadPercentage(percent){
  * @param {boolean} val True to enable, false to disable.
  */
 function setLaunchEnabled(val){
-    document.getElementById('launch_button').disabled = !val
+    launchAllowed = val
+    refreshLaunchButton()
+}
+
+// True when a server is selected and the game may be launched.
+let launchAllowed = false
+// Game processes that are still running, so "Fechar jogo" can stop them.
+const runningProcs = new Set()
+// Timer that cancels the "Confirmar" step of the stop button.
+let stopConfirmTimer = null
+
+/**
+ * Show "Jogar" or, while the game is running, "Fechar jogo".
+ */
+function refreshLaunchButton(){
+    const button = document.getElementById('launch_button')
+    const running = runningProcs.size > 0
+    clearTimeout(stopConfirmTimer)
+    stopConfirmTimer = null
+    button.classList.remove('confirm')
+    button.classList.toggle('running', running)
+    button.textContent = Lang.queryJS(running ? 'landing.launch.stop' : 'landing.launch.play')
+    button.disabled = !running && !launchAllowed
+}
+
+/**
+ * Stop every running game process. The first click asks for confirmation,
+ * since unsaved progress in the game is lost.
+ */
+function stopGame(){
+    const button = document.getElementById('launch_button')
+    if(stopConfirmTimer == null){
+        button.classList.add('confirm')
+        button.textContent = Lang.queryJS('landing.launch.confirmStop')
+        stopConfirmTimer = setTimeout(refreshLaunchButton, 4000)
+        return
+    }
+    loggerLanding.info('Stopping game..')
+    for(const p of runningProcs){
+        p.kill()
+    }
+    refreshLaunchButton()
 }
 
 // Bind launch button
 document.getElementById('launch_button').addEventListener('click', async e => {
+    if(runningProcs.size > 0){
+        stopGame()
+        return
+    }
     loggerLanding.info('Launching game..')
     try {
         const server = (await DistroAPI.getDistribution()).getServerById(ConfigManager.getSelectedServer())
@@ -190,6 +237,26 @@ function updateSelectedAccount(authUser){
 updateSelectedAccount(ConfigManager.getSelectedAccount())
 
 // Bind selected server
+/**
+ * Show "in the launcher" on Discord for the selected server, unless the game
+ * is running (the game updates the status itself).
+ *
+ * @param {boolean} resetTimer Restart the elapsed time (e.g. after the game closes).
+ */
+async function updateLauncherPresence(resetTimer = false){
+    if(hasRPC){
+        return
+    }
+    try {
+        const distro = await DistroAPI.getDistribution()
+        const serverId = ConfigManager.getSelectedServer()
+        const serv = serverId == null || serverId === 'SELECT' ? null : distro.getServerById(serverId)
+        DiscordWrapper.setPresence(distro.rawDistribution.discord, serv?.rawServer.discord, Lang.queryJS('landing.discord.launcher'), { resetTimer })
+    } catch(err) {
+        loggerLanding.warn('Unable to update Discord presence.', err)
+    }
+}
+
 function updateSelectedServer(serv){
 
     if(getCurrentView() === VIEWS.settings){
@@ -199,7 +266,8 @@ function updateSelectedServer(serv){
     ConfigManager.setSelectedServer(serv != null ? serv.rawServer.id : null)
     ConfigManager.save()
 
-    if (serv != null) {
+    // Servers without their own background keep the launcher's default.
+    if (serv?.rawServer.background) {
         setTimeout(() => {
             document.body.style.backgroundImage = `url('${serv.rawServer.background}'), url('assets/images/backgrounds/${document.body.getAttribute('bkid')}.jpg')`
         }, 900)
@@ -222,6 +290,7 @@ function updateSelectedServer(serv){
     }
 
     setLaunchEnabled(serv != null && serv.rawServer.id !== 'SELECT')
+    updateLauncherPresence()
 
     renderProfileSelection()
 
@@ -523,8 +592,6 @@ async function downloadJava(effectiveJavaOptions, launchAfter = true) {
 
 // Keep reference to Minecraft Process
 let proc
-// Is DiscordRPC enabled
-let hasRPC = false
 // Joined server regex
 // Change this if your server uses something different.
 const GAME_JOINED_REGEX = /\[.+\]: Sound engine started/
@@ -759,12 +826,16 @@ async function dlAsync(login = true) {
             proc = pb.build()
             gameProc = proc
             gameRunning++
+            runningProcs.add(gameProc)
+            refreshLaunchButton()
             let released = false
             const releaseGameLock = () => {
                 if(!released){
                     released = true
                     gameRunning--
+                    runningProcs.delete(gameProc)
                     refreshLaunchLock()
+                    refreshLaunchButton()
                 }
             }
             gameProc.on('close', releaseGameLock)
@@ -782,19 +853,20 @@ async function dlAsync(login = true) {
 
             setLaunchDetails(Lang.queryJS('landing.dlAsync.doneEnjoyServer'))
 
-            // Init Discord Hook
+            // Discord: switch from the launcher status to the game's.
             if(distro.rawDistribution.discord != null && serv.rawServer.discord != null){
                 DiscordWrapper.initRPC(distro.rawDistribution.discord, serv.rawServer.discord)
                 hasRPC = true
-                gameProc.on('close', (code, signal) => {
-                    loggerLaunchSuite.info('Shutting down Discord Rich Presence..')
-                    DiscordWrapper.shutdownRPC()
-                    hasRPC = false
-                    if(proc === gameProc){
-                        proc = null
-                    }
-                })
             }
+            gameProc.on('close', () => {
+                if(proc === gameProc){
+                    proc = null
+                }
+                if(hasRPC){
+                    hasRPC = false
+                    updateLauncherPresence(true)
+                }
+            })
 
         } catch(err) {
 
