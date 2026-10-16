@@ -170,6 +170,8 @@ input[error] { border-color: var(--danger-fg); color: var(--danger-fg); backgrou
 #launch_content > .bot_divider { display: none; }
 #launch_button { font: 600 16px var(--font-sans); min-height: 56px; width: 160px; flex-shrink: 0; padding: 10px 24px; background: var(--primary-fill); border: 1px solid var(--primary-fill); border-radius: 4px; color: var(--foreground); text-shadow: none; }
 #launch_button:hover { background: var(--fj-primary-hover); border-color: var(--primary-light); }
+#launch_button.running { background: var(--surface-2); border-color: var(--danger-line); color: var(--danger-fg); }
+#launch_button.running:hover, #launch_button.confirm { background: var(--danger-soft); border-color: var(--danger-fg); color: var(--danger-fg); }
 #server_selection_button { position: relative; flex: 1; min-width: 220px; min-height: 56px; padding: 8px 40px 8px 16px; text-align: left; background: var(--surface-2); border: 1px solid var(--input-border); color: var(--foreground); font: 13px var(--font-sans); border-radius: 4px; overflow: hidden; }
 #server_selection_button:hover { background: var(--accent); border-color: var(--primary-light); }
 #server_selection_button.has-server-icon { padding-left: 60px; }

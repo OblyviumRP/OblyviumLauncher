@@ -177,6 +177,9 @@ pleaseWait = "Aguarde.."
 failureTitle = "Erro Durante o Lançamento"
 failureText = "Veja o console (CTRL + Shift + i) para mais detalhes."
 okay = "OK"
+play = "Jogar"
+stop = "Fechar jogo"
+confirmStop = "Confirmar"
 
 [js.landing.selectedAccount]
 noAccountSelected = "Nenhuma Conta Selecionada"
@@ -236,6 +239,7 @@ checkConsoleForDetails = "Verifique o console (CTRL + Shift + i) para mais detal
 checking = "Verificando Notícias"
 
 [js.landing.discord]
+launcher = "No launcher"
 loading = "Carregando jogo.."
 joining = "Entrando no Oblyvium!"
 joined = "Explorando o Reino!"
