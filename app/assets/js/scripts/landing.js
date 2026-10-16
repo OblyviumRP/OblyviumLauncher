@@ -44,12 +44,43 @@ const loggerLanding = LoggerUtil.getLogger('Landing')
 
 /* Launch Progress Wrapper Functions */
 
+// True while the loading area is shown (Java scan, file checks, downloads,
+// game start). The profile and its content must not change meanwhile.
+let launchAreaShown = false
+// Number of game processes spawned and not yet closed. The loading area hides
+// once the game window is up, but the game keeps using the profile folder
+// until it exits.
+let gameRunning = 0
+// True while the game owns the Discord status (launcher status otherwise).
+let hasRPC = false
+
+/**
+ * @returns {boolean} True while the game is opening or running.
+ */
+function isLaunchLocked(){
+    return launchAreaShown || gameRunning > 0
+}
+
+/**
+ * Disable the Mods button and the profile selector while the game is opening
+ * or running; re-enable them otherwise.
+ */
+function refreshLaunchLock(){
+    document.getElementById('modsMediaButton').disabled = isLaunchLocked()
+    if(isLaunchLocked()){
+        document.getElementById('profile_selection').disabled = true
+    } else {
+        renderProfileSelection()
+    }
+}
+
 /**
  * Show/hide the loading area.
- * 
+ *
  * @param {boolean} loading True if the loading area should be shown, otherwise false.
  */
 function toggleLaunchArea(loading){
+    launchAreaShown = loading
     if(loading){
         launch_details.style.display = 'flex'
         launch_content.style.display = 'none'
@@ -57,6 +88,7 @@ function toggleLaunchArea(loading){
         launch_details.style.display = 'none'
         launch_content.style.display = 'inline-flex'
     }
+    refreshLaunchLock()
 }
 
 /**
@@ -95,15 +127,60 @@ function setDownloadPercentage(percent){
  * @param {boolean} val True to enable, false to disable.
  */
 function setLaunchEnabled(val){
-    document.getElementById('launch_button').disabled = !val
+    launchAllowed = val
+    refreshLaunchButton()
+}
+
+// True when a server is selected and the game may be launched.
+let launchAllowed = false
+// Game processes that are still running, so "Fechar jogo" can stop them.
+const runningProcs = new Set()
+// Timer that cancels the "Confirmar" step of the stop button.
+let stopConfirmTimer = null
+
+/**
+ * Show "Jogar" or, while the game is running, "Fechar jogo".
+ */
+function refreshLaunchButton(){
+    const button = document.getElementById('launch_button')
+    const running = runningProcs.size > 0
+    clearTimeout(stopConfirmTimer)
+    stopConfirmTimer = null
+    button.classList.remove('confirm')
+    button.classList.toggle('running', running)
+    button.textContent = Lang.queryJS(running ? 'landing.launch.stop' : 'landing.launch.play')
+    button.disabled = !running && !launchAllowed
+}
+
+/**
+ * Stop every running game process. The first click asks for confirmation,
+ * since unsaved progress in the game is lost.
+ */
+function stopGame(){
+    const button = document.getElementById('launch_button')
+    if(stopConfirmTimer == null){
+        button.classList.add('confirm')
+        button.textContent = Lang.queryJS('landing.launch.confirmStop')
+        stopConfirmTimer = setTimeout(refreshLaunchButton, 4000)
+        return
+    }
+    loggerLanding.info('Stopping game..')
+    for(const p of runningProcs){
+        p.kill()
+    }
+    refreshLaunchButton()
 }
 
 // Bind launch button
 document.getElementById('launch_button').addEventListener('click', async e => {
+    if(runningProcs.size > 0){
+        stopGame()
+        return
+    }
     loggerLanding.info('Launching game..')
     try {
         const server = (await DistroAPI.getDistribution()).getServerById(ConfigManager.getSelectedServer())
-        const jExe = ConfigManager.getJavaExecutable(ConfigManager.getSelectedServer())
+        const jExe = ConfigManager.getJavaExecutable(ProfileManager.getSelectedConfigKey())
         if(jExe == null){
             await asyncSystemScan(server.effectiveJavaOptions)
         } else {
@@ -133,6 +210,9 @@ document.getElementById('settingsMediaButton').onclick = async e => {
     switchView(getCurrentView(), VIEWS.settings)
 }
 
+// Bind mods button
+document.getElementById('modsMediaButton').onclick = () => openModsView()
+
 // Bind avatar overlay button.
 document.getElementById('avatarOverlay').onclick = async e => {
     await prepareSettings()
@@ -157,6 +237,26 @@ function updateSelectedAccount(authUser){
 updateSelectedAccount(ConfigManager.getSelectedAccount())
 
 // Bind selected server
+/**
+ * Show "in the launcher" on Discord for the selected server, unless the game
+ * is running (the game updates the status itself).
+ *
+ * @param {boolean} resetTimer Restart the elapsed time (e.g. after the game closes).
+ */
+async function updateLauncherPresence(resetTimer = false){
+    if(hasRPC){
+        return
+    }
+    try {
+        const distro = await DistroAPI.getDistribution()
+        const serverId = ConfigManager.getSelectedServer()
+        const serv = serverId == null || serverId === 'SELECT' ? null : distro.getServerById(serverId)
+        DiscordWrapper.setPresence(distro.rawDistribution.discord, serv?.rawServer.discord, Lang.queryJS('landing.discord.launcher'), { resetTimer })
+    } catch(err) {
+        loggerLanding.warn('Unable to update Discord presence.', err)
+    }
+}
+
 function updateSelectedServer(serv){
 
     if(getCurrentView() === VIEWS.settings){
@@ -166,7 +266,8 @@ function updateSelectedServer(serv){
     ConfigManager.setSelectedServer(serv != null ? serv.rawServer.id : null)
     ConfigManager.save()
 
-    if (serv != null) {
+    // Servers without their own background keep the launcher's default.
+    if (serv?.rawServer.background) {
         setTimeout(() => {
             document.body.style.backgroundImage = `url('${serv.rawServer.background}'), url('assets/images/backgrounds/${document.body.getAttribute('bkid')}.jpg')`
         }, 900)
@@ -189,8 +290,45 @@ function updateSelectedServer(serv){
     }
 
     setLaunchEnabled(serv != null && serv.rawServer.id !== 'SELECT')
+    updateLauncherPresence()
+
+    renderProfileSelection()
 
 }
+const PROFILE_NEW_VALUE = '__novo__'
+
+/**
+ * Fill the profile selector with the selected server's profiles.
+ */
+function renderProfileSelection(){
+    const select = document.getElementById('profile_selection')
+    const serverId = ConfigManager.getSelectedServer()
+    select.replaceChildren()
+    if(serverId == null || serverId === 'SELECT'){
+        select.disabled = true
+        return
+    }
+    // dlAsync refreshes the distro mid-launch, which re-renders this selector.
+    select.disabled = isLaunchLocked()
+    const selected = ProfileManager.getSelected(serverId)
+    for(const profile of ProfileManager.list(serverId)){
+        select.add(new Option(profile.name, profile.id, false, profile.id === selected.id))
+    }
+    if(typeof modsOpenEditor === 'function'){
+        select.add(new Option(Lang.queryJS('landing.profile.new'), PROFILE_NEW_VALUE))
+    }
+}
+
+document.getElementById('profile_selection').addEventListener('change', async e => {
+    const serverId = ConfigManager.getSelectedServer()
+    if(e.target.value === PROFILE_NEW_VALUE){
+        renderProfileSelection()
+        await openModsView({ createProfile: true })
+        return
+    }
+    ProfileManager.select(serverId, e.target.value)
+})
+
 // Real text is set in uibinder.js on distributionIndexDone.
 document.getElementById('server_selection_name').textContent = Lang.queryJS('landing.selectedServer.loading')
 server_selection_button.onclick = async e => {
@@ -376,13 +514,8 @@ async function asyncSystemScan(effectiveJavaOptions, launchAfter = true){
     } else {
         // Java installation found, use this to launch the game.
         const javaExec = javaExecFromRoot(jvmDetails.path)
-        ConfigManager.setJavaExecutable(ConfigManager.getSelectedServer(), javaExec)
+        ConfigManager.setJavaExecutable(ProfileManager.getSelectedConfigKey(), javaExec)
         ConfigManager.save()
-
-        // We need to make sure that the updated value is on the settings UI.
-        // Just incase the settings UI is already open.
-        settingsJavaExecVal.value = javaExec
-        await populateJavaExecDetails(settingsJavaExecVal.value)
 
         // TODO Callback hell, refactor
         // TODO Move this out, separate concerns.
@@ -445,7 +578,7 @@ async function downloadJava(effectiveJavaOptions, launchAfter = true) {
     remote.getCurrentWindow().setProgressBar(-1)
 
     // Extraction completed successfully.
-    ConfigManager.setJavaExecutable(ConfigManager.getSelectedServer(), newJavaExec)
+    ConfigManager.setJavaExecutable(ProfileManager.getSelectedConfigKey(), newJavaExec)
     ConfigManager.save()
 
     clearInterval(extractListener)
@@ -459,8 +592,6 @@ async function downloadJava(effectiveJavaOptions, launchAfter = true) {
 
 // Keep reference to Minecraft Process
 let proc
-// Is DiscordRPC enabled
-let hasRPC = false
 // Joined server regex
 // Change this if your server uses something different.
 const GAME_JOINED_REGEX = /\[.+\]: Sound engine started/
@@ -474,28 +605,36 @@ function escapeHtml(text) {
 }
 
 /**
- * Disable enabled drop-in mods that the staff has blocked, then tell the
- * player. If Modrinth cannot be reached the launch carries on.
+ * Disable enabled content that the staff has blocked, then tell the player.
+ * If Modrinth cannot be reached the launch carries on.
  */
-async function disableBlockedDropins(serv, logger) {
-    const modsDir = path.join(ConfigManager.getInstanceDirectory(), serv.rawServer.id, 'mods')
+async function disableBlockedContent(serv, gameDir, logger) {
     let blocked
     try {
-        blocked = await Modrinth.findBlockedDropins(modsDir, Modrinth.getBlocklist(serv))
+        blocked = await ContentManager.findBlocked(gameDir, Modrinth.getBlocklist(serv))
     } catch (err) {
-        logger.warn('Could not check drop-in mods against the blocklist.', err)
+        logger.warn('Could not check content against the blocklist.', err)
         return
     }
     if (blocked.length === 0) {
         return
     }
-    for (const mod of blocked) {
-        await DropinModUtil.toggleDropinMod(modsDir, mod.fileName, false)
-        logger.warn(`Disabled blocked drop-in mod ${mod.fileName} (${mod.title}).`)
+    const disabled = []
+    for (const item of blocked) {
+        try {
+            await ContentManager.setEnabled(gameDir, item.type, item.fileName, false)
+            disabled.push(item)
+            logger.warn(`Disabled blocked ${item.type} ${item.fileName} (${item.title}).`)
+        } catch (err) {
+            logger.warn(`Could not disable blocked ${item.type} ${item.fileName} (${item.title}).`, err)
+        }
+    }
+    if (disabled.length === 0) {
+        return
     }
     setOverlayContent(
         Lang.queryJS('landing.dlAsync.blockedModsTitle'),
-        Lang.queryJS('landing.dlAsync.blockedModsMessage', { mods: blocked.map(m => escapeHtml(m.title)).join(', ') }),
+        Lang.queryJS('landing.dlAsync.blockedModsMessage', { mods: disabled.map(m => escapeHtml(m.title)).join(', ') }),
         Lang.queryJS('landing.launch.okay')
     )
     setOverlayHandler(null)
@@ -523,6 +662,15 @@ async function dlAsync(login = true) {
     }
 
     const serv = distro.getServerById(ConfigManager.getSelectedServer())
+    if(serv == null){
+        loggerLaunchSuite.error('The selected server is not in the distribution index.')
+        showLaunchFailure(Lang.queryJS('landing.dlAsync.fatalError'), Lang.queryJS('landing.dlAsync.unableToLoadDistributionIndex'))
+        return
+    }
+
+    const profile = ProfileManager.getSelected(serv.rawServer.id)
+    const gameDir = ProfileManager.getGameDir(serv.rawServer.id, profile.id)
+    const configKey = ProfileManager.configKey(serv.rawServer.id, profile.id)
 
     if(login) {
         if(ConfigManager.getSelectedAccount() == null){
@@ -535,11 +683,14 @@ async function dlAsync(login = true) {
     toggleLaunchArea(true)
     setLaunchPercentage(0, 100)
 
+    // The child process resolves File-type pack modules under this profile's
+    // instance root. Renderer-side mdl.getPath() for File modules still points
+    // at the default instance, so don't rely on it for other profiles.
     const fullRepairModule = new FullRepair(
         ConfigManager.getCommonDirectory(),
-        ConfigManager.getInstanceDirectory(),
+        ProfileManager.getInstanceRoot(profile.id),
         ConfigManager.getLauncherDirectory(),
-        ConfigManager.getSelectedServer(),
+        serv.rawServer.id,
         DistroAPI.isDevMode()
     )
 
@@ -594,7 +745,7 @@ async function dlAsync(login = true) {
 
     fullRepairModule.destroyReceiver()
 
-    await disableBlockedDropins(serv, loggerLaunchSuite)
+    await disableBlockedContent(serv, gameDir, loggerLaunchSuite)
 
     setLaunchDetails(Lang.queryJS('landing.dlAsync.preparingToLaunch'))
 
@@ -613,20 +764,27 @@ async function dlAsync(login = true) {
     if(login) {
         const authUser = ConfigManager.getSelectedAccount()
         loggerLaunchSuite.info(`Sending selected account (${authUser.displayName}) to ProcessBuilder.`)
-        let pb = new ProcessBuilder(serv, versionData, modLoaderData, authUser, remote.app.getVersion())
+        let pb = new ProcessBuilder(serv, versionData, modLoaderData, authUser, remote.app.getVersion(), { gameDir, configKey })
         setLaunchDetails(Lang.queryJS('landing.dlAsync.launchingGame'))
 
         // const SERVER_JOINED_REGEX = /\[.+\]: \[CHAT\] [a-zA-Z0-9_]{1,16} joined the game/
         const SERVER_JOINED_REGEX = new RegExp(`\\[.+\\]: \\[CHAT\\] ${authUser.displayName} joined the game`)
 
+        // This launch's process. The global `proc` may be cleared (or replaced by
+        // a newer launch) before the delayed onLoadComplete runs.
+        let gameProc = null
+
         const onLoadComplete = () => {
             toggleLaunchArea(false)
-            if(hasRPC){
-                DiscordWrapper.updateDetails(Lang.queryJS('landing.discord.loading'))
-                proc.stdout.on('data', gameStateChange)
+            if(gameProc == null){
+                return
             }
-            proc.stdout.removeListener('data', tempListener)
-            proc.stderr.removeListener('data', gameErrorListener)
+            if(hasRPC && gameProc.exitCode == null){
+                DiscordWrapper.updateDetails(Lang.queryJS('landing.discord.loading'))
+                gameProc.stdout.on('data', gameStateChange)
+            }
+            gameProc.stdout.removeListener('data', tempListener)
+            gameProc.stderr.removeListener('data', gameErrorListener)
         }
         const start = Date.now()
 
@@ -666,24 +824,49 @@ async function dlAsync(login = true) {
         try {
             // Build Minecraft process.
             proc = pb.build()
+            gameProc = proc
+            gameRunning++
+            runningProcs.add(gameProc)
+            refreshLaunchButton()
+            let released = false
+            const releaseGameLock = () => {
+                if(!released){
+                    released = true
+                    gameRunning--
+                    runningProcs.delete(gameProc)
+                    refreshLaunchLock()
+                    refreshLaunchButton()
+                }
+            }
+            gameProc.on('close', releaseGameLock)
+            // A process that never spawned may emit 'error' without 'close'.
+            gameProc.on('error', err => {
+                loggerLaunchSuite.error('Game process error', err)
+                if(gameProc.pid == null){
+                    releaseGameLock()
+                }
+            })
 
             // Bind listeners to stdout.
-            proc.stdout.on('data', tempListener)
-            proc.stderr.on('data', gameErrorListener)
+            gameProc.stdout.on('data', tempListener)
+            gameProc.stderr.on('data', gameErrorListener)
 
             setLaunchDetails(Lang.queryJS('landing.dlAsync.doneEnjoyServer'))
 
-            // Init Discord Hook
+            // Discord: switch from the launcher status to the game's.
             if(distro.rawDistribution.discord != null && serv.rawServer.discord != null){
                 DiscordWrapper.initRPC(distro.rawDistribution.discord, serv.rawServer.discord)
                 hasRPC = true
-                proc.on('close', (code, signal) => {
-                    loggerLaunchSuite.info('Shutting down Discord Rich Presence..')
-                    DiscordWrapper.shutdownRPC()
-                    hasRPC = false
-                    proc = null
-                })
             }
+            gameProc.on('close', () => {
+                if(proc === gameProc){
+                    proc = null
+                }
+                if(hasRPC){
+                    hasRPC = false
+                    updateLauncherPresence(true)
+                }
+            })
 
         } catch(err) {
 
@@ -887,10 +1070,10 @@ function updateLandingNewsNotice(article){
         notice.hidden = true
         return
     }
-    const summary = document.createElement('template')
-    summary.innerHTML = article.content || ''
-    summary.content.querySelectorAll('script, style').forEach(element => element.remove())
-    const text = (summary.content.textContent || '').replace(/\s+/g, ' ').trim()
+    // DOMParser documents are inert: no scripts run and no handlers fire.
+    const summary = new DOMParser().parseFromString(String(article.content || ''), 'text/html')
+    summary.querySelectorAll('script, style').forEach(element => element.remove())
+    const text = (summary.body.textContent || '').replace(/\s+/g, ' ').trim()
     document.getElementById('landingNewsTitle').textContent = article.title
     document.getElementById('landingNewsTitle').title = article.title
     document.getElementById('landingNewsSummary').textContent = text.length > 180 ? text.slice(0, 177) + '…' : text
@@ -1019,13 +1202,16 @@ document.addEventListener('keydown', (e) => {
  * @param {number} index The article index.
  */
 function displayArticle(articleObject, index){
-    newsArticleTitle.innerHTML = articleObject.title
+    // Feed fields are untrusted and this renderer has Node access: plain
+    // fields go in as text, the body through RichText. RichText is the global
+    // declared by mods.js (shared script scope); redeclaring it would throw.
+    newsArticleTitle.textContent = articleObject.title
     newsArticleTitle.href = articleObject.link
-    newsArticleAuthor.innerHTML = 'by ' + articleObject.author
-    newsArticleDate.innerHTML = articleObject.date
-    newsArticleComments.innerHTML = articleObject.comments
+    newsArticleAuthor.textContent = 'by ' + articleObject.author
+    newsArticleDate.textContent = articleObject.date
+    newsArticleComments.textContent = articleObject.comments
     newsArticleComments.href = articleObject.commentsLink
-    newsArticleContentScrollable.innerHTML = '<div id="newsArticleContentWrapper"><div class="newsArticleSpacerTop"></div>' + articleObject.content + '<div class="newsArticleSpacerBot"></div></div>'
+    newsArticleContentScrollable.innerHTML = '<div id="newsArticleContentWrapper"><div class="newsArticleSpacerTop"></div>' + RichText.sanitizeHtml(articleObject.content) + '<div class="newsArticleSpacerBot"></div></div>'
     Array.from(newsArticleContentScrollable.getElementsByClassName('bbCodeSpoilerButton')).forEach(v => {
         v.onclick = () => {
             const text = v.parentElement.getElementsByClassName('bbCodeSpoilerText')[0]
@@ -1045,6 +1231,17 @@ async function loadNews(){
     const distroData = await DistroAPI.getDistribution()
     if(!distroData.rawDistribution.rss) {
         loggerLanding.debug('No RSS feed provided.')
+        return null
+    }
+    // A placeholder or malformed value must not break the landing screen.
+    let feedUrl
+    try {
+        feedUrl = new URL(distroData.rawDistribution.rss)
+    } catch {
+        feedUrl = null
+    }
+    if(feedUrl == null || (feedUrl.protocol !== 'https:' && feedUrl.protocol !== 'http:')) {
+        loggerLanding.warn('Ignoring invalid RSS feed URL in the distribution:', distroData.rawDistribution.rss)
         return null
     }
 

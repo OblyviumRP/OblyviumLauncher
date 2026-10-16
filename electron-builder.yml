@@ -11,6 +11,9 @@ files:
   - '!{dist,.gitignore,.vscode,docs,dev-app-update.yml,.nvmrc,eslint.config.mjs}'
   - '!scripts/verify-visual.cjs'
   - '!app/.forja-qa.html'
+  - '!scripts/verify-mods.cjs'
+  - '!test/**'
+  - '!app/.mods-qa.html'
 
 extraResources:
   - 'libraries'

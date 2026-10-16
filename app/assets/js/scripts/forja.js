@@ -19,24 +19,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const fallback = new URL('assets/images/oblyvium-mark.svg', document.baseURI).href
         if(event.currentTarget.src !== fallback) event.currentTarget.src = fallback
     })
-    const shaders = document.getElementById('settingsShadersSelected')
-    const options = document.getElementById('settingsShadersOptions')
-    shaders.tabIndex = 0
-    shaders.setAttribute('role', 'combobox')
-    shaders.setAttribute('aria-label', 'Shaderpack')
-    shaders.setAttribute('aria-controls', options.id)
-    shaders.setAttribute('aria-haspopup', 'listbox')
-    options.setAttribute('role', 'listbox')
-    options.setAttribute('aria-label', 'Shaderpacks disponíveis')
     const syncControls = () => {
         const inDialog = document.getElementById('main').hasAttribute('overlay')
-        shaders.tabIndex = inDialog ? -1 : 0
-        shaders.setAttribute('aria-expanded', String(!options.hasAttribute('hidden')))
-        for (const option of options.children) {
-            option.tabIndex = -1
-            option.setAttribute('role', 'option')
-            option.setAttribute('aria-selected', String(option.hasAttribute('selected')))
-        }
         for (const slider of document.querySelectorAll('.rangeSlider')) {
             slider.tabIndex = inDialog ? -1 : 0
             slider.setAttribute('aria-valuenow', slider.getAttribute('value'))
@@ -45,37 +29,6 @@ document.addEventListener('DOMContentLoaded', () => {
             slider.setAttribute('aria-valuetext', slider.getAttribute('value') + ' gigabytes')
         }
     }
-    shaders.addEventListener('keydown', event => {
-        if (['Enter', ' ', 'ArrowDown', 'ArrowUp'].includes(event.key)) {
-            event.preventDefault()
-            if (options.hasAttribute('hidden')) shaders.click()
-            else if (event.key === 'Enter' || event.key === ' ') shaders.click()
-            if (!options.hasAttribute('hidden')) (options.querySelector('[selected]') || options.firstElementChild)?.focus({ preventScroll: true })
-        } else if (event.key === 'Escape') {
-            if(!options.hasAttribute('hidden')) {
-                event.preventDefault()
-                closeSettingsSelect()
-            }
-        }
-    })
-    options.addEventListener('keydown', event => {
-        const entries = Array.from(options.children)
-        const index = entries.indexOf(document.activeElement)
-        if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
-            event.preventDefault()
-            let next = event.key === 'ArrowDown' ? index + 1 : index - 1
-            if (event.key === 'Home') next = 0
-            if (event.key === 'End') next = entries.length - 1
-            entries[Math.max(0, Math.min(entries.length - 1, next))]?.focus()
-        } else if (['Enter', ' ', 'Escape'].includes(event.key)) {
-            event.preventDefault()
-            if (event.key !== 'Escape') document.activeElement.click()
-            else closeSettingsSelect()
-            shaders.focus({ preventScroll: true })
-        } else if (event.key === 'Tab') {
-            closeSettingsSelect()
-        }
-    })
     for (const slider of document.querySelectorAll('.rangeSlider')) {
         slider.tabIndex = 0
         slider.setAttribute('role', 'slider')

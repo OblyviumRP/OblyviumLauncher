@@ -205,11 +205,31 @@ document.addEventListener('readystatechange', function () {
 }, false)
 
 /**
- * Open web links in the user's default browser.
+ * Links never navigate the launcher window (it has Node access). Web links
+ * open in the user's default browser; anything else (e.g. href="#" with its
+ * own click handler) only loses the default action.
  */
-$(document).on('click', 'a[href^="http"]', function(event) {
+function openLinkExternally(anchor, event) {
     event.preventDefault()
-    shell.openExternal(this.href)
+    let url
+    try {
+        url = new URL(anchor.getAttribute('href'), document.baseURI)
+    } catch {
+        return
+    }
+    if(url.protocol === 'https:' || url.protocol === 'http:') {
+        shell.openExternal(url.href)
+    }
+}
+$(document).on('click', 'a[href]', function(event) {
+    openLinkExternally(this, event)
+})
+$(document).on('auxclick', 'a[href]', function(event) {
+    if(event.button === 1) {
+        openLinkExternally(this, event)
+    } else {
+        event.preventDefault()
+    }
 })
 
 /**

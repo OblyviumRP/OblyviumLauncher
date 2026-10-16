@@ -10,6 +10,9 @@ const AuthManagerOffline = require('./assets/extension/offline/authmanagerOfflin
 const AuthManager   = require('./assets/js/authmanager')
 const ConfigManager = require('./assets/js/configmanager')
 const { DistroAPI } = require('./assets/js/distromanager')
+const ProfileManager = require('./assets/js/profilemanager')
+const Modrinth      = require('./assets/js/modrinth')
+const ContentManager = require('./assets/js/contentmanager')
 
 let rscShouldLoad = false
 let fatalStartupError = false
@@ -21,6 +24,7 @@ const VIEWS = {
     loginOffline: '#loginOfflineContainer',
     login: '#loginContainer',
     settings: '#settingsContainer',
+    mods: '#modsContainer',
     welcome: '#welcomeContainer',
     waiting: '#waitingContainer'
 }
@@ -47,7 +51,8 @@ function switchView(current, next, currentFadeTime = 180, nextFadeTime = 180, on
         $(`${next}`).fadeIn(nextFadeTime, async () => {
             await onNextFade()
             const focusTarget = document.querySelector(next + ' [data-view-focus]')
-            if(focusTarget && !focusTarget.disabled && currentView === next && !isOverlayVisible()){
+            const focusPlaced = document.querySelector(next)?.contains(document.activeElement)
+            if(focusTarget && !focusTarget.disabled && currentView === next && !isOverlayVisible() && !focusPlaced){
                 focusTarget.focus({preventScroll: true})
             }
         })
@@ -147,82 +152,21 @@ function onDistroRefresh(data){
 }
 
 /**
- * Sync the mod configurations with the distro index.
- * 
+ * Sync the optional mod configuration of every profile with the distro index.
+ *
  * @param {Object} data The distro index object.
  */
 function syncModConfigurations(data){
+    ProfileManager.ensureServers(data.servers.map(s => s.rawServer.id))
 
     const syncedCfgs = []
-
-    for(let serv of data.servers){
-
-        const id = serv.rawServer.id
-        const mdls = serv.modules
-        const cfg = ConfigManager.getModConfiguration(id)
-
-        if(cfg != null){
-
-            const modsOld = cfg.mods
-            const mods = {}
-
-            for(let mdl of mdls){
-                const type = mdl.rawModule.type
-
-                if(type === Type.ForgeMod || type === Type.LiteMod || type === Type.LiteLoader || type === Type.FabricMod){
-                    if(!mdl.getRequired().value){
-                        const mdlID = mdl.getVersionlessMavenIdentifier()
-                        if(modsOld[mdlID] == null){
-                            mods[mdlID] = scanOptionalSubModules(mdl.subModules, mdl)
-                        } else {
-                            mods[mdlID] = mergeModConfiguration(modsOld[mdlID], scanOptionalSubModules(mdl.subModules, mdl), false)
-                        }
-                    } else {
-                        if(mdl.subModules.length > 0){
-                            const mdlID = mdl.getVersionlessMavenIdentifier()
-                            const v = scanOptionalSubModules(mdl.subModules, mdl)
-                            if(typeof v === 'object'){
-                                if(modsOld[mdlID] == null){
-                                    mods[mdlID] = v
-                                } else {
-                                    mods[mdlID] = mergeModConfiguration(modsOld[mdlID], v, true)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
+    for(const serv of data.servers){
+        for(const key of ProfileManager.configKeys(serv.rawServer.id)){
+            const cfg = ConfigManager.getModConfiguration(key)
             syncedCfgs.push({
-                id,
-                mods
+                id: key,
+                mods: resolveModConfiguration(serv.modules, cfg?.mods ?? null)
             })
-
-        } else {
-
-            const mods = {}
-
-            for(let mdl of mdls){
-                const type = mdl.rawModule.type
-                if(type === Type.ForgeMod || type === Type.LiteMod || type === Type.LiteLoader || type === Type.FabricMod){
-                    if(!mdl.getRequired().value){
-                        mods[mdl.getVersionlessMavenIdentifier()] = scanOptionalSubModules(mdl.subModules, mdl)
-                    } else {
-                        if(mdl.subModules.length > 0){
-                            const v = scanOptionalSubModules(mdl.subModules, mdl)
-                            if(typeof v === 'object'){
-                                mods[mdl.getVersionlessMavenIdentifier()] = v
-                            }
-                        }
-                    }
-                }
-            }
-
-            syncedCfgs.push({
-                id,
-                mods
-            })
-
         }
     }
 
@@ -231,17 +175,41 @@ function syncModConfigurations(data){
 }
 
 /**
- * Ensure java configurations are present for the available servers.
- * 
+ * Build the optional mod configuration for a server's modules, keeping the
+ * player's previous choices when there are any.
+ */
+function resolveModConfiguration(mdls, modsOld){
+    const mods = {}
+    for(const mdl of mdls){
+        const type = mdl.rawModule.type
+        if(type === Type.ForgeMod || type === Type.LiteMod || type === Type.LiteLoader || type === Type.FabricMod){
+            const mdlID = mdl.getVersionlessMavenIdentifier()
+            if(!mdl.getRequired().value){
+                const v = scanOptionalSubModules(mdl.subModules, mdl)
+                mods[mdlID] = modsOld?.[mdlID] == null ? v : mergeModConfiguration(modsOld[mdlID], v, false)
+            } else if(mdl.subModules.length > 0){
+                const v = scanOptionalSubModules(mdl.subModules, mdl)
+                if(typeof v === 'object'){
+                    mods[mdlID] = modsOld?.[mdlID] == null ? v : mergeModConfiguration(modsOld[mdlID], v, true)
+                }
+            }
+        }
+    }
+    return mods
+}
+
+/**
+ * Ensure java configurations are present for every profile of every server.
+ *
  * @param {Object} data The distro index object.
  */
 function ensureJavaSettings(data) {
-
-    // Nothing too fancy for now.
+    ProfileManager.ensureServers(data.servers.map(s => s.rawServer.id))
     for(const serv of data.servers){
-        ConfigManager.ensureJavaConfig(serv.rawServer.id, serv.effectiveJavaOptions, serv.rawServer.javaOptions?.ram)
+        for(const key of ProfileManager.configKeys(serv.rawServer.id)){
+            ConfigManager.ensureJavaConfig(key, serv.effectiveJavaOptions, serv.rawServer.javaOptions?.ram)
+        }
     }
-
     ConfigManager.save()
 }
 
@@ -442,7 +410,14 @@ document.addEventListener('readystatechange', async () => {
 }, false)
 
 // Actions that must be performed after the distribution index is downloaded.
-ipcRenderer.on('distributionIndexDone', async (event, res) => {
+// The preloader may finish before this script registers the IPC listener (the
+// echo is then lost), so the result is also read from the window once below.
+let distributionIndexHandled = false
+async function onDistributionIndexDone(res) {
+    if(distributionIndexHandled) {
+        return
+    }
+    distributionIndexHandled = true
     if(res) {
         const data = await DistroAPI.getDistribution()
         syncModConfigurations(data)
@@ -460,7 +435,11 @@ ipcRenderer.on('distributionIndexDone', async (event, res) => {
             rscShouldLoad = true
         }
     }
-})
+}
+ipcRenderer.on('distributionIndexDone', (event, res) => onDistributionIndexDone(res))
+if(typeof window.distributionIndexResult === 'boolean') {
+    onDistributionIndexDone(window.distributionIndexResult)
+}
 
 // Util for development
 async function devModeToggle() {

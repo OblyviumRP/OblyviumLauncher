@@ -12,6 +12,7 @@ const semver                            = require('semver')
 const { pathToFileURL }                 = require('url')
 const { AZURE_CLIENT_ID, MSFT_OPCODE, MSFT_REPLY_TYPE, MSFT_ERROR, SHELL_OPCODE } = require('./app/assets/js/ipcconstants')
 const LangLoader                        = require('./app/assets/js/langloader')
+const NavigationGuard                   = require('./app/assets/js/navigationguard')
 
 // Setup Lang
 LangLoader.setupLanguage()
@@ -246,7 +247,9 @@ function createWindow() {
     }
     Object.entries(data).forEach(([key, val]) => ejse.data(key, val))
 
-    win.loadURL(pathToFileURL(path.join(__dirname, 'app', 'app.ejs')).toString())
+    const appUrl = pathToFileURL(path.join(__dirname, 'app', 'app.ejs')).toString()
+    NavigationGuard.attach(win.webContents, () => appUrl, url => shell.openExternal(url))
+    win.loadURL(appUrl)
 
     /*win.once('ready-to-show', () => {
         win.show()
