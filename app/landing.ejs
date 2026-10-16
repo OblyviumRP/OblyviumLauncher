@@ -31,6 +31,12 @@
                 </div>
                 <div id="mediaContent">
                     <div id="internalMedia">
+                        <div class="mediaContainer" id="modsMediaContainer">
+                            <button class="mediaButton" id="modsMediaButton" type="button">
+                                <svg class="mediaSVG" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 3h4v3a2 2 0 1 0 4 0V3h3v7h-3a2 2 0 1 0 0 4h3v7h-7v-3a2 2 0 1 0-4 0v3H3v-7h3a2 2 0 1 0 0-4H3V3h7z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+                                <span>Mods</span>
+                            </button>
+                        </div>
                         <div class="mediaContainer" id="settingsMediaContainer">
                             <button class="mediaButton" id="settingsMediaButton" aria-label="Configurações">
                                 <svg id="settingsSVG" class="mediaSVG" viewBox="0 0 141.36 137.43">
@@ -161,6 +167,11 @@
                         <span id="server_selection_name"><%- lang('landing.launchButtonPlaceholder') %></span>
                         <svg class="server-selector-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
                     </button>
+                    <label id="profile_selection_wrap" class="profile-selector">
+                        <span class="server-selector-label"><%- lang('landing.profileLabel') %></span>
+                        <select id="profile_selection" aria-label="<%- lang('landing.profileLabel') %>"></select>
+                        <svg class="server-selector-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+                    </label>
                     <button id="launch_button"><%- lang('landing.launchButton') %></button>
                 </div>
                 <div id="launch_details">

@@ -56,11 +56,17 @@ As ações de selecionar e desconectar conta são visíveis sem hover. Conteúdo
 
 O QA no Electron também verifica centralização do modal offline, foco dos campos, saída pelos três caminhos, erro/correção de resolução, fechamento do dropdown sem sair da aba e configurações em 800 e 1920px. O teste usa perfil isolado; não autentica uma conta Microsoft real nem inicia o Minecraft.
 
-## Mods da Modrinth
+## Perfis e tela de mods
 
-Na aba **Mods**, o jogador busca mods na Modrinth e instala direto na pasta de drop-in mods do servidor selecionado. A busca só mostra mods compatíveis com a versão do Minecraft e o loader (Forge ou Fabric) do servidor, que rodam no cliente, e que não estão no modpack nem na lista de proibidos. As dependências obrigatórias são instaladas juntas. Se alguma estiver proibida, nada é baixado. Todo arquivo baixado é conferido pelo hash `sha512` informado pela Modrinth.
+Cada servidor tem perfis. O **Padrão** usa a pasta de jogo de sempre (`instances/<servidor>`); perfis novos ficam em `instances/.perfis/<id>/<servidor>`. Cada perfil tem os próprios mods, resource packs, shaders, `options.txt`, teclas, mundos, memória, Java, argumentos da JVM, resolução e mods opcionais do pack. Os mods obrigatórios do pack ficam em `common/` e não são baixados de novo por perfil.
 
-A staff mantém a lista de proibidos no `distribution.json`, na entrada de cada servidor. Valem o slug ou o ID do projeto na Modrinth:
+O jogador escolhe o perfil ao lado do servidor, na tela principal, e abre a tela **Mods** pelo botão no topo. Nela há:
+
+- **Instalados:** mods, resource packs e shaders do perfil, com ligar/desligar, remover e atualizar; o grupo "Mods do pack" mostra o que a staff mantém.
+- **Explorar:** busca na Modrinth filtrada pela versão e pelo loader do servidor, com categorias e página de cada projeto. A descrição do projeto passa por limpeza de HTML antes de aparecer.
+- **Editar perfil:** nome, ícone, ajustes de jogo, duplicar e excluir (a pasta vai para a lixeira).
+
+A staff proíbe projetos no `distribution.json`, na entrada de cada servidor, por slug ou ID da Modrinth:
 
 ```json
 {
@@ -71,7 +77,28 @@ A staff mantém a lista de proibidos no `distribution.json`, na entrada de cada 
 }
 ```
 
-Antes de abrir o jogo, o launcher identifica os drop-ins ativos pelo hash e desativa (renomeia para `.disabled`) os que estiverem proibidos, avisando o jogador. Se a Modrinth estiver fora do ar, o jogo abre sem a checagem.
+Proibidos e suas dependências não aparecem nem instalam. Antes de abrir o jogo, o launcher identifica pelo hash o conteúdo ativo do perfil e desativa o que estiver proibido, avisando o jogador. Se a Modrinth estiver fora do ar, o jogo abre sem a checagem.
 
-Limites: o launcher só reconhece arquivos publicados na Modrinth. Um jar modificado ou baixado de outro site passa pela checagem. A lista é uma barreira de conveniência; anticheat de verdade precisa ficar no servidor.
+Limites: só arquivos publicados na Modrinth são reconhecidos; um jar modificado ou de outro site passa pela checagem. A lista é uma barreira de conveniência; anticheat de verdade fica no servidor. Proibir resource packs e shaders desativa o item no `options.txt`/configuração de shaders antes de abrir o jogo, mas o arquivo continua na pasta e pode ser reativado dentro do jogo até a próxima abertura pelo launcher.
+
+Testes: `npm test` (módulos de perfis, conteúdo e Modrinth, contra uma Modrinth falsa local) e `npm run verify:mods` (tela no Electron, com capturas em `%TEMP%\oblyvium-mods-qa`).
+
+### Detalhes além do plano original
+
+- Links nas descrições de projetos e na notícia da tela principal sempre abrem no navegador do sistema: a janela principal não navega para fora da própria página (`navigationguard.js` intercepta `will-navigate` e janelas novas).
+- A descrição do mod/resource pack/shader e o conteúdo da notícia (RSS) passam pelo mesmo sanitizador de HTML (`richtext.js`, DOMPurify com lista branca de tags/atributos e só URLs `https:`).
+- Instalações são enfileiradas uma de cada vez (nunca em paralelo) e todo nome de arquivo anunciado pela Modrinth é validado antes de tocar o disco.
+- **Remover** manda o mod/resource pack/shader para a lixeira do sistema, com fallback para exclusão definitiva se a lixeira falhar; excluir um perfil manda a pasta inteira para a lixeira do mesmo jeito.
+- O botão **Mods** e o seletor de perfil ficam bloqueados enquanto o jogo está abrindo ou rodando, para o perfil não mudar por baixo do jogo.
+- Memória, executável do Java, argumentos da JVM e resolução saíram de Configurações e agora ficam em **Editar perfil**, por perfil.
+
+## Versão do Java
+
+O launcher usa a versão do Java que cada servidor precisa e baixa a certa (Temurin) se ela não estiver instalada. A helios-core só conhece até o Java 21 (Minecraft 1.20.5+); o launcher completa a regra em `app/assets/js/javadefaults.js`: **Minecraft 26 em diante usa Java 25**.
+
+Se um servidor precisar de outra versão, a staff define na entrada dele no `distribution.json`, e isso tem prioridade sobre a regra:
+
+```json
+"javaOptions": { "supported": ">=25.x", "suggestedMajor": 25 }
+```
 

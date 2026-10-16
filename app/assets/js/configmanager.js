@@ -3,11 +3,12 @@ const { LoggerUtil } = require('helios-core')
 const os   = require('os')
 const path = require('path')
 
+const LegacyMigration = require('./legacymigration')
+
 const logger = LoggerUtil.getLogger('ConfigManager')
 
 const sysRoot = process.env.APPDATA || (process.platform == 'darwin' ? process.env.HOME + '/Library/Application Support' : process.env.HOME)
 
-//Todo: Change default folder
 const dataPath = path.join(sysRoot, '.OblyviumLauncher')
 
 const launcherDir = require('@electron/remote').app.getPath('userData')
@@ -100,7 +101,9 @@ const DEFAULT_CONFIG = {
     selectedAccount: null,
     authenticationDatabase: {},
     modConfigurations: [],
-    javaConfig: {}
+    javaConfig: {},
+    gameConfig: {},
+    profiles: {}
 }
 
 let config = null
@@ -149,6 +152,9 @@ exports.load = function(){
         }
         if(doValidate){
             config = validateKeySet(DEFAULT_CONFIG, config)
+            if(LegacyMigration.migrateLegacyDataDirectory(config, sysRoot, dataPath)){
+                logger.info('Moved the data directory from the old NationNetwork default to', dataPath)
+            }
             exports.save()
         }
     }
@@ -791,4 +797,135 @@ exports.getAllowPrerelease = function(def = false){
  */
 exports.setAllowPrerelease = function(allowPrerelease){
     config.settings.launcher.allowPrerelease = allowPrerelease
+}
+
+// Profiles
+
+/**
+ * The raw profiles store. See profiles.js for its shape.
+ *
+ * @returns {Object}
+ */
+exports.getProfiles = function(){
+    return config.profiles
+}
+
+function gameConfigFor(key){
+    if(config.gameConfig[key] == null){
+        config.gameConfig[key] = {
+            resWidth: config.settings.game.resWidth,
+            resHeight: config.settings.game.resHeight,
+            fullscreen: config.settings.game.fullscreen
+        }
+    }
+    return config.gameConfig[key]
+}
+
+/**
+ * Retrieve the width of the game window for a profile config key.
+ *
+ * @param {string} key The profile config key.
+ * @returns {number} The width of the game window.
+ */
+exports.getProfileGameWidth = function(key){
+    return gameConfigFor(key).resWidth
+}
+
+/**
+ * Set the width of the game window for a profile config key.
+ *
+ * @param {string} key The profile config key.
+ * @param {number} resWidth The new width of the game window.
+ */
+exports.setProfileGameWidth = function(key, resWidth){
+    gameConfigFor(key).resWidth = Number.parseInt(resWidth)
+}
+
+/**
+ * Validate a potential new width value for a profile.
+ *
+ * @param {number} resWidth The width value to validate.
+ * @returns {boolean} Whether or not the value is valid.
+ */
+exports.validateProfileGameWidth = function(resWidth){
+    return exports.validateGameWidth(resWidth)
+}
+
+/**
+ * Retrieve the height of the game window for a profile config key.
+ *
+ * @param {string} key The profile config key.
+ * @returns {number} The height of the game window.
+ */
+exports.getProfileGameHeight = function(key){
+    return gameConfigFor(key).resHeight
+}
+
+/**
+ * Set the height of the game window for a profile config key.
+ *
+ * @param {string} key The profile config key.
+ * @param {number} resHeight The new height of the game window.
+ */
+exports.setProfileGameHeight = function(key, resHeight){
+    gameConfigFor(key).resHeight = Number.parseInt(resHeight)
+}
+
+/**
+ * Validate a potential new height value for a profile.
+ *
+ * @param {number} resHeight The height value to validate.
+ * @returns {boolean} Whether or not the value is valid.
+ */
+exports.validateProfileGameHeight = function(resHeight){
+    return exports.validateGameHeight(resHeight)
+}
+
+/**
+ * Check if a profile should be launched in fullscreen mode.
+ *
+ * @param {string} key The profile config key.
+ * @returns {boolean} Whether or not the profile is set to launch in fullscreen mode.
+ */
+exports.getProfileFullscreen = function(key){
+    return gameConfigFor(key).fullscreen
+}
+
+/**
+ * Set whether a profile should be launched in fullscreen mode.
+ *
+ * @param {string} key The profile config key.
+ * @param {boolean} fullscreen The new fullscreen setting.
+ */
+exports.setProfileFullscreen = function(key, fullscreen){
+    gameConfigFor(key).fullscreen = fullscreen
+}
+
+/**
+ * Copy Java, game and optional-mod settings from one profile key to another.
+ * dstKey is expected to be a fresh key with no settings of its own yet.
+ */
+exports.copyProfileConfig = function(srcKey, dstKey){
+    if(config.javaConfig[srcKey] != null){
+        config.javaConfig[dstKey] = JSON.parse(JSON.stringify(config.javaConfig[srcKey]))
+    }
+    const srcGameConfig = config.gameConfig[srcKey] ?? {
+        resWidth: config.settings.game.resWidth,
+        resHeight: config.settings.game.resHeight,
+        fullscreen: config.settings.game.fullscreen
+    }
+    config.gameConfig[dstKey] = JSON.parse(JSON.stringify(srcGameConfig))
+    const modConf = exports.getModConfiguration(srcKey)
+    if(modConf != null){
+        exports.setModConfiguration(dstKey, { id: dstKey, mods: JSON.parse(JSON.stringify(modConf.mods)) })
+    }
+}
+
+/**
+ * Forget every setting stored for a profile key.
+ */
+exports.removeProfileConfig = function(key){
+    delete config.javaConfig[key]
+    delete config.gameConfig[key]
+    config.modConfigurations = config.modConfigurations.filter(c => c.id !== key)
 }
