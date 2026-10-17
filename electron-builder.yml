@@ -40,6 +40,11 @@ mac:
       arch:
         - 'x64'
         - 'arm64'
+    # electron-updater reads the zip on macOS; latest-mac.yml points to it.
+    - target: 'zip'
+      arch:
+        - 'x64'
+        - 'arm64'
   artifactName: 'Oblyvium-Launcher-setup-${version}-${arch}.${ext}'
   category: 'public.app-category.games'
 
@@ -54,13 +59,14 @@ linux:
   category: 'Game'
 
 
-# Auto update feed. Disabled until the Oblyvium update host exists. To enable:
-#   publish:
-#     provider: 'generic'
-#     url: 'https://<host>/launcher/'
-# then upload latest.yml and the installers from dist/ to that URL on every release.
+# Auto update feed, served by launcher-cdn from oblyvium-website.
+# Each build writes latest.yml, latest-mac.yml or latest-linux.yml next to the
+# installers. Upload the installers and blockmaps first, then the yml, in the
+# website's Launcher > Versões do launcher tab.
 # Keep in sync with UPDATE_URL in app/assets/js/scripts/uicore.js.
-publish: null
+publish:
+  provider: 'generic'
+  url: 'https://launcher.oblyvium.com.br/updates/'
 
 directories:
   buildResources: 'build'
