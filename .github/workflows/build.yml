@@ -1,0 +1,84 @@
+# Builds the launcher for Windows, macOS and Linux on GitHub-hosted runners.
+# Runs on demand (Actions tab -> Build -> Run workflow), on version tags (v*),
+# and on pull requests that change this file, so edits to it get tested.
+# The repository is private: macOS minutes count 10x and Windows 2x against
+# the quota, which is why this does not run on every push.
+
+name: Build
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+  pull_request:
+    paths:
+      - '.github/workflows/build.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Lint and tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+
+  build:
+    name: Build (${{ matrix.name }})
+    needs: check
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows
+            os: windows-latest
+            flag: --win
+            files: |
+              dist/*.exe
+              dist/*.blockmap
+              dist/latest.yml
+          - name: macOS
+            os: macos-latest
+            flag: --mac
+            files: |
+              dist/*.dmg
+              dist/*.blockmap
+              dist/latest-mac.yml
+          - name: Linux
+            os: ubuntu-latest
+            flag: --linux
+            files: |
+              dist/*.AppImage
+              dist/latest-linux.yml
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Build installer
+        run: npx electron-builder ${{ matrix.flag }} --publish never
+        env:
+          # No signing certificates yet; keep electron-builder from looking for them.
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Oblyvium-Launcher-${{ matrix.name }}
+          path: ${{ matrix.files }}
+          if-no-files-found: error
+          retention-days: 14
