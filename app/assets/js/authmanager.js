@@ -383,7 +383,7 @@ async function validateSelectedMicrosoftAccount(){
             )
             ConfigManager.save()
             return true
-        } catch(err) {
+        } catch {
             return false
         }
     } else {
@@ -402,7 +402,7 @@ async function validateSelectedMicrosoftAccount(){
             ConfigManager.save()
             return true
         }
-        catch(err) {
+        catch {
             return false
         }
     }
