@@ -19,12 +19,18 @@ const NOTIFICATION_TYPE_KEYS = {
     'other': 'other'
 }
 
-const UPDATE_CHECK_TIMEOUT_MS = 60000
+/**
+ * How long a launcher update waits for the updater: an answer to the check, then
+ * the download (no progress events arrive while it runs). An object so the
+ * Electron check can shorten them.
+ */
+const notificationUpdateTimeouts = { checkMs: 60000, downloadMs: 600000 }
 const UP_TO_DATE_DISMISS_MS = 3000
 
 let notificationsFeed = null
 let notificationsEtag = null
 let notificationsPolling = false
+let notificationsReadFailing = false
 /** id -> { card, item, syncTimer, clearTimer } */
 const shownToasts = new Map()
 /** The item in the highlight, or null. */
@@ -109,6 +115,15 @@ function launcherUpdateButton(status, dismiss){
         }
         button.disabled = true
         setNotificationStatus(status, Lang.queryJS('notifications.checking'))
+        // No answer from the updater in time: stop waiting and let the player try again.
+        let timeout = null
+        const wait = ms => {
+            clearTimeout(timeout)
+            timeout = setTimeout(() => {
+                stop()
+                offerRetry(Lang.queryJS('notifications.updateFailed'))
+            }, ms)
+        }
         const onUpdate = (_event, arg, info) => {
             if(arg === 'update-available' && process.platform === 'darwin'){
                 stop()
@@ -116,6 +131,8 @@ function launcherUpdateButton(status, dismiss){
                 button.disabled = false
                 setNotificationStatus(status, Lang.queryJS('notifications.downloadOpened'))
             } else if(arg === 'update-available'){
+                // The download runs on its own; give it its own, longer wait.
+                wait(notificationUpdateTimeouts.downloadMs)
                 setNotificationStatus(status, Lang.queryJS('notifications.downloadingUpdate'))
             } else if(arg === 'update-downloaded'){
                 stop()
@@ -131,15 +148,11 @@ function launcherUpdateButton(status, dismiss){
                 offerRetry(Lang.queryJS('notifications.updateFailed') + (message ? ' ' + message : ''))
             }
         }
-        // No answer from the updater: stop waiting and let the player try again.
-        const timeout = setTimeout(() => {
-            stop()
-            offerRetry(Lang.queryJS('notifications.updateFailed'))
-        }, UPDATE_CHECK_TIMEOUT_MS)
         const stop = () => {
             clearTimeout(timeout)
             ipcRenderer.removeListener('autoUpdateNotification', onUpdate)
         }
+        wait(notificationUpdateTimeouts.checkMs)
         ipcRenderer.on('autoUpdateNotification', onUpdate)
         ipcRenderer.send('autoUpdateAction', 'checkForUpdate')
     }
@@ -168,8 +181,16 @@ function modpackUpdateButton(status){
         button.dataset.busy = '1'
         button.disabled = true
         setNotificationStatus(status, Lang.queryJS('notifications.updatingModpack'))
-        const prepared = await prepareServerFiles()
-        delete button.dataset.busy
+        let prepared = null
+        try {
+            prepared = await prepareServerFiles()
+        } catch(err) {
+            // The Jogar path has its own catch; without one here the launch area would stay locked.
+            loggerNotifications.error('Could not update the modpack.', err)
+            showLaunchFailure(Lang.queryJS('landing.dlAsync.fatalError'), Lang.queryJS('landing.dlAsync.seeConsoleForDetails'))
+        } finally {
+            delete button.dataset.busy
+        }
         if(prepared != null){
             toggleLaunchArea(false)
             button.hidden = true
@@ -305,17 +326,26 @@ function openHighlight(item){
     }, [close])
     title.id = 'notificationsHighlightTitle'
     notificationsHighlightCard.append(content)
-    // The page behind the dialog takes no focus or clicks while it is open.
-    document.getElementById('main').inert = true
-    notificationsHighlight.hidden = false
+    syncHighlightVisibility()
     focusHighlight()
+}
+
+/**
+ * Shows the open highlight only on the main screens. While it shows, the page
+ * behind takes no focus or clicks.
+ */
+function syncHighlightVisibility(){
+    const visible = shownHighlight != null && notificationsCanShow()
+    const wasHidden = notificationsHighlight.hidden
+    notificationsHighlight.hidden = !visible
+    document.getElementById('main').inert = visible
+    if(visible && wasHidden && !notificationsHighlight.contains(document.activeElement)) focusHighlight()
 }
 
 /** Closes the highlight without rendering again. */
 function hideHighlight(){
-    notificationsHighlight.hidden = true
     shownHighlight = null
-    document.getElementById('main').inert = false
+    syncHighlightVisibility()
     const returnTo = highlightReturnFocus?.isConnected && highlightReturnFocus !== document.body
         ? highlightReturnFocus
         : document.getElementById('launch_button')
@@ -356,6 +386,9 @@ notificationsHighlight.addEventListener('keydown', event => {
 })
 
 function renderNotifications(){
+    // Off the main screens (back at login, minimised) shown cards and the highlight hide too.
+    notificationsToasts.hidden = !notificationsCanShow()
+    syncHighlightVisibility()
     const overlay = isOverlayVisible()
     // A launcher dialog takes the keyboard; the cards and the highlight wait behind it.
     notificationsToasts.inert = overlay
@@ -392,14 +425,22 @@ async function pollNotifications(){
             notificationsFeed = { feed: result.feed, clock: result.clock }
             notificationsEtag = result.etag
             if(result.feed.dropped > 0) loggerNotifications.warn(`Ignored ${result.feed.dropped} invalid or repeated notification(s).`)
-            ConfigManager.setNotificationsSeen(Notifications.pruneSeen(ConfigManager.getNotificationsSeen(), result.feed))
-            ConfigManager.save()
+            const seen = ConfigManager.getNotificationsSeen()
+            const kept = Notifications.pruneSeen(seen, result.feed)
+            if(kept.length !== seen.length){
+                ConfigManager.setNotificationsSeen(kept)
+                ConfigManager.save()
+            }
         } else if(notificationsFeed != null && result.clock != null){
             // 304: same file, fresh server clock (scheduled and expired items depend on it).
             notificationsFeed.clock = result.clock
         }
+        if(notificationsReadFailing) loggerNotifications.info('The notifications feed can be read again.')
+        notificationsReadFailing = false
     } catch(err) {
-        loggerNotifications.warn('Could not read the notifications feed:', err.message)
+        // Once per outage, not every 30 s.
+        if(!notificationsReadFailing) loggerNotifications.warn('Could not read the notifications feed:', err.message)
+        notificationsReadFailing = true
     } finally {
         notificationsPolling = false
     }
@@ -441,16 +482,23 @@ const notificationsBaseSwitchView = switchView
 switchView = function(current, next, currentFadeTime, nextFadeTime, onCurrentFade, onNextFade = () => {}){
     return notificationsBaseSwitchView.call(this, current, next, currentFadeTime, nextFadeTime, onCurrentFade, async () => {
         await onNextFade()
-        renderNotifications()
+        // A failure here must not skip switchView's own focus handling after this callback.
+        try {
+            renderNotifications()
+        } catch(err) {
+            loggerNotifications.error('Could not show the notifications.', err)
+        }
     })
 }
 // showMainUI picks the first view a moment after it returns, then fades it in.
 const notificationsBaseShowMainUI = showMainUI
 showMainUI = async function(...args){
     const result = await notificationsBaseShowMainUI.apply(this, args)
+    let tries = 0
     const whenShown = () => {
         if(getCurrentView() == null){
-            setTimeout(whenShown, 100)
+            // The view comes 750 ms later; stop looking after 10 s.
+            if(++tries < 100) setTimeout(whenShown, 100)
         } else {
             $(getCurrentView()).promise().done(renderNotifications)
         }

@@ -238,6 +238,18 @@ C.save();
         assert.equal(await run(modpackStatus), Lang.queryJS('notifications.closeGameFirst'))
         await run('gameRunning = 0; refreshLaunchLock()')
         assert.equal(await run(`${toast('modpack')}.querySelector(".notif-btn").disabled`), false)
+        // Preparing throws after locking the launch area: the card unlocks it and offers retry.
+        await run(`prepareServerFiles = async () => { toggleLaunchArea(true); throw new Error('Falha de teste') }; true`)
+        await run(`${toast('modpack')}.querySelector(".notif-btn").click()`)
+        await waitFor(`${modpackStatus} === ${JSON.stringify(Lang.queryJS('notifications.modpackFailed'))}`, 'modpack failure shown')
+        assert.equal(await run('isLaunchLocked()'), false)
+        assert.notEqual(await run('getComputedStyle(document.getElementById("launch_content")).display'), 'none')
+        assert.equal(await run(`${toast('modpack')}.querySelector(".notif-btn").textContent`), Lang.queryJS('notifications.retry'))
+        assert.equal(await run(`${toast('modpack')}.querySelector(".notif-btn").disabled`), false)
+        assert.equal(await run('isOverlayVisible()'), true, 'the failure dialog shows')
+        await run('toggleOverlay(false); true')
+        check('modpack update that throws unlocks Jogar and offers retry')
+
         await run('window.__prepared = 0; prepareServerFiles = async () => { window.__prepared++; return {} }; true')
         await run(`${toast('modpack')}.querySelector(".notif-btn").click()`)
         await waitFor(`${modpackStatus} === ${JSON.stringify(Lang.queryJS('notifications.modpackUpdated'))}`, 'modpack updated')
@@ -284,6 +296,16 @@ C.save();
         assert.equal(await highlightHidden(), true)
         check('seen notifications do not come back after a restart; a new one shows on startup')
 
+        // The real prepareServerFiles (this page has no stub): a second call while one runs leaves the screen alone.
+        const launchDetails = 'document.getElementById("launch_details_text").innerHTML'
+        const detailsBefore = await run(launchDetails)
+        await run('preparingServerFiles = true')
+        assert.equal(await run('prepareServerFiles()'), null)
+        assert.equal(await run('isLaunchLocked()'), false)
+        assert.equal(await run(launchDetails), detailsBefore)
+        await run('preparingServerFiles = false')
+        check('prepareServerFiles ignores a call while another run is going on')
+
         // Minimised window: a new read waits until the window is back.
         await run(`Object.defineProperty(document, 'hidden', { configurable: true, get: () => true }); document.dispatchEvent(new Event('visibilitychange')); true`)
         publish(extraItem('escondida', 'announcement', 'Chegou minimizado'))
@@ -301,8 +323,16 @@ C.save();
         win.setSize(1100, 700)
         check('fits at 800x600')
 
+        // Back at a screen before login, shown cards hide; they return with the main screen.
+        await run('switchView(getCurrentView(), VIEWS.welcome, 0, 0); true')
+        await waitFor('notificationsToasts.hidden', 'cards hide off the main screens', 3000)
+        await run('switchView(getCurrentView(), VIEWS.landing, 0, 0); true')
+        await waitFor('!notificationsToasts.hidden', 'cards return with the main screen', 3000)
+        assert.ok((await toastIds()).includes('nova'))
+        check('cards hide when leaving the main screens and come back with them')
+
         // More launcher cards, on a fresh page (no update downloaded yet). The X clears the cards.
-        await run(`${toast('nova')}.querySelector(".notif-close").click(); ${toast('escondida')}.querySelector(".notif-close").click(); true`)
+        await run(`${toast('nova')}.querySelector(".notif-close").click(); ${toast('escondida')}?.querySelector(".notif-close").click(); true`)
         assert.deepEqual(await toastIds(), [])
         await run('notificationsUpdaterEnabled = true; window.__saves = 0; const baseSave = ConfigManager.save; ConfigManager.save = (...args) => { window.__saves++; return baseSave(...args) }; true')
         publish(
@@ -312,7 +342,7 @@ C.save();
         )
         await run('pollNotifications()')
         assert.deepEqual(await toastIds(), ['launcher-erro', 'launcher-em-dia', 'launcher-pronto'])
-        assert.equal(await run('window.__saves'), 2, 'one save for the read, one for the three cards')
+        assert.equal(await run('window.__saves'), 1, 'the read removed no seen id, the three cards save once')
         check('the seen list is saved once per render, not once per card')
 
         const baseCount = await listeners()
@@ -322,6 +352,24 @@ C.save();
         assert.equal(await run(`${toast('launcher-erro')}.querySelector(".notif-btn").textContent`), Lang.queryJS('notifications.retry'))
         assert.equal(await listeners(), baseCount)
         check('launcher update error: shows the reason, offers retry, stops listening')
+
+        // Timeouts, shortened: no answer to the check gives up; a running download does not.
+        const erroStatus = `${toast('launcher-erro')}.querySelector(".notif-status").textContent`
+        await run('notificationUpdateTimeouts.checkMs = 300; notificationUpdateTimeouts.downloadMs = 1500')
+        await run(`${toast('launcher-erro')}.querySelector(".notif-btn").click()`)
+        await pause(700)
+        assert.equal(await run(erroStatus), Lang.queryJS('notifications.updateFailed'))
+        assert.equal(await run(`${toast('launcher-erro')}.querySelector(".notif-btn").textContent`), Lang.queryJS('notifications.retry'))
+        assert.equal(await listeners(), baseCount)
+        await run(`${toast('launcher-erro')}.querySelector(".notif-btn").click()`)
+        await run(`ipcRenderer.emit('autoUpdateNotification', {}, 'update-available', { version: '2.0.6' }); true`)
+        await pause(700)
+        assert.equal(await run(erroStatus), Lang.queryJS('notifications.downloadingUpdate'))
+        assert.equal(await listeners(), baseCount + 1)
+        await waitFor(`${erroStatus} === ${JSON.stringify(Lang.queryJS('notifications.updateFailed'))}`, 'download wait has its own, longer limit', 3000)
+        assert.equal(await listeners(), baseCount)
+        await run('notificationUpdateTimeouts.checkMs = 60000; notificationUpdateTimeouts.downloadMs = 600000')
+        check('launcher update: the check times out, a running download gets its own longer wait')
 
         await run(`${toast('launcher-em-dia')}.querySelector(".notif-btn").click()`)
         await run(`ipcRenderer.emit('autoUpdateNotification', {}, 'update-not-available'); true`)
