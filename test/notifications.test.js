@@ -66,14 +66,28 @@ test('parseItem descarta tipo, textos, link, imagem e datas inválidos', () => {
     assert.equal(N.parseItem(null), null)
 })
 
-test('parseItem descarta texto com caracteres de controle, largura zero ou bidi', () => {
+test('parseItem descarta texto com caracteres de controle, espaço de largura zero, LRM/RLM ou bidi', () => {
     const zeroWidthSpace = String.fromCodePoint(0x200b)
+    const leftToRightMark = String.fromCodePoint(0x200e)
     const bidiOverride = String.fromCodePoint(0x202e)
     assert.equal(N.parseItem(item({ title: 'Oi\tgente' })), null)
     assert.equal(N.parseItem(item({ title: `Oi${zeroWidthSpace}gente` })), null)
+    assert.equal(N.parseItem(item({ title: `Oi${leftToRightMark}gente` })), null)
     assert.equal(N.parseItem(item({ title: `Oi${bidiOverride}gente` })), null)
     assert.equal(N.parseItem(item({ body: 'Oi\u0007gente' })), null)
     assert.equal(N.parseItem(item({ link: { url: 'https://oblyvium.com.br/x', label: `Ver${zeroWidthSpace}isso` } })), null)
+})
+
+test('parseItem aceita ZWJ e ZWNJ (emoji compostos e junção de script) no título, corpo e rótulo do link', () => {
+    const zwj = String.fromCodePoint(0x200d)
+    const zwnj = String.fromCodePoint(0x200c)
+    const rainbowFlag = '\u{1F3F3}\u{FE0F}' + zwj + '\u{1F308}' // 🏳️‍🌈
+    const manTechnologist = '\u{1F468}' + zwj + '\u{1F4BB}' // 👨‍💻
+    const heartOnFire = '\u{2764}\u{FE0F}' + zwj + '\u{1F525}' // ❤️‍🔥
+    assert.ok(N.parseItem(item({ title: `Evento ${rainbowFlag}` })) != null)
+    assert.ok(N.parseItem(item({ body: `Chegou ${manTechnologist} no servidor!` })) != null)
+    assert.ok(N.parseItem(item({ link: { url: 'https://oblyvium.com.br/x', label: `Ver ${heartOnFire}` } })) != null)
+    assert.ok(N.parseItem(item({ title: `Com${zwnj}junção` })) != null)
 })
 
 test('parseItem descarta link com usuário ou senha na URL', () => {

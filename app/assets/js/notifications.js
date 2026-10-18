@@ -39,14 +39,19 @@ const ISO_UTC = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$/
 const isIsoUtc = value => typeof value === 'string' && ISO_UTC.test(value)
 
 /**
- * C0 controls, DEL, zero-width spacing and bidi-override characters: never legitimate in
- * card text. Code points, not regex \u escapes, so no invisible character ever sits in
- * this source file.
+ * C0 controls, DEL, zero-width space, LRM/RLM and bidi-override/isolate characters: never
+ * legitimate in card text. Code points, not regex \u escapes, so no invisible character
+ * ever sits in this source file.
+ *
+ * ZWNJ (U+200C) and ZWJ (U+200D) are deliberately NOT in this list: they're needed for
+ * emoji sequences (flags, families, professions - e.g. the rainbow flag or "man
+ * technologist") and for ligature control in some scripts.
  */
 const UNSAFE_RANGES = [
     [0x00, 0x1f], // C0 controls, including \n (allowed back in for the body below)
     [0x7f, 0x7f], // DEL
-    [0x200b, 0x200f], // zero-width space/non-joiner/joiner, LRM, RLM
+    [0x200b, 0x200b], // zero-width space
+    [0x200e, 0x200f], // LRM, RLM
     [0x202a, 0x202e], // bidi embedding/override
     [0x2066, 0x2069] // bidi isolates
 ]
