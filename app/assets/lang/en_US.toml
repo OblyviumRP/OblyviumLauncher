@@ -443,3 +443,31 @@ gameNotPurchasedTitle = "Erro Durante o Login:<br>Jogo Não Comprado"
 gameNotPurchasedDesc = "A conta usada para login não possui uma cópia do Minecraft. Você pode comprar em <a href=\"https://minecraft.net/\">Minecraft.net</a>."
 unknownErrorTitle = "Erro Desconhecido Durante o Login"
 unknownErrorDesc = "Ocorreu um erro desconhecido. Consulte o console para mais detalhes."
+
+[ejs.notifications]
+region = "Notificações"
+
+[js.notifications]
+close = "Fechar"
+updateNow = "Atualizar agora"
+download = "Baixar"
+retry = "Tentar de novo"
+checking = "Procurando a versão nova..."
+downloadingUpdate = "Baixando a versão nova..."
+updateReady = "Versão nova pronta."
+restartToInstall = "Reiniciar e instalar"
+downloadOpened = "O download abriu no navegador."
+upToDate = "Você já está na versão mais nova."
+updateFailed = "Não foi possível atualizar agora."
+updatingModpack = "Atualizando o modpack..."
+modpackUpdated = "Modpack atualizado."
+modpackFailed = "Não foi possível atualizar o modpack."
+closeGameFirst = "Feche o jogo para atualizar."
+
+[js.notifications.type]
+event = "Evento"
+announcement = "Anúncio"
+maintenance = "Manutenção"
+launcherUpdate = "Launcher"
+modpackUpdate = "Modpack"
+other = "Aviso"
