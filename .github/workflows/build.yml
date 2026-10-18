@@ -1,6 +1,16 @@
-# Builds the launcher for Windows, macOS and Linux on GitHub-hosted runners.
-# Runs on demand (Actions tab -> Build -> Run workflow), on version tags (v*),
-# and on pull requests that change this file, so edits to it get tested.
+# Builds the launcher for Windows, macOS and Linux on GitHub-hosted runners
+# and publishes each platform to the Oblyvium website, which serves the
+# auto-update feed at launcher.oblyvium.com.br/updates/.
+#
+# - v* tags: build and publish. The tag must match the version in package.json.
+# - Actions tab -> Build -> Run workflow: build, and publish only if "publish" is ticked.
+# - Pull requests that change this workflow or the publish script: build only.
+#
+# Nothing is stored as a workflow artifact (the organization's artifact quota
+# fills up). Publishing needs the LAUNCHER_PUBLISH_KEY secret, equal to the
+# website's LAUNCHER_PUBLISH_KEY; the LAUNCHER_PUBLISH_URL variable overrides
+# the website address.
+#
 # The repository is private: macOS minutes count 10x and Windows 2x against
 # the quota, which is why this does not run on every push.
 
@@ -8,19 +18,27 @@ name: Build
 
 on:
   workflow_dispatch:
+    inputs:
+      publish:
+        description: 'Publish to the website (players receive this version)'
+        type: boolean
+        default: false
   push:
     tags:
       - 'v*'
   pull_request:
     paths:
       - '.github/workflows/build.yml'
+      - 'scripts/publish-update.cjs'
 
 permissions:
   contents: read
 
 concurrency:
   group: build-${{ github.ref }}
-  cancel-in-progress: true
+  # Never cancel a run that may be publishing; a half-sent platform is only
+  # completed by running it again.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   check:
@@ -35,6 +53,14 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm test
+      - name: Tag matches package.json
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          version="v$(node -p "require('./package.json').version")"
+          if [ "$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match package.json ($version)."
+            exit 1
+          fi
 
   build:
     name: Build (${{ matrix.name }})
@@ -47,24 +73,17 @@ jobs:
           - name: Windows
             os: windows-latest
             flag: --win
-            files: |
-              dist/*.exe
-              dist/*.blockmap
-              dist/latest.yml
+            feed: latest.yml
           - name: macOS
             os: macos-latest
             flag: --mac
-            files: |
-              dist/*.dmg
-              dist/*.zip
-              dist/*.blockmap
-              dist/latest-mac.yml
+            feed: latest-mac.yml
           - name: Linux
             os: ubuntu-latest
             flag: --linux
-            files: |
-              dist/*.AppImage
-              dist/latest-linux.yml
+            feed: latest-linux.yml
+    env:
+      PUBLISH: ${{ startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publish) }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -77,9 +96,12 @@ jobs:
         env:
           # No signing certificates yet; keep electron-builder from looking for them.
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-      - uses: actions/upload-artifact@v4
-        with:
-          name: Oblyvium-Launcher-${{ matrix.name }}
-          path: ${{ matrix.files }}
-          if-no-files-found: error
-          retention-days: 14
+      - name: List build output
+        shell: bash
+        run: ls -l dist
+      - name: Publish to the website
+        if: env.PUBLISH == 'true'
+        run: node scripts/publish-update.cjs dist ${{ matrix.feed }}
+        env:
+          LAUNCHER_PUBLISH_KEY: ${{ secrets.LAUNCHER_PUBLISH_KEY }}
+          LAUNCHER_PUBLISH_URL: ${{ vars.LAUNCHER_PUBLISH_URL }}
