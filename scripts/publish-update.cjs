@@ -53,12 +53,27 @@ async function putChunk({ baseUrl, key, name, offset, total, body }){
         headers: { 'Authorization': `Launcher ${key}`, 'Content-Type': 'application/octet-stream' },
         body
     })
+    const text = await res.text()
     let payload = null
-    try { payload = await res.json() } catch { /* non-JSON error page (proxy, Cloudflare) */ }
-    return { status: res.status, payload }
+    try { payload = JSON.parse(text) } catch { /* non-JSON error page (proxy, Cloudflare) */ }
+    return {
+        status: res.status,
+        payload,
+        // Kept for errors that never reached the website: they tell Cloudflare (server: cloudflare,
+        // a cf-ray to look up in Security Events) apart from the origin's proxy.
+        server: res.headers.get('server'),
+        cfRay: res.headers.get('cf-ray'),
+        snippet: payload == null ? text.replace(/\s+/g, ' ').trim().slice(0, 200) : ''
+    }
 }
 
-const errorText = (r) => r.payload?.error?.message ?? r.payload?.error?.code ?? `HTTP ${r.status}`
+function errorText(r){
+    const fromSite = r.payload?.error?.message ?? r.payload?.error?.code
+    if(fromSite) return fromSite
+    const details = [`server: ${r.server ?? 'none'}`, `cf-ray: ${r.cfRay ?? 'none'}`]
+    if(r.snippet) details.push(`body: ${r.snippet}`)
+    return `HTTP ${r.status} (${details.join(', ')})`
+}
 
 /**
  * Sends one file. Returns 'sent' or 'exists'. A failed piece restarts the
