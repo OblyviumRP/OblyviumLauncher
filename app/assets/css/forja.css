@@ -604,6 +604,32 @@ button.mods-row-title:hover { color: var(--primary-light); text-decoration: unde
     .toggleSwitch { height: 44px; width: 44px; }
     .toggleSwitchSlider { top: 12px; bottom: 12px; right: 8px; }
 }
+/* Notificações do site: cartões acima da barra do Jogar e destaque no centro. */
+.notif-toasts { position: fixed; right: 16px; bottom: calc(124px + 16px); z-index: 300; display: flex; flex-direction: column-reverse; gap: 10px; width: min(320px, calc(100vw - 32px)); pointer-events: none; }
+.notif-toast { position: relative; pointer-events: auto; padding: 12px 14px; background: var(--card); border: 1px solid var(--primary-line); border-radius: 8px; box-shadow: var(--shadow-dialog); animation: notif-in var(--dur-slow) var(--ease-forja); }
+@keyframes notif-in { from { opacity: 0; transform: translateY(8px); } }
+.notif-close { position: absolute; top: 6px; right: 6px; display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: var(--muted-foreground); cursor: pointer; }
+.notif-close:hover { background: var(--accent); color: var(--foreground); }
+.notif-chip { display: inline-block; padding: 0 6px; border: 1px solid; border-radius: 4px; font: 700 10px/1.6 var(--font-sans); letter-spacing: .08em; text-transform: uppercase; }
+.notif-chip-event { color: var(--warning-fg); background: var(--warning-soft); border-color: var(--warning-line); }
+.notif-chip-announcement { color: var(--success-fg); background: var(--success-soft); border-color: var(--success-line); }
+.notif-chip-maintenance { color: var(--danger-fg); background: var(--danger-soft); border-color: var(--danger-line); }
+.notif-chip-launcher-update, .notif-chip-modpack-update, .notif-chip-other { color: var(--primary-fg); background: var(--primary-soft); border-color: var(--primary-line); }
+.notif-title { margin: 6px 28px 2px 0; font: 600 14px/1.35 var(--font-sans); color: var(--foreground); overflow-wrap: anywhere; }
+.notif-body { margin: 0; font-size: 12px; line-height: 1.45; color: var(--muted-foreground); white-space: pre-line; overflow-wrap: anywhere; }
+.notif-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.notif-btn { min-height: 32px; padding: 0 12px; border: 1px solid transparent; border-radius: 6px; background: var(--primary-fill); color: #fff; font: 600 12px var(--font-sans); cursor: pointer; }
+.notif-btn:hover:not(:disabled) { background: var(--fj-primary-hover); }
+.notif-btn-secondary { background: transparent; color: var(--primary-fg); border-color: var(--primary-line); }
+.notif-btn-secondary:hover:not(:disabled) { background: var(--primary-soft); }
+.notif-btn:disabled { opacity: .55; cursor: not-allowed; }
+.notif-status { margin: 8px 0 0; font-size: 11px; color: var(--muted-foreground); }
+.notif-highlight { position: fixed; inset: var(--fj-frame-height) 0 0 0; z-index: 450; display: grid; place-items: center; padding: 24px; background: var(--fj-overlay); }
+.notif-highlight-card { width: min(100%, 460px); max-height: 100%; overflow-y: auto; background: var(--card); border: 1px solid var(--primary-line); border-radius: 10px; box-shadow: var(--shadow-dialog); animation: notif-in var(--dur-slow) var(--ease-forja); }
+.notif-image { display: block; width: 100%; max-height: 220px; object-fit: cover; border-radius: 10px 10px 0 0; }
+.notif-highlight-content { padding: 20px 22px; }
+.notif-highlight .notif-title { margin-right: 0; font-size: 18px; }
+@media (max-width: 650px) { .notif-toasts { bottom: calc(180px + 16px); } }
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
     .waitingSpinner { animation: forja-spin 3s linear infinite !important; }
