@@ -144,3 +144,23 @@ test('publish fails on a wrong key without retrying', async () => {
     assert.strictEqual(site.requests.length, 1)
     await assert.rejects(publish({ distDir: dist, feed: 'latest.yml', baseUrl: site.baseUrl, key: '', log: quiet }), /LAUNCHER_PUBLISH_KEY/)
 })
+
+test('an error page that never reached the website reports server, cf-ray and body', async () => {
+    const proxy = http.createServer((req, res) => {
+        req.resume()
+        req.on('end', () => {
+            res.writeHead(403, { 'Content-Type': 'text/html', 'Server': 'cloudflare', 'CF-RAY': 'abc123-GRU' })
+            res.end('<html><title>Attention Required! | Cloudflare</title></html>')
+        })
+    })
+    await new Promise(resolve => proxy.listen(0, '127.0.0.1', resolve))
+    try {
+        writeDist({ 'latest.yml': WIN_YML, 'Oblyvium-Launcher-setup-2.0.5.exe': 'exe' })
+        await assert.rejects(
+            publish({ distDir: dist, feed: 'latest.yml', baseUrl: `http://127.0.0.1:${proxy.address().port}`, key: KEY, log: quiet }),
+            /HTTP 403 \(server: cloudflare, cf-ray: abc123-GRU, body: <html><title>Attention Required! \| Cloudflare/
+        )
+    } finally {
+        proxy.close()
+    }
+})
