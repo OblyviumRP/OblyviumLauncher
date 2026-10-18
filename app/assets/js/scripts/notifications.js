@@ -8,6 +8,7 @@ const Notifications = require('./assets/js/notifications')
 const loggerNotifications = LoggerUtil.getLogger('Notifications')
 const notificationsToasts = document.getElementById('notificationsToasts')
 const notificationsHighlight = document.getElementById('notificationsHighlight')
+const notificationsHighlightCard = notificationsHighlight.querySelector('.notif-highlight-card')
 
 const NOTIFICATION_TYPE_KEYS = {
     'event': 'event',
@@ -18,14 +19,31 @@ const NOTIFICATION_TYPE_KEYS = {
     'other': 'other'
 }
 
+const UPDATE_CHECK_TIMEOUT_MS = 60000
+const UP_TO_DATE_DISMISS_MS = 3000
+
 let notificationsFeed = null
 let notificationsEtag = null
 let notificationsPolling = false
+/** id -> { card, item, syncTimer, clearTimer } */
 const shownToasts = new Map()
+/** The item in the highlight, or null. */
 let shownHighlight = null
 let highlightReturnFocus = null
+/** Ids shown during the current render, saved once at its end. */
+let notificationsNewlySeen = []
 /** Disable/enable callbacks of the modpack buttons on screen, run when the launch lock changes. */
 const notificationLockWatchers = new Set()
+/**
+ * Whether the auto-updater runs (it does not in development). A let so the
+ * Electron check can drive the update buttons in development.
+ */
+let notificationsUpdaterEnabled = !isDev
+/** Version the auto-updater already downloaded in the background, or null. */
+let launcherUpdateDownloaded = null
+ipcRenderer.on('autoUpdateNotification', (_event, arg, info) => {
+    if(arg === 'update-downloaded') launcherUpdateDownloaded = info?.version ?? true
+})
 
 function notifEl(tag, className, text){
     const element = document.createElement(tag)
@@ -46,11 +64,17 @@ function setNotificationStatus(status, text){
 }
 
 function markNotificationSeen(id){
+    notificationsNewlySeen.push(id)
+}
+
+/** One save for everything a render put on screen. */
+function saveNotificationsSeen(){
     const seen = ConfigManager.getNotificationsSeen()
-    if(!seen.includes(id)){
-        ConfigManager.setNotificationsSeen([...seen, id])
-        ConfigManager.save()
-    }
+    const added = notificationsNewlySeen.filter(id => !seen.includes(id))
+    notificationsNewlySeen = []
+    if(added.length === 0) return
+    ConfigManager.setNotificationsSeen([...seen, ...added])
+    ConfigManager.save()
 }
 
 /** Main UI only: nothing before login, nothing while the window is minimised. */
@@ -58,9 +82,31 @@ function notificationsCanShow(){
     return !document.hidden && [VIEWS.landing, VIEWS.settings, VIEWS.mods].includes(getCurrentView())
 }
 
-function launcherUpdateButton(status){
+function launcherUpdateButton(status, dismiss){
     const button = notifButton(Lang.queryJS(process.platform === 'darwin' ? 'notifications.download' : 'notifications.updateNow'))
+    const offerRetry = text => {
+        button.textContent = Lang.queryJS('notifications.retry')
+        button.disabled = false
+        setNotificationStatus(status, text)
+    }
+    const offerRestart = () => {
+        button.textContent = Lang.queryJS('notifications.restartToInstall')
+        button.disabled = false
+        button.onclick = () => {
+            if(notificationsUpdaterEnabled) ipcRenderer.send('autoUpdateAction', 'installUpdateNow')
+        }
+        setNotificationStatus(status, Lang.queryJS('notifications.updateReady'))
+    }
     button.onclick = () => {
+        // Downloaded in the background already: nothing left to check.
+        if(launcherUpdateDownloaded != null && process.platform !== 'darwin'){
+            offerRestart()
+            return
+        }
+        if(!notificationsUpdaterEnabled){
+            offerRetry(Lang.queryJS('notifications.updateFailed'))
+            return
+        }
         button.disabled = true
         setNotificationStatus(status, Lang.queryJS('notifications.checking'))
         const onUpdate = (_event, arg, info) => {
@@ -73,22 +119,27 @@ function launcherUpdateButton(status){
                 setNotificationStatus(status, Lang.queryJS('notifications.downloadingUpdate'))
             } else if(arg === 'update-downloaded'){
                 stop()
-                button.textContent = Lang.queryJS('notifications.restartToInstall')
-                button.disabled = false
-                button.onclick = () => ipcRenderer.send('autoUpdateAction', 'installUpdateNow')
-                setNotificationStatus(status, Lang.queryJS('notifications.updateReady'))
+                offerRestart()
             } else if(arg === 'update-not-available'){
                 stop()
                 button.hidden = true
                 setNotificationStatus(status, Lang.queryJS('notifications.upToDate'))
+                setTimeout(dismiss, UP_TO_DATE_DISMISS_MS)
             } else if(arg === 'realerror'){
                 stop()
-                button.textContent = Lang.queryJS('notifications.retry')
-                button.disabled = false
-                setNotificationStatus(status, Lang.queryJS('notifications.updateFailed'))
+                const message = typeof info?.message === 'string' ? info.message.slice(0, 200) : ''
+                offerRetry(Lang.queryJS('notifications.updateFailed') + (message ? ' ' + message : ''))
             }
         }
-        const stop = () => ipcRenderer.removeListener('autoUpdateNotification', onUpdate)
+        // No answer from the updater: stop waiting and let the player try again.
+        const timeout = setTimeout(() => {
+            stop()
+            offerRetry(Lang.queryJS('notifications.updateFailed'))
+        }, UPDATE_CHECK_TIMEOUT_MS)
+        const stop = () => {
+            clearTimeout(timeout)
+            ipcRenderer.removeListener('autoUpdateNotification', onUpdate)
+        }
         ipcRenderer.on('autoUpdateNotification', onUpdate)
         ipcRenderer.send('autoUpdateAction', 'checkForUpdate')
     }
@@ -102,7 +153,8 @@ function modpackUpdateButton(status){
             notificationLockWatchers.delete(sync)
             return
         }
-        if(button.dataset.busy) return
+        // Busy, or done: the status line already says what happened.
+        if(button.dataset.busy || button.hidden) return
         button.disabled = isLaunchLocked()
         if(gameRunning > 0){
             setNotificationStatus(status, Lang.queryJS('notifications.closeGameFirst'))
@@ -137,9 +189,10 @@ function modpackUpdateButton(status){
  * Fills a card with chip, title, text and buttons. Text always goes in as
  * text, never as HTML.
  *
+ * @param {() => void} dismiss Removes this card (once an action is done).
  * @returns {HTMLElement} The title element.
  */
-function buildNotificationBody(item, container, extraButtons = []){
+function buildNotificationBody(item, container, dismiss, extraButtons = []){
     container.append(notifEl('span', 'notif-chip notif-chip-' + item.type, Lang.queryJS('notifications.type.' + NOTIFICATION_TYPE_KEYS[item.type])))
     const title = notifEl('h3', 'notif-title', item.title)
     container.append(title)
@@ -149,7 +202,7 @@ function buildNotificationBody(item, container, extraButtons = []){
     status.setAttribute('role', 'status')
     status.hidden = true
     const actions = notifEl('div', 'notif-actions')
-    if(item.type === 'launcher-update') actions.append(launcherUpdateButton(status))
+    if(item.type === 'launcher-update') actions.append(launcherUpdateButton(status, dismiss))
     if(item.type === 'modpack-update') actions.append(modpackUpdateButton(status))
     if(item.link){
         const link = notifButton(item.link.label + ' ↗', true)
@@ -162,11 +215,18 @@ function buildNotificationBody(item, container, extraButtons = []){
     return title
 }
 
-function removeToast(id){
-    const card = shownToasts.get(id)
-    if(card == null) return
+/** Takes a card off the screen without rendering again. */
+function dropToast(id){
+    const shown = shownToasts.get(id)
+    if(shown == null) return
     shownToasts.delete(id)
-    card.remove()
+    shown.clearTimer()
+    shown.card.remove()
+}
+
+function removeToast(id){
+    if(!shownToasts.has(id)) return
+    dropToast(id)
     renderNotifications()
 }
 
@@ -174,76 +234,119 @@ function showToast(item){
     markNotificationSeen(item.id)
     const card = notifEl('article', 'notif-toast')
     card.dataset.id = item.id
+    card.dataset.target = item.target
     card.setAttribute('aria-label', item.title)
     const close = notifEl('button', 'notif-close', '✕')
     close.type = 'button'
     close.setAttribute('aria-label', Lang.queryJS('notifications.close'))
     close.onclick = () => removeToast(item.id)
     card.append(close)
-    buildNotificationBody(item, card)
+    buildNotificationBody(item, card, () => removeToast(item.id))
     notificationsToasts.append(card)
-    shownToasts.set(item.id, card)
 
-    if(!item.sticky){
-        let timer = null
-        const start = () => {
-            clearTimeout(timer)
+    // The auto-dismiss countdown only runs while the card can be read: not under
+    // the mouse or focus, not behind a dialog, not with the window minimised.
+    let timer = null
+    let hovered = false
+    let focused = false
+    const clearTimer = () => {
+        clearTimeout(timer)
+        timer = null
+    }
+    const syncTimer = () => {
+        if(item.sticky) return
+        if(hovered || focused || isOverlayVisible() || !notificationsCanShow()){
+            clearTimer()
+        } else if(timer == null){
             timer = setTimeout(() => removeToast(item.id), Notifications.AUTO_DISMISS_MS)
         }
-        const pause = () => clearTimeout(timer)
-        card.addEventListener('mouseenter', pause)
-        card.addEventListener('mouseleave', start)
-        card.addEventListener('focusin', pause)
-        card.addEventListener('focusout', start)
-        start()
+    }
+    card.addEventListener('mouseenter', () => { hovered = true; syncTimer() })
+    card.addEventListener('mouseleave', () => { hovered = false; syncTimer() })
+    card.addEventListener('focusin', () => { focused = true; syncTimer() })
+    card.addEventListener('focusout', () => { focused = false; syncTimer() })
+    shownToasts.set(item.id, { card, item, syncTimer, clearTimer })
+    syncTimer()
+}
+
+// Clicks on the card keep the focus inside the dialog instead of dropping it on the body.
+notificationsHighlightCard.tabIndex = -1
+// Same for clicks on the dimmed backdrop around the card.
+notificationsHighlight.addEventListener('mousedown', event => {
+    if(event.target === notificationsHighlight) event.preventDefault()
+})
+
+function focusHighlight(){
+    const first = notificationsHighlightCard.querySelector('button:not([disabled]):not([hidden])')
+    if(first){
+        first.focus()
+    } else {
+        notificationsHighlightCard.focus()
     }
 }
 
 function openHighlight(item){
     markNotificationSeen(item.id)
-    shownHighlight = item.id
+    shownHighlight = item
     highlightReturnFocus = document.activeElement
-    const card = notificationsHighlight.querySelector('.notif-highlight-card')
-    card.replaceChildren()
+    notificationsHighlightCard.replaceChildren()
     if(item.image){
         const image = notifEl('img', 'notif-image')
         image.alt = ''
         image.onerror = () => image.remove()
         image.src = item.image
-        card.append(image)
+        notificationsHighlightCard.append(image)
     }
     const content = notifEl('div', 'notif-highlight-content')
     const close = notifButton(Lang.queryJS('notifications.close'), true)
     close.onclick = closeHighlight
-    const title = buildNotificationBody(item, content, [close])
+    const title = buildNotificationBody(item, content, () => {
+        if(shownHighlight === item) closeHighlight()
+    }, [close])
     title.id = 'notificationsHighlightTitle'
-    card.append(content)
+    notificationsHighlightCard.append(content)
+    // The page behind the dialog takes no focus or clicks while it is open.
+    document.getElementById('main').inert = true
     notificationsHighlight.hidden = false
-    const first = content.querySelector('button:not([disabled]):not([hidden])')
-    if(first) first.focus()
+    focusHighlight()
+}
+
+/** Closes the highlight without rendering again. */
+function hideHighlight(){
+    notificationsHighlight.hidden = true
+    shownHighlight = null
+    document.getElementById('main').inert = false
+    const returnTo = highlightReturnFocus?.isConnected && highlightReturnFocus !== document.body
+        ? highlightReturnFocus
+        : document.getElementById('launch_button')
+    highlightReturnFocus = null
+    returnTo.focus()
 }
 
 function closeHighlight(){
-    notificationsHighlight.hidden = true
-    shownHighlight = null
-    if(highlightReturnFocus && typeof highlightReturnFocus.focus === 'function') highlightReturnFocus.focus()
-    highlightReturnFocus = null
+    hideHighlight()
     renderNotifications()
 }
 
 notificationsHighlight.addEventListener('keydown', event => {
+    // A launcher dialog on top owns the keyboard.
+    if(isOverlayVisible()) return
+    // Keys must not reach the page behind (landing.js binds the arrows, for one).
+    event.stopPropagation()
     if(event.key === 'Escape'){
         event.preventDefault()
-        event.stopPropagation()
         closeHighlight()
         return
     }
     if(event.key !== 'Tab') return
     const buttons = [...notificationsHighlight.querySelectorAll('button:not([disabled]):not([hidden])')]
-    if(buttons.length === 0) return
+    if(buttons.length === 0){
+        event.preventDefault()
+        return
+    }
     const first = buttons[0]
     const last = buttons[buttons.length - 1]
-    if(event.shiftKey && document.activeElement === first){
+    if(event.shiftKey && (document.activeElement === first || document.activeElement === notificationsHighlightCard)){
         event.preventDefault()
         last.focus()
     } else if(!event.shiftKey && document.activeElement === last){
@@ -254,8 +357,14 @@ notificationsHighlight.addEventListener('keydown', event => {
 
 function renderNotifications(){
     const overlay = isOverlayVisible()
-    // A launcher dialog takes the keyboard; the cards wait behind it.
+    // A launcher dialog takes the keyboard; the cards and the highlight wait behind it.
     notificationsToasts.inert = overlay
+    const highlightWasInert = notificationsHighlight.inert
+    notificationsHighlight.inert = overlay
+    if(highlightWasInert && !overlay && shownHighlight != null && !notificationsHighlight.contains(document.activeElement)){
+        focusHighlight()
+    }
+    shownToasts.forEach(shown => shown.syncTimer())
     if(notificationsFeed == null || !notificationsCanShow()) return
     const pending = Notifications.pendingItems(notificationsFeed.feed, {
         serverId: ConfigManager.getSelectedServer(),
@@ -271,6 +380,7 @@ function renderNotifications(){
         if(shownToasts.size >= Notifications.MAX_TOASTS) break
         showToast(item)
     }
+    saveNotificationsSeen()
 }
 
 async function pollNotifications(){
@@ -296,19 +406,56 @@ async function pollNotifications(){
     renderNotifications()
 }
 
-// Re-filter when the selected server changes and react to the launch lock.
 // Function declarations in classic scripts are writable globals, and callers
 // resolve them at call time, so wrapping here reaches every caller.
+
+// Re-filter when the selected server changes, dropping what was meant for the previous one only.
 const notificationsBaseUpdateSelectedServer = updateSelectedServer
 updateSelectedServer = function(...args){
     const result = notificationsBaseUpdateSelectedServer.apply(this, args)
+    const serverId = ConfigManager.getSelectedServer()
+    const forOtherServer = item => item.target !== 'all' && item.target !== serverId
+    if(shownHighlight != null && forOtherServer(shownHighlight)) hideHighlight()
+    for(const [id, shown] of [...shownToasts]){
+        if(forOtherServer(shown.item)) dropToast(id)
+    }
     renderNotifications()
     return result
 }
+// React to the launch lock.
 const notificationsBaseRefreshLaunchLock = refreshLaunchLock
 refreshLaunchLock = function(...args){
     const result = notificationsBaseRefreshLaunchLock.apply(this, args)
     notificationLockWatchers.forEach(sync => sync())
+    return result
+}
+// A dialog opening or closing changes whether the cards are inert and the highlight may open.
+const notificationsBaseToggleOverlay = toggleOverlay
+toggleOverlay = function(...args){
+    const result = notificationsBaseToggleOverlay.apply(this, args)
+    renderNotifications()
+    return result
+}
+// Render as soon as a view is on screen, not on the next 30 s read.
+const notificationsBaseSwitchView = switchView
+switchView = function(current, next, currentFadeTime, nextFadeTime, onCurrentFade, onNextFade = () => {}){
+    return notificationsBaseSwitchView.call(this, current, next, currentFadeTime, nextFadeTime, onCurrentFade, async () => {
+        await onNextFade()
+        renderNotifications()
+    })
+}
+// showMainUI picks the first view a moment after it returns, then fades it in.
+const notificationsBaseShowMainUI = showMainUI
+showMainUI = async function(...args){
+    const result = await notificationsBaseShowMainUI.apply(this, args)
+    const whenShown = () => {
+        if(getCurrentView() == null){
+            setTimeout(whenShown, 100)
+        } else {
+            $(getCurrentView()).promise().done(renderNotifications)
+        }
+    }
+    whenShown()
     return result
 }
 

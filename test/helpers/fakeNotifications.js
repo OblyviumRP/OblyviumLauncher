@@ -1,7 +1,8 @@
 /**
  * Local stand-in for launcher-cdn's notifications.json, for tests and the
  * Electron verification only. Answers 304 to a matching If-None-Match and
- * serves a 1x1 PNG under /notifications/ for highlight images.
+ * serves a 1x1 PNG under /notifications/ for highlight images (404 for the
+ * names listed in state.missingImages).
  */
 const crypto = require('crypto')
 const http   = require('http')
@@ -9,13 +10,17 @@ const http   = require('http')
 const PNG_1X1 = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==', 'base64')
 
 exports.start = async function(){
-    const state = { body: null, status: 200, requests: [], date: null }
+    const state = { body: null, status: 200, requests: [], date: null, missingImages: [] }
     const server = http.createServer((req, res) => {
         state.requests.push({ url: req.url, ifNoneMatch: req.headers['if-none-match'] ?? null })
         // state.date: null keeps Node's own Date header, a string overrides it,
         // false suppresses it (to test a response with no Date at all).
         if(state.date === false) res.sendDate = false
         if(req.url.startsWith('/notifications/')){
+            if(state.missingImages.includes(req.url.slice('/notifications/'.length))){
+                res.writeHead(404)
+                return res.end()
+            }
             res.writeHead(200, { 'content-type': 'image/png' })
             return res.end(PNG_1X1)
         }

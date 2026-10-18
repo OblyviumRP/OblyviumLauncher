@@ -46,6 +46,10 @@ function feed(fakeBase, extra = []){
         ]
     }
 }
+/** One more item for feed(), live for the next hour. */
+function extraItem(id, type, title, fields = {}){
+    return { id, type, title, body: '', link: null, target: 'all', highlight: false, image: null, startsAt: iso(Date.now() - 60000), expiresAt: iso(Date.now() + 3600000), ...fields }
+}
 
 app.whenReady().then(async () => {
     let fake = null
@@ -97,9 +101,9 @@ C.save();
                 await pause(100)
             }
         }
-        const key = async keyCode => {
-            win.webContents.sendInputEvent({ type: 'keyDown', keyCode })
-            win.webContents.sendInputEvent({ type: 'keyUp', keyCode })
+        const key = async (keyCode, modifiers = []) => {
+            win.webContents.sendInputEvent({ type: 'keyDown', keyCode, modifiers })
+            win.webContents.sendInputEvent({ type: 'keyUp', keyCode, modifiers })
             await pause(150)
         }
         const screenshot = async name => {
@@ -115,88 +119,247 @@ C.save();
             fs.writeFileSync(path.join(output, name + '.png'), (await win.webContents.capturePage()).toPNG())
         }
         const toastIds = () => run('[...document.querySelectorAll(".notif-toast")].map(t => t.dataset.id)')
+        const toast = id => `document.querySelector('.notif-toast[data-id="${id}"]')`
+        const highlightHidden = () => run('document.getElementById("notificationsHighlight").hidden')
+        const activeText = () => run('document.activeElement.textContent')
+        const openDialog = () => run(`setOverlayContent('Teste', 'Diálogo de teste', 'OK'); setOverlayHandler(null); toggleOverlay(true); true`)
+        const listeners = () => run('ipcRenderer.listenerCount("autoUpdateNotification")')
+        const updateCalls = () => run('window.__sent.filter(args => args[0] === "autoUpdateAction" && args[1] === "checkForUpdate").length')
+        const extras = []
+        const publish = (...items) => {
+            extras.push(...items)
+            fake.setFeed(feed(fake.base, extras))
+        }
 
-        const boot = async () => {
+        /**
+         * Loads the page and runs showMainUI like the app does. `beforeLanding` runs
+         * on whatever view showMainUI picked; the main screen is then reached
+         * through switchView, never by rendering the notifications by hand.
+         */
+        const boot = async (beforeLanding = async () => {}) => {
             await win.loadFile(fixture)
             await run('$.fx.off = true')
-            await run('syncModConfigurations(DistroAPI.distribution); ensureJavaSettings(DistroAPI.distribution); showMainUI(DistroAPI.distribution)')
-            await pause(2300)
-            await run(`$('#main > div').hide(); $('#overlayContainer, #loadingContainer').hide(); $('#main').show(); currentView = VIEWS.landing; $(currentView).show();`)
             await run('window.__opened = []; shell.openExternal = url => { window.__opened.push(url); return Promise.resolve() }; true')
             // @electron/remote talks over ipcRenderer.send too; let its own messages through.
             await run(`window.__sent = []; const send = ipcRenderer.send.bind(ipcRenderer)
                 ipcRenderer.send = (...args) => String(args[0]).startsWith('REMOTE_') ? send(...args) : window.__sent.push(args); true`)
+            await run('syncModConfigurations(DistroAPI.distribution); ensureJavaSettings(DistroAPI.distribution); showMainUI(DistroAPI.distribution); true')
+            await waitFor('getCurrentView() != null && notificationsFeed != null', 'first view and first read')
+            await pause(300)
+            await run(`$('#loadingContainer').hide(); true`)
+            const firstView = await run('getCurrentView()')
+            await beforeLanding()
+            if(await run('getCurrentView() !== VIEWS.landing')){
+                await run('switchView(getCurrentView(), VIEWS.landing, 0, 0); true')
+            }
+            return firstView
         }
-        await boot()
-        await run('renderNotifications()')
+
+        // Before login (here the first-launch welcome screen) nothing shows.
+        await boot(async () => {
+            if(await run('getCurrentView() !== VIEWS.welcome')){
+                await run('switchView(getCurrentView(), VIEWS.welcome, 0, 0); true')
+                await waitFor('getCurrentView() === VIEWS.welcome && $(VIEWS.welcome).is(":visible")', 'welcome view')
+            }
+            await run('renderNotifications()')
+            assert.deepEqual(await toastIds(), [])
+            assert.equal(await highlightHidden(), true)
+        })
+        check('nothing shows before login (welcome screen)')
+
+        // Reaching the main screen shows them on its own, without waiting for the next read.
+        await waitFor('!document.getElementById("notificationsHighlight").hidden', 'highlight opens after switching to the main screen', 3000)
+        await waitFor('document.querySelectorAll(".notif-toast").length === 3', 'cards show after switching to the main screen', 3000)
+        check('cards and highlight show as soon as the main screen is on, without a manual render')
 
         // Highlight first, with the HTML in the title shown as text.
-        await waitFor('!document.getElementById("notificationsHighlight").hidden', 'highlight opens')
         assert.equal(await run('document.getElementById("notificationsHighlightTitle").textContent'), '<img src=x onerror="window.__xss=1">Torneio')
         assert.equal(await run('window.__xss === undefined && document.querySelector("#notificationsHighlight .notif-title img") === null'), true)
         await waitFor('document.querySelector(".notif-image")?.naturalWidth === 1', 'highlight image loads')
         assert.equal(await run('document.activeElement.closest("#notificationsHighlight") !== null'), true)
+        assert.equal(await run('document.getElementById("main").inert'), true)
         await screenshot('notifications-highlight')
         await run('[...document.querySelectorAll("#notificationsHighlight button")].find(b => b.textContent.startsWith("Ver no site")).click()')
         assert.deepEqual(await run('window.__opened'), ['https://oblyvium.com.br/eventos'])
-        check('highlight: text-only title, image, focus inside, link opens externally')
+        check('highlight: text-only title, image, focus inside, page behind inert, link opens externally')
+
+        // Keyboard: Tab wraps both ways, arrows stay inside.
+        assert.ok((await activeText()).startsWith('Ver no site'))
+        await key('Tab', ['shift'])
+        assert.equal(await activeText(), Lang.queryJS('notifications.close'))
+        await key('Tab')
+        assert.ok((await activeText()).startsWith('Ver no site'))
+        await run('window.__arrows = 0; document.addEventListener("keydown", e => { if(e.key.startsWith("Arrow")) window.__arrows++ }); true')
+        await key('Up')
+        await key('Down')
+        assert.equal(await run('window.__arrows'), 0)
+        check('highlight keyboard: Tab and Shift+Tab wrap, arrow keys do not reach the page')
+
+        // A launcher dialog on top: it owns Escape; cards and highlight are inert until it closes.
+        await openDialog()
+        assert.equal(await run('notificationsToasts.inert && notificationsHighlight.inert'), true)
+        await waitFor('document.getElementById("overlayContainer").contains(document.activeElement)', 'focus moves into the dialog')
+        await key('Escape')
+        assert.equal(await run('isOverlayVisible()'), false)
+        assert.equal(await highlightHidden(), false)
+        assert.equal(await run('notificationsToasts.inert || notificationsHighlight.inert'), false)
+        await waitFor('document.activeElement.closest("#notificationsHighlight") !== null', 'focus back in the highlight', 3000)
+        check('Escape with a dialog open closes the dialog, not the highlight; cards stop being inert right away')
 
         await key('Escape')
-        assert.equal(await run('document.getElementById("notificationsHighlight").hidden'), true)
-        check('Escape closes the highlight')
+        assert.equal(await highlightHidden(), true)
+        assert.equal(await run('document.getElementById("main").inert'), false)
+        check('Escape closes the highlight and frees the page')
 
         // Cards: three at most, only for this server.
-        await waitFor('document.querySelectorAll(".notif-toast").length === 3', 'three cards')
         const first = await toastIds()
         assert.deepEqual(first, ['evento', 'modpack', 'launcher'])
-        assert.equal(first.includes('outro-servidor'), false)
         await screenshot('notifications-cards')
         check('three cards for the selected server, the rest queued')
 
         // The non-sticky card leaves on its own and the queue moves.
-        await waitFor('!document.querySelector(".notif-toast[data-id=evento]")', 'announcement auto-dismiss', 12000)
-        await waitFor('document.querySelector(".notif-toast[data-id=fila]") !== null', 'queued card shows')
+        await waitFor(`!${toast('evento')}`, 'announcement auto-dismiss', 12000)
+        await waitFor(`${toast('fila')} !== null`, 'queued card shows')
         assert.ok((await toastIds()).includes('launcher'))
         check('announcement dismisses itself, update stays, queue advances')
 
+        // Its countdown waits while a dialog is open.
+        await openDialog()
+        await pause(Math.ceil(await run('Notifications.AUTO_DISMISS_MS')) + 1000)
+        assert.notEqual(await run(toast('fila')), null)
+        await run('toggleOverlay(false); true')
+        await waitFor(`!${toast('fila')}`, 'auto-dismiss resumes after the dialog', 12000)
+        check('auto-dismiss pauses behind a dialog and resumes after it')
+
         // Modpack: locked while the game runs, then updates without launching.
+        const modpackStatus = `${toast('modpack')}.querySelector(".notif-status").textContent`
         await run('gameRunning = 1; refreshLaunchLock()')
-        assert.equal(await run('document.querySelector(".notif-toast[data-id=modpack] .notif-btn").disabled'), true)
-        assert.equal(await run('document.querySelector(".notif-toast[data-id=modpack] .notif-status").textContent'), Lang.queryJS('notifications.closeGameFirst'))
+        assert.equal(await run(`${toast('modpack')}.querySelector(".notif-btn").disabled`), true)
+        assert.equal(await run(modpackStatus), Lang.queryJS('notifications.closeGameFirst'))
         await run('gameRunning = 0; refreshLaunchLock()')
-        assert.equal(await run('document.querySelector(".notif-toast[data-id=modpack] .notif-btn").disabled'), false)
+        assert.equal(await run(`${toast('modpack')}.querySelector(".notif-btn").disabled`), false)
         await run('window.__prepared = 0; prepareServerFiles = async () => { window.__prepared++; return {} }; true')
-        await run('document.querySelector(".notif-toast[data-id=modpack] .notif-btn").click()')
-        await waitFor(`document.querySelector(".notif-toast[data-id=modpack] .notif-status").textContent === ${JSON.stringify(Lang.queryJS('notifications.modpackUpdated'))}`, 'modpack updated')
+        await run(`${toast('modpack')}.querySelector(".notif-btn").click()`)
+        await waitFor(`${modpackStatus} === ${JSON.stringify(Lang.queryJS('notifications.modpackUpdated'))}`, 'modpack updated')
         assert.equal(await run('window.__prepared'), 1)
-        check('modpack button: disabled while playing, prepares files without launching')
+        await run('gameRunning = 1; refreshLaunchLock()')
+        assert.equal(await run(modpackStatus), Lang.queryJS('notifications.modpackUpdated'))
+        await run('gameRunning = 0; refreshLaunchLock()')
+        check('modpack button: disabled while playing, prepares files without launching, result stays')
 
-        // Launcher update: asks the updater, then offers restart and install.
-        await run('document.querySelector(".notif-toast[data-id=launcher] .notif-btn").click()')
+        // Launcher update. In development there is no updater: it says so at once.
+        const launcherButton = `${toast('launcher')}.querySelector(".notif-btn")`
+        await run(`${launcherButton}.click()`)
+        assert.equal(await run(`${toast('launcher')}.querySelector(".notif-status").textContent`), Lang.queryJS('notifications.updateFailed'))
+        assert.equal(await run(`${launcherButton}.textContent`), Lang.queryJS('notifications.retry'))
+        assert.equal(await updateCalls(), 0)
+        // With the updater on, it asks for the update, then offers restart and install.
+        await run('notificationsUpdaterEnabled = true')
+        const baseListeners = await listeners()
+        await run(`${launcherButton}.click()`)
+        assert.equal(await updateCalls(), 1)
         assert.deepEqual(await run('window.__sent'), [['autoUpdateAction', 'checkForUpdate']])
-        await run(`ipcRenderer.emit('autoUpdateNotification', {}, 'update-downloaded', { version: '2.0.5' })`)
-        assert.equal(await run('document.querySelector(".notif-toast[data-id=launcher] .notif-btn").textContent'), Lang.queryJS('notifications.restartToInstall'))
-        check('launcher update button drives the updater')
+        assert.equal(await listeners(), baseListeners + 1)
+        await run(`ipcRenderer.emit('autoUpdateNotification', {}, 'update-downloaded', { version: '2.0.5' }); true`)
+        assert.equal(await run(`${launcherButton}.textContent`), Lang.queryJS('notifications.restartToInstall'))
+        assert.equal(await listeners(), baseListeners)
+        check('launcher update: fails fast in development, drives the updater, stops listening when done')
 
-        // Seen ids survive a restart: nothing shows again.
-        assert.deepEqual((await run('ConfigManager.getNotificationsSeen()')).sort(), ['destaque', 'evento', 'fila', 'launcher', 'modpack'].sort())
-        await boot()
-        await run('renderNotifications()')
-        await pause(800)
-        assert.deepEqual(await toastIds(), [])
-        assert.equal(await run('document.getElementById("notificationsHighlight").hidden'), true)
-        check('seen notifications do not come back after a restart')
+        // Switching server drops the old server's card and brings the new one's.
+        await run('updateSelectedServer(DistroAPI.distribution.getServerById("outro")); true')
+        assert.equal(await run(toast('modpack')), null)
+        await waitFor(`${toast('outro-servidor')} !== null`, 'card for the other server')
+        assert.ok((await toastIds()).includes('launcher'))
+        await run(`updateSelectedServer(DistroAPI.distribution.getServerById(${JSON.stringify(SERVER)})); true`)
+        assert.equal(await run(toast('outro-servidor')), null)
+        check('server switch removes cards meant for the previous server only')
 
-        // A new one arrives on the next read; 800x600 keeps everything in view.
-        fake.setFeed(feed(fake.base, [{ id: 'nova', type: 'maintenance', title: 'Manutenção às 22h', body: '', link: null, target: 'all', highlight: false, image: null, startsAt: iso(Date.now() - 1000), expiresAt: iso(Date.now() + 3600000) }]))
+        // Seen ids survive a restart: nothing shows again, and a new one shows on startup.
+        assert.deepEqual((await run('ConfigManager.getNotificationsSeen()')).sort(), ['destaque', 'evento', 'fila', 'launcher', 'modpack', 'outro-servidor'].sort())
+        publish(extraItem('nova', 'maintenance', 'Manutenção às 22h'))
+        const restartView = await boot()
+        assert.equal(restartView, await run('VIEWS.landing'), 'restart goes straight to the main screen')
+        await waitFor(`${toast('nova')} !== null`, 'new notification on startup', 3000)
+        assert.deepEqual(await toastIds(), ['nova'])
+        assert.equal(await highlightHidden(), true)
+        check('seen notifications do not come back after a restart; a new one shows on startup')
+
+        // Minimised window: a new read waits until the window is back.
+        await run(`Object.defineProperty(document, 'hidden', { configurable: true, get: () => true }); document.dispatchEvent(new Event('visibilitychange')); true`)
+        publish(extraItem('escondida', 'announcement', 'Chegou minimizado'))
         await run('pollNotifications()')
-        await waitFor('document.querySelector(".notif-toast[data-id=nova]") !== null', 'new notification on next read')
+        assert.equal(await run(toast('escondida')), null)
+        await run(`delete document.hidden; document.dispatchEvent(new Event('visibilitychange')); true`)
+        assert.notEqual(await run(toast('escondida')), null)
+        check('a new read shows nothing while minimised and shows it when the window is back')
+
+        // 800x600 keeps the cards in view.
         win.setSize(800, 600)
         await pause(250)
-        assert.equal(await run('(() => { const r = document.querySelector(".notif-toast[data-id=nova]").getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth && r.bottom <= innerHeight })()'), true)
+        assert.equal(await run(`(() => { const r = ${toast('nova')}.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth && r.bottom <= innerHeight })()`), true)
         await screenshot('notifications-800')
         win.setSize(1100, 700)
-        check('new notification on the next read; fits at 800x600')
+        check('fits at 800x600')
+
+        // More launcher cards, on a fresh page (no update downloaded yet). The X clears the cards.
+        await run(`${toast('nova')}.querySelector(".notif-close").click(); ${toast('escondida')}.querySelector(".notif-close").click(); true`)
+        assert.deepEqual(await toastIds(), [])
+        await run('notificationsUpdaterEnabled = true; window.__saves = 0; const baseSave = ConfigManager.save; ConfigManager.save = (...args) => { window.__saves++; return baseSave(...args) }; true')
+        publish(
+            extraItem('launcher-erro', 'launcher-update', 'Launcher 2.0.6'),
+            extraItem('launcher-em-dia', 'launcher-update', 'Launcher 2.0.7'),
+            extraItem('launcher-pronto', 'launcher-update', 'Launcher 2.0.8')
+        )
+        await run('pollNotifications()')
+        assert.deepEqual(await toastIds(), ['launcher-erro', 'launcher-em-dia', 'launcher-pronto'])
+        assert.equal(await run('window.__saves'), 2, 'one save for the read, one for the three cards')
+        check('the seen list is saved once per render, not once per card')
+
+        const baseCount = await listeners()
+        await run(`${toast('launcher-erro')}.querySelector(".notif-btn").click()`)
+        await run(`ipcRenderer.emit('autoUpdateNotification', {}, 'realerror', { message: 'Sem conexão com o servidor.' }); true`)
+        assert.equal(await run(`${toast('launcher-erro')}.querySelector(".notif-status").textContent`), Lang.queryJS('notifications.updateFailed') + ' Sem conexão com o servidor.')
+        assert.equal(await run(`${toast('launcher-erro')}.querySelector(".notif-btn").textContent`), Lang.queryJS('notifications.retry'))
+        assert.equal(await listeners(), baseCount)
+        check('launcher update error: shows the reason, offers retry, stops listening')
+
+        await run(`${toast('launcher-em-dia')}.querySelector(".notif-btn").click()`)
+        await run(`ipcRenderer.emit('autoUpdateNotification', {}, 'update-not-available'); true`)
+        assert.equal(await run(`${toast('launcher-em-dia')}.querySelector(".notif-status").textContent`), Lang.queryJS('notifications.upToDate'))
+        assert.equal(await listeners(), baseCount)
+        await waitFor(`${toast('launcher-em-dia')} === null`, 'up-to-date card leaves', 5000)
+        check('already up to date: says so and the card leaves')
+
+        // Downloaded in the background: the button goes straight to restart.
+        await run(`window.__sent = []; ipcRenderer.emit('autoUpdateNotification', {}, 'update-downloaded', { version: '2.0.8' }); true`)
+        await run(`${toast('launcher-pronto')}.querySelector(".notif-btn").click()`)
+        assert.equal(await run(`${toast('launcher-pronto')}.querySelector(".notif-btn").textContent`), Lang.queryJS('notifications.restartToInstall'))
+        assert.equal(await updateCalls(), 0)
+        check('an update downloaded in the background goes straight to restart and install')
+
+        // Highlights without an image and with a broken one still open, without an image left.
+        fake.state.missingImages = ['quebrada.png']
+        await run(`${toast('launcher-pronto')}.querySelector(".notif-close").focus(); true`)
+        publish(
+            extraItem('destaque-sem-imagem', 'event', 'Sem imagem', { highlight: true }),
+            extraItem('destaque-quebrado', 'event', 'Imagem quebrada', { highlight: true, image: fake.base + '/notifications/quebrada.png' })
+        )
+        await run('pollNotifications()')
+        await waitFor('document.getElementById("notificationsHighlightTitle")?.textContent === "Sem imagem"', 'highlight without image')
+        assert.equal(await run('document.querySelector("#notificationsHighlight img")'), null)
+        await run('[...document.querySelectorAll("#notificationsHighlight button")].find(b => b.textContent === Lang.queryJS("notifications.close")).click()')
+        await waitFor('document.getElementById("notificationsHighlightTitle")?.textContent === "Imagem quebrada"', 'highlight with broken image')
+        await waitFor('document.querySelector("#notificationsHighlight img") === null', 'broken image removed')
+        assert.equal(await highlightHidden(), false)
+        check('highlight without an image and with a broken image still opens, no image left')
+
+        // The element focused before it opened is gone: focus goes to Jogar.
+        await run(`${toast('launcher-pronto')}.querySelector(".notif-close").click(); true`)
+        await run('focusHighlight()')
+        await key('Escape')
+        assert.equal(await highlightHidden(), true)
+        assert.equal(await run('document.activeElement.id'), 'launch_button')
+        check('closing the highlight focuses Jogar when the old focus is gone')
 
         assert.deepEqual(errors, [], 'renderer errors')
         check('no renderer exceptions')
@@ -204,6 +367,7 @@ C.save();
     } catch(err) {
         failed = true
         console.error('QA FAILED', err)
+        console.error('Passed so far:', checks)
     } finally {
         await fake?.close()
         fs.rmSync(fixture, { force: true })
