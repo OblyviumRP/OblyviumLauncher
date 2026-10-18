@@ -20,6 +20,8 @@ fs.rmSync(output, { recursive: true, force: true })
 fs.mkdirSync(output, { recursive: true })
 process.env.APPDATA = path.join(output, 'appdata')
 process.env.ELECTRON_IS_DEV = '1'
+// Never let QA read the production notifications feed.
+process.env.OBLYVIUM_NOTIFICATIONS_URL = 'http://127.0.0.1:9/notifications.json'
 app.setPath('userData', path.join(output, 'userData'))
 app.disableHardwareAcceleration()
 
