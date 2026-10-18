@@ -641,10 +641,16 @@ async function disableBlockedContent(serv, gameDir, logger) {
     toggleOverlay(true)
 }
 
-async function dlAsync(login = true) {
-
-    // Login parameter is temporary for debug purposes. Allows testing the validation/downloads without
-    // launching the game.
+/**
+ * Refreshes the distribution, then verifies and downloads the selected server's
+ * files for its selected profile, and disables blocked content. Shows any failure
+ * with showLaunchFailure. Leaves the launch area in its loading state; callers
+ * that do not launch the game call toggleLaunchArea(false) afterwards.
+ *
+ * @returns {Promise<{ distro: object, serv: object, gameDir: string, configKey: string, loggerLaunchSuite: object } | null>}
+ * null when something failed (already shown to the player).
+ */
+async function prepareServerFiles() {
 
     const loggerLaunchSuite = LoggerUtil.getLogger('LaunchSuite')
 
@@ -658,26 +664,19 @@ async function dlAsync(login = true) {
     } catch(err) {
         loggerLaunchSuite.error('Unable to refresh distribution index.', err)
         showLaunchFailure(Lang.queryJS('landing.dlAsync.fatalError'), Lang.queryJS('landing.dlAsync.unableToLoadDistributionIndex'))
-        return
+        return null
     }
 
     const serv = distro.getServerById(ConfigManager.getSelectedServer())
     if(serv == null){
         loggerLaunchSuite.error('The selected server is not in the distribution index.')
         showLaunchFailure(Lang.queryJS('landing.dlAsync.fatalError'), Lang.queryJS('landing.dlAsync.unableToLoadDistributionIndex'))
-        return
+        return null
     }
 
     const profile = ProfileManager.getSelected(serv.rawServer.id)
     const gameDir = ProfileManager.getGameDir(serv.rawServer.id, profile.id)
     const configKey = ProfileManager.configKey(serv.rawServer.id, profile.id)
-
-    if(login) {
-        if(ConfigManager.getSelectedAccount() == null){
-            loggerLanding.error('You must be logged into an account.')
-            return
-        }
-    }
 
     setLaunchDetails(Lang.queryJS('landing.dlAsync.pleaseWait'))
     toggleLaunchArea(true)
@@ -718,9 +717,9 @@ async function dlAsync(login = true) {
     } catch (err) {
         loggerLaunchSuite.error('Error during file validation.')
         showLaunchFailure(Lang.queryJS('landing.dlAsync.errorDuringFileVerificationTitle'), err.displayable || Lang.queryJS('landing.dlAsync.seeConsoleForDetails'))
-        return
+        return null
     }
-    
+
 
     if(invalidFileCount > 0) {
         loggerLaunchSuite.info('Downloading files.')
@@ -734,7 +733,7 @@ async function dlAsync(login = true) {
         } catch(err) {
             loggerLaunchSuite.error('Error during file download.')
             showLaunchFailure(Lang.queryJS('landing.dlAsync.errorDuringFileDownloadTitle'), err.displayable || Lang.queryJS('landing.dlAsync.seeConsoleForDetails'))
-            return
+            return null
         }
     } else {
         loggerLaunchSuite.info('No invalid files, skipping download.')
@@ -746,6 +745,25 @@ async function dlAsync(login = true) {
     fullRepairModule.destroyReceiver()
 
     await disableBlockedContent(serv, gameDir, loggerLaunchSuite)
+
+    return { distro, serv, gameDir, configKey, loggerLaunchSuite }
+}
+
+async function dlAsync(login = true) {
+
+    // Login parameter is temporary for debug purposes. Allows testing the validation/downloads without
+    // launching the game.
+
+    if(login && ConfigManager.getSelectedAccount() == null){
+        loggerLanding.error('You must be logged into an account.')
+        return
+    }
+
+    const prepared = await prepareServerFiles()
+    if(prepared == null){
+        return
+    }
+    const { distro, serv, gameDir, configKey, loggerLaunchSuite } = prepared
 
     setLaunchDetails(Lang.queryJS('landing.dlAsync.preparingToLaunch'))
 
