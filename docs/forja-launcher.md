@@ -103,6 +103,17 @@ Se um servidor precisar de outra versão, a staff define na entrada dele no `dis
 ```
 
 
+## Notificações do site
+
+A staff dispara notificações pelo painel do site (Launcher → Notificações). O launcher lê `https://launcher.oblyvium.com.br/notifications.json` ao abrir e a cada 30 segundos e mostra o que é para "Todos" ou para o servidor selecionado, dentro da janela de validade e ainda não visto neste computador (`notificationsSeen` na configuração). A janela de validade usa o relógio do servidor (o cabeçalho `Date` da última resposta do feed, 200 ou 304, medido em um relógio monotônico), nunca o relógio do PC; `generatedAt` só entra como alternativa quando a resposta não traz `Date`.
+
+- Cartões no canto, acima do Jogar, no máximo 3 por vez. Evento, anúncio e aviso somem em 8 segundos; manutenção e atualizações ficam até o jogador fechar.
+- Destaque: abre no centro, com imagem, e só fecha pelo jogador (Esc ou Fechar).
+- "Atualizar agora": no launcher, procura e baixa a versão nova e oferece "Reiniciar e instalar" (no macOS abre o `.dmg`); no modpack, confere e baixa os arquivos do servidor sem abrir o jogo (desativado com o jogo aberto).
+- Nada aparece antes do login nem com a janela minimizada. Texto sempre como texto, links só `https://`, imagens só do CDN do launcher.
+
+`npm run verify:notifications` testa tudo isso contra um servidor local (`test/helpers/fakeNotifications.js`); `OBLYVIUM_NOTIFICATIONS_URL` troca o endereço do feed só para testes. `verify:mods` e `verify:visual` apontam essa mesma variável para um endereço local inalcançável, para nunca ler o feed de produção durante o QA.
+
 ## Publicar uma versão
 
 A action `Build` (`.github/workflows/build.yml`) gera Windows, macOS e Linux nos runners do GitHub e publica cada plataforma no site, que serve o auto-update em `https://launcher.oblyvium.com.br/updates/`.
