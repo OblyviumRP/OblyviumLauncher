@@ -641,16 +641,34 @@ async function disableBlockedContent(serv, gameDir, logger) {
     toggleOverlay(true)
 }
 
+/** True while prepareServerFiles runs. */
+let preparingServerFiles = false
+
 /**
  * Refreshes the distribution, then verifies and downloads the selected server's
  * files for its selected profile, and disables blocked content. Shows any failure
  * with showLaunchFailure. Leaves the launch area in its loading state; callers
  * that do not launch the game call toggleLaunchArea(false) afterwards.
  *
+ * One run at a time: a call while another runs returns null and leaves the screen alone.
+ *
  * @returns {Promise<{ distro: object, serv: object, gameDir: string, configKey: string, loggerLaunchSuite: object } | null>}
- * null when something failed (already shown to the player).
+ * null when something failed (already shown to the player) or another run is going on.
  */
 async function prepareServerFiles() {
+    if(preparingServerFiles){
+        loggerLanding.warn('Server files are already being prepared; ignoring a second request.')
+        return null
+    }
+    preparingServerFiles = true
+    try {
+        return await runPrepareServerFiles()
+    } finally {
+        preparingServerFiles = false
+    }
+}
+
+async function runPrepareServerFiles() {
 
     const loggerLaunchSuite = LoggerUtil.getLogger('LaunchSuite')
 
@@ -757,6 +775,7 @@ async function dlAsync(login = true) {
 
     if(login && ConfigManager.getSelectedAccount() == null){
         loggerLanding.error('You must be logged into an account.')
+        toggleLaunchArea(false)
         return
     }
 
