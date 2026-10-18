@@ -16,7 +16,7 @@ const loggerUICore             = LoggerUtil.getLogger('UICore')
 const loggerAutoUpdater        = LoggerUtil.getLogger('AutoUpdater')
 
 // Must match the publish url in electron-builder.yml.
-const UPDATE_URL = ''
+const UPDATE_URL = 'https://launcher.oblyvium.com.br/updates/'
 
 // Log deprecation and process warnings.
 process.traceProcessWarnings = true
