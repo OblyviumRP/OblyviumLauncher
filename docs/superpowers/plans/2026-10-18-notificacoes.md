@@ -923,7 +923,7 @@ function renderNotifications(){
     const pending = Notifications.pendingItems(notificationsFeed.feed, {
         serverId: ConfigManager.getSelectedServer(),
         seen: new Set(ConfigManager.getNotificationsSeen()),
-        feedNowMs: Notifications.feedClock(notificationsFeed.feed, notificationsFeed.fetchedAtMs)
+        feedNowMs: Notifications.feedClock(notificationsFeed.clock)
     })
     if(!overlay && shownHighlight == null){
         const highlight = pending.find(item => item.highlight)
@@ -942,10 +942,14 @@ async function pollNotifications(){
     try {
         const result = await Notifications.fetchFeed({ etag: notificationsEtag })
         if(result.changed){
-            notificationsFeed = { feed: result.feed, fetchedAtMs: result.fetchedAtMs }
+            notificationsFeed = { feed: result.feed, clock: result.clock }
             notificationsEtag = result.etag
+            if(result.feed.dropped > 0) loggerNotifications.warn(`Ignored ${result.feed.dropped} invalid or repeated notification(s).`)
             ConfigManager.setNotificationsSeen(Notifications.pruneSeen(ConfigManager.getNotificationsSeen(), result.feed))
             ConfigManager.save()
+        } else if(notificationsFeed != null && result.clock != null){
+            // 304: same file, fresh server clock (scheduled and expired items depend on it).
+            notificationsFeed.clock = result.clock
         }
     } catch(err) {
         loggerNotifications.warn('Could not read the notifications feed:', err.message)
