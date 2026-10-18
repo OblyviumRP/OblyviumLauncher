@@ -102,3 +102,14 @@ Se um servidor precisar de outra versão, a staff define na entrada dele no `dis
 "javaOptions": { "supported": ">=25.x", "suggestedMajor": 25 }
 ```
 
+
+## Publicar uma versão
+
+A action `Build` (`.github/workflows/build.yml`) gera Windows, macOS e Linux nos runners do GitHub e publica cada plataforma no site, que serve o auto-update em `https://launcher.oblyvium.com.br/updates/`.
+
+1. Suba a versão no `package.json` e faça o merge na `main`.
+2. Crie a tag `v<versão>` (por exemplo `git tag v2.0.5 && git push origin v2.0.5`). A action confere se a tag bate com o `package.json`, gera os instaladores e publica.
+
+Também dá para rodar à mão na aba Actions → Build → Run workflow; ela só publica com "publish" marcado. Em pull requests a action só faz o build.
+
+A publicação usa `scripts/publish-update.cjs`, que manda os arquivos que o `latest*.yml` cita (e os `.blockmap`) e o yml por último, em pedaços de 8 MB, para `PUT /api/ci/launcher/updates/<arquivo>` no site. Ela precisa do secret `LAUNCHER_PUBLISH_KEY` no repositório, igual ao `LAUNCHER_PUBLISH_KEY` do site; a variável `LAUNCHER_PUBLISH_URL` troca o endereço (padrão `https://staff.oblyvium.com.br`). Um instalador que o site já tem é pulado; se o conteúdo mudou, o site recusa o yml e é preciso subir a versão. Nada fica guardado como artefato do GitHub.
