@@ -654,7 +654,9 @@ async function prepareServerFiles() {
 
     const loggerLaunchSuite = LoggerUtil.getLogger('LaunchSuite')
 
+    // Lock Jogar and the modpack button before the first await, so neither can start a second run.
     setLaunchDetails(Lang.queryJS('landing.dlAsync.loadingServerInfo'))
+    toggleLaunchArea(true)
 
     let distro
 
@@ -679,7 +681,6 @@ async function prepareServerFiles() {
     const configKey = ProfileManager.configKey(serv.rawServer.id, profile.id)
 
     setLaunchDetails(Lang.queryJS('landing.dlAsync.pleaseWait'))
-    toggleLaunchArea(true)
     setLaunchPercentage(0, 100)
 
     // The child process resolves File-type pack modules under this profile's
