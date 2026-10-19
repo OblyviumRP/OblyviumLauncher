@@ -13,6 +13,8 @@ const runProfile = path.join(output, 'runs', String(process.pid))
 fs.mkdirSync(runProfile, { recursive: true })
 process.env.APPDATA = path.join(runProfile, 'profile')
 process.env.ELECTRON_IS_DEV = '1'
+// Never let QA read the production notifications feed.
+process.env.OBLYVIUM_NOTIFICATIONS_URL = 'http://127.0.0.1:9/notifications.json'
 app.setPath('userData', path.join(runProfile, 'userData'))
 app.disableHardwareAcceleration()
 const preload = path.join(output, 'preload.cjs')

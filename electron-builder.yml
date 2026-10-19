@@ -13,6 +13,8 @@ files:
   - '!app/.forja-qa.html'
   - '!scripts/verify-mods.cjs'
   - '!scripts/publish-update.cjs'
+  - '!scripts/verify-notifications.cjs'
+  - '!app/.notifications-qa.html'
   - '!test/**'
   - '!app/.mods-qa.html'
 

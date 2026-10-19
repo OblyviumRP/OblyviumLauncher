@@ -641,14 +641,40 @@ async function disableBlockedContent(serv, gameDir, logger) {
     toggleOverlay(true)
 }
 
-async function dlAsync(login = true) {
+/** True while prepareServerFiles runs. */
+let preparingServerFiles = false
 
-    // Login parameter is temporary for debug purposes. Allows testing the validation/downloads without
-    // launching the game.
+/**
+ * Refreshes the distribution, then verifies and downloads the selected server's
+ * files for its selected profile, and disables blocked content. Shows any failure
+ * with showLaunchFailure. Leaves the launch area in its loading state; callers
+ * that do not launch the game call toggleLaunchArea(false) afterwards.
+ *
+ * One run at a time: a call while another runs returns null and leaves the screen alone.
+ *
+ * @returns {Promise<{ distro: object, serv: object, gameDir: string, configKey: string, loggerLaunchSuite: object } | null>}
+ * null when something failed (already shown to the player) or another run is going on.
+ */
+async function prepareServerFiles() {
+    if(preparingServerFiles){
+        loggerLanding.warn('Server files are already being prepared; ignoring a second request.')
+        return null
+    }
+    preparingServerFiles = true
+    try {
+        return await runPrepareServerFiles()
+    } finally {
+        preparingServerFiles = false
+    }
+}
+
+async function runPrepareServerFiles() {
 
     const loggerLaunchSuite = LoggerUtil.getLogger('LaunchSuite')
 
+    // Lock Jogar and the modpack button before the first await, so neither can start a second run.
     setLaunchDetails(Lang.queryJS('landing.dlAsync.loadingServerInfo'))
+    toggleLaunchArea(true)
 
     let distro
 
@@ -658,29 +684,21 @@ async function dlAsync(login = true) {
     } catch(err) {
         loggerLaunchSuite.error('Unable to refresh distribution index.', err)
         showLaunchFailure(Lang.queryJS('landing.dlAsync.fatalError'), Lang.queryJS('landing.dlAsync.unableToLoadDistributionIndex'))
-        return
+        return null
     }
 
     const serv = distro.getServerById(ConfigManager.getSelectedServer())
     if(serv == null){
         loggerLaunchSuite.error('The selected server is not in the distribution index.')
         showLaunchFailure(Lang.queryJS('landing.dlAsync.fatalError'), Lang.queryJS('landing.dlAsync.unableToLoadDistributionIndex'))
-        return
+        return null
     }
 
     const profile = ProfileManager.getSelected(serv.rawServer.id)
     const gameDir = ProfileManager.getGameDir(serv.rawServer.id, profile.id)
     const configKey = ProfileManager.configKey(serv.rawServer.id, profile.id)
 
-    if(login) {
-        if(ConfigManager.getSelectedAccount() == null){
-            loggerLanding.error('You must be logged into an account.')
-            return
-        }
-    }
-
     setLaunchDetails(Lang.queryJS('landing.dlAsync.pleaseWait'))
-    toggleLaunchArea(true)
     setLaunchPercentage(0, 100)
 
     // The child process resolves File-type pack modules under this profile's
@@ -718,9 +736,9 @@ async function dlAsync(login = true) {
     } catch (err) {
         loggerLaunchSuite.error('Error during file validation.')
         showLaunchFailure(Lang.queryJS('landing.dlAsync.errorDuringFileVerificationTitle'), err.displayable || Lang.queryJS('landing.dlAsync.seeConsoleForDetails'))
-        return
+        return null
     }
-    
+
 
     if(invalidFileCount > 0) {
         loggerLaunchSuite.info('Downloading files.')
@@ -734,7 +752,7 @@ async function dlAsync(login = true) {
         } catch(err) {
             loggerLaunchSuite.error('Error during file download.')
             showLaunchFailure(Lang.queryJS('landing.dlAsync.errorDuringFileDownloadTitle'), err.displayable || Lang.queryJS('landing.dlAsync.seeConsoleForDetails'))
-            return
+            return null
         }
     } else {
         loggerLaunchSuite.info('No invalid files, skipping download.')
@@ -746,6 +764,26 @@ async function dlAsync(login = true) {
     fullRepairModule.destroyReceiver()
 
     await disableBlockedContent(serv, gameDir, loggerLaunchSuite)
+
+    return { distro, serv, gameDir, configKey, loggerLaunchSuite }
+}
+
+async function dlAsync(login = true) {
+
+    // Login parameter is temporary for debug purposes. Allows testing the validation/downloads without
+    // launching the game.
+
+    if(login && ConfigManager.getSelectedAccount() == null){
+        loggerLanding.error('You must be logged into an account.')
+        toggleLaunchArea(false)
+        return
+    }
+
+    const prepared = await prepareServerFiles()
+    if(prepared == null){
+        return
+    }
+    const { distro, serv, gameDir, configKey, loggerLaunchSuite } = prepared
 
     setLaunchDetails(Lang.queryJS('landing.dlAsync.preparingToLaunch'))
 

@@ -12,6 +12,7 @@
     "start": "electron .",
     "verify:visual": "electron scripts/verify-visual.cjs",
     "verify:mods": "electron scripts/verify-mods.cjs",
+    "verify:notifications": "electron scripts/verify-notifications.cjs",
     "test": "node --test \"test/*.test.js\"",
     "dist": "electron-builder build",
     "dist:win": "npm run dist -- -w",
