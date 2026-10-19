@@ -103,7 +103,8 @@ const DEFAULT_CONFIG = {
     modConfigurations: [],
     javaConfig: {},
     gameConfig: {},
-    profiles: {}
+    profiles: {},
+    notificationsSeen: []
 }
 
 let config = null
@@ -231,6 +232,23 @@ exports.getNewsCache = function(){
  */
 exports.setNewsCache = function(newsCache){
     config.newsCache = newsCache
+}
+
+/**
+ * Ids das notificações do site que já apareceram neste computador.
+ *
+ * @returns {string[]}
+ */
+exports.getNotificationsSeen = function(){
+    return Array.isArray(config.notificationsSeen) ? config.notificationsSeen : []
+}
+
+/**
+ * @param {string[]} ids Replaces the list (never mutate the returned array: on a fresh
+ * config it is the DEFAULT_CONFIG array itself).
+ */
+exports.setNotificationsSeen = function(ids){
+    config.notificationsSeen = ids
 }
 
 /**
