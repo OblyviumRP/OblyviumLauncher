@@ -181,8 +181,10 @@ input[error] { border-color: var(--danger-fg); color: var(--danger-fg); backgrou
 .server-selector-chevron { position: absolute; width: 16px; height: 16px; top: 20px; right: 14px; color: var(--primary-light); }
 .profile-selector { position: relative; flex: 0 1 168px; min-width: 128px; min-height: 56px; padding: 8px 40px 8px 16px; background: var(--surface-2); border: 1px solid var(--input-border); border-radius: 4px; color: var(--foreground); overflow: hidden; }
 .profile-selector:hover, .profile-selector:focus-within { background: var(--accent); border-color: var(--primary-light); }
-#profile_selection { appearance: none; width: 100%; background: transparent; border: 0; color: var(--foreground); font: 500 13px var(--font-sans); padding: 0; cursor: pointer; }
-#profile_selection:focus-visible { outline: none; }
+#profile_selection { appearance: none; width: 100%; min-height: 0; background: transparent; border: 0; color: var(--foreground); font: 500 13px/20px var(--font-sans); padding: 0; cursor: pointer; }
+/* The frame draws the only focus ring (a select doesn't reliably match :focus-visible);
+   the global :focus-visible rule is !important, so the inner one must be too. */
+#profile_selection:focus-visible { outline: none !important; }
 .profile-selector:focus-within { outline: 2px solid var(--ring); outline-offset: 3px; }
 #profile_selection option { background: var(--surface-2); color: var(--foreground); }
 #profile_selection:disabled { cursor: default; color: var(--muted-foreground); }
