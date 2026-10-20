@@ -309,6 +309,20 @@ C.save();
         assert.deepEqual(await landingOptions(), ['Padrão', 'Leve', '+ Novo perfil…'])
         check('Escape back to landing with the updated profile list')
 
+        // 11b. Settings > Minecraft shortcut opens the editor of the selected profile
+        await run(`switchView(getCurrentView(), VIEWS.settings, 0, 0)`)
+        await waitFor(`getCurrentView() === VIEWS.settings && $('#settingsContainer').is(':visible')`, 'settings view')
+        await run(`settingsOpenProfileEditor.click()`)
+        await waitFor(`getCurrentView() === VIEWS.mods && !modsPanelEdit.hidden && !modsEditGame.hidden && !modsEditSave.disabled`, 'editor opened from settings')
+        assert.equal(await run(`modsEditName.value`), await run(`ProfileManager.getSelected(${JSON.stringify(SERVER)}).name`))
+        assert.equal(await run(`$('#settingsMaxRAMRange').is(':visible')`), true)
+        await screenshot('editor-from-settings')
+        await run(`modsEditCancel.click()`)
+        await waitFor(`modsPanelEdit.hidden`, 'editor closed')
+        await key('Escape')
+        await waitFor(`getCurrentView() === VIEWS.landing`, 'back to landing from the editor')
+        check('settings shortcut opens the selected profile editor with memory and Java')
+
         // 12. Launch-time blocklist check on the default profile
         fs.writeFileSync(path.join(padraoMods, 'sodium-1.0.jar'), fake.files['sodium-1.0.jar'].buf)
         await run(`disableBlockedContent(DistroAPI.distribution.getServerById(${JSON.stringify(SERVER)}), ${JSON.stringify(padraoDir)}, console)`)
