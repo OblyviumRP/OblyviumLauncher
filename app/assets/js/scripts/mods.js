@@ -263,9 +263,10 @@ function modsSwitchProfile(profileId){
 /**
  * Open the mods screen for the selected server and profile.
  *
- * @param {{createProfile?: boolean}} options createProfile opens the profile editor in create mode.
+ * @param {{createProfile?: boolean, editProfile?: boolean}} options createProfile opens the
+ * profile editor in create mode, editProfile opens it on the selected profile.
  */
-async function openModsView({ createProfile = false } = {}){
+async function openModsView({ createProfile = false, editProfile = false } = {}){
     // The profile must not change while the game is opening or running.
     if(isLaunchLocked()){
         return
@@ -304,9 +305,10 @@ async function openModsView({ createProfile = false } = {}){
         modsSetType(modsState.target.loader == null ? 'resourcepack' : 'mod', false)
         modsRenderHeader()
         modsShowTab('installed')
-        const openEditor = createProfile && typeof modsOpenEditor === 'function'
+        const editorMode = createProfile ? 'create' : editProfile ? 'edit' : null
+        const openEditor = editorMode != null && typeof modsOpenEditor === 'function'
         if(openEditor){
-            await modsOpenEditor('create')
+            await modsOpenEditor(editorMode)
         }
         if(getCurrentView() === VIEWS.mods){
             return
