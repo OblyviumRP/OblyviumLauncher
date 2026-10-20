@@ -1,5 +1,4 @@
 [ejs.landing]
-updateAvailableTooltip = "Atualização Disponível"
 usernamePlaceholder = "Usuário"
 usernameEditButton = "Editar"
 settingsTooltip = "Configurações"
@@ -377,7 +376,8 @@ releaseNotesDiscord = "As novidades de cada versão são publicadas no nosso Dis
 [js.settings.updates]
 newReleaseTitle = "Nova Versão Disponível"
 newPreReleaseTitle = "Nova Pré-release Disponível"
-downloadingButton = "Baixando.."
+downloadingButton = "Baixando..."
+downloadingPercentButton = "Baixando... {percent}%"
 downloadButton = 'Baixar do GitHub<span style="font-size: 10px;color: gray;text-shadow: none !important;">Feche o launcher e execute o dmg para atualizar.</span>'
 latestVersionTitle = "Você Está Usando a Versão Mais Recente"
 checkForUpdatesButton = "Verificar Atualizações"
@@ -402,7 +402,17 @@ selectAnotherAccountButton = "Selecionar Outra Conta"
 
 [js.uicore.autoUpdate]
 checkingForUpdateButton = "Verificando Atualizações..."
-installNowButton = "Instalar Agora"
+installNowButton = "Reiniciar e atualizar"
+noticeAvailable = "Nova versão {version}"
+noticeReady = "Versão {version} pronta"
+noticeDownloading = "Baixando a atualização..."
+noticeDownloadingPercent = "Baixando a atualização... {percent}%"
+noticeReadyDesc = "O launcher reabre sozinho em segundos."
+noticeRestartButton = "Reiniciar e atualizar"
+noticeRestarting = "Reiniciando..."
+noticeGameRunning = "Feche o jogo antes de atualizar."
+noticeDownloadDesc = "Baixe e instale a nova versão."
+noticeDownloadButton = "Baixar"
 checkForUpdatesButton = "Verificar Atualizações"
 
 [js.auth.microsoft.error]
