@@ -58,22 +58,26 @@ if(!isDev){
                 break
             case 'update-available':
                 loggerAutoUpdater.info('New update available', info.version)
-                
+
                 if(process.platform === 'darwin'){
                     info.darwindownload = `${UPDATE_URL}Oblyvium-Launcher-setup-${info.version}${process.arch === 'arm64' ? '-arm64' : '-x64'}.dmg`
-                    showUpdateUI(info)
+                    showUpdateUI('download', info)
+                } else {
+                    showUpdateUI('downloading', info)
                 }
-                
+
                 populateSettingsUpdateInformation(info)
+                break
+            case 'download-progress':
+                showUpdateUI('downloading', launcherUpdateInfo, info.percent)
+                settingsUpdateButtonStatus(Lang.queryJS('settings.updates.downloadingPercentButton', { percent: Math.floor(info.percent) }), true)
                 break
             case 'update-downloaded':
                 loggerAutoUpdater.info('Update ' + info.version + ' ready to be installed.')
                 settingsUpdateButtonStatus(Lang.queryJS('uicore.autoUpdate.installNowButton'), false, () => {
-                    if(!isDev){
-                        ipcRenderer.send('autoUpdateAction', 'installUpdateNow')
-                    }
+                    installLauncherUpdate(document.getElementById('settingsUpdateTitle'), settingsUpdateActionButton)
                 })
-                showUpdateUI(info)
+                showUpdateUI('ready', info)
                 break
             case 'update-not-available':
                 loggerAutoUpdater.info('No new update found.')
@@ -116,27 +120,67 @@ function changeAllowPrerelease(val){
     ipcRenderer.send('autoUpdateAction', 'allowPrereleaseChange', val)
 }
 
-function showUpdateUI(info){
-    //TODO Make this message a bit more informative `${info.version}`
-    document.getElementById('image_seal_container').setAttribute('update', true)
-    document.getElementById('image_seal_container').onclick = () => {
-        /*setOverlayContent('Update Available', 'A new update for the launcher is available. Would you like to install now?', 'Install', 'Later')
-        setOverlayHandler(() => {
-            if(!isDev){
-                ipcRenderer.send('autoUpdateAction', 'installUpdateNow')
-            } else {
-                console.error('Cannot install updates in development environment.')
-                toggleOverlay(false)
-            }
-        })
-        setDismissHandler(() => {
-            toggleOverlay(false)
-        })
-        toggleOverlay(true, true)*/
-        switchView(getCurrentView(), VIEWS.settings, 500, 500, () => {
-            settingsNavItemListener(document.getElementById('settingsNavUpdate'), false)
-        })
+/** The update the notice describes, kept so progress events can reuse its version. */
+let launcherUpdateInfo = null
+
+/**
+ * Show the update notice next to the logo.
+ *
+ * @param {'downloading' | 'ready' | 'download'} state downloading runs in the background,
+ * ready is installed by restarting, download (macOS) opens the installer page.
+ * @param {Object} info The update info from electron-updater.
+ * @param {number} percent Optional. Download progress, 0 to 100.
+ */
+function showUpdateUI(state, info, percent = null){
+    launcherUpdateInfo = info
+    const version = info?.version ?? ''
+    const title = document.getElementById('launcherUpdateTitle')
+    const status = document.getElementById('launcherUpdateStatus')
+    const button = document.getElementById('launcherUpdateButton')
+    document.getElementById('launcherUpdateNotice').hidden = false
+    button.disabled = false
+    if(state === 'ready'){
+        title.textContent = Lang.queryJS('uicore.autoUpdate.noticeReady', { version })
+        status.textContent = Lang.queryJS('uicore.autoUpdate.noticeReadyDesc')
+        button.textContent = Lang.queryJS('uicore.autoUpdate.noticeRestartButton')
+        button.onclick = () => installLauncherUpdate(status, button)
+        button.hidden = false
+    } else if(state === 'download'){
+        title.textContent = Lang.queryJS('uicore.autoUpdate.noticeAvailable', { version })
+        status.textContent = Lang.queryJS('uicore.autoUpdate.noticeDownloadDesc')
+        button.textContent = Lang.queryJS('uicore.autoUpdate.noticeDownloadButton')
+        button.onclick = () => shell.openExternal(info.darwindownload)
+        button.hidden = false
+    } else {
+        title.textContent = Lang.queryJS('uicore.autoUpdate.noticeAvailable', { version })
+        status.textContent = percent == null
+            ? Lang.queryJS('uicore.autoUpdate.noticeDownloading')
+            : Lang.queryJS('uicore.autoUpdate.noticeDownloadingPercent', { percent: Math.floor(percent) })
+        button.hidden = true
     }
+}
+
+/**
+ * Close the launcher, install the downloaded update silently and open it again.
+ * Refused while the game is opening or running, since closing would stop it.
+ *
+ * @param {Element} status Optional. Where to explain a refusal.
+ * @param {Element} button Optional. Disabled while the launcher restarts.
+ * @returns {boolean} Whether the install started.
+ */
+function installLauncherUpdate(status = null, button = null){
+    if(typeof isLaunchLocked === 'function' && isLaunchLocked()){
+        if(status != null) status.textContent = Lang.queryJS('uicore.autoUpdate.noticeGameRunning')
+        return false
+    }
+    if(button != null){
+        button.disabled = true
+        button.textContent = Lang.queryJS('uicore.autoUpdate.noticeRestarting')
+    }
+    if(!isDev){
+        ipcRenderer.send('autoUpdateAction', 'installUpdateNow')
+    }
+    return true
 }
 
 /* jQuery Example

@@ -101,13 +101,22 @@ input[error] { border-color: var(--danger-fg); color: var(--danger-fg); backgrou
 #landingContainer::after { content: 'Arte conceitual, não é uma captura do servidor.'; position: absolute; right: 32px; bottom: 136px; color: var(--muted-foreground); font-size: 11px; }
 #landingContainer > #upper { height: calc(100% - 124px); padding: 24px 32px 36px; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 110px minmax(0, 1fr); gap: 16px 32px; }
 #landingContainer > #upper > #left, #landingContainer > #upper > #content, #landingContainer > #upper > #right { width: auto; height: auto; min-width: 0; }
-#landingContainer > #upper > #left { align-items: flex-start; justify-content: flex-start; }
+#landingContainer > #upper > #left { display: flex; flex-direction: row; gap: 20px; align-items: flex-start; justify-content: flex-start; }
 #landingContainer > #upper > #content { grid-column: 1 / -1; grid-row: 2; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 400px); align-content: center; align-items: center; gap: 48px; max-width: 1440px; width: 100%; margin: auto; }
 #landingContainer > #upper > #content:has(#landingNewsNotice[hidden]) { grid-template-columns: 1fr; }
 #landingContainer > #upper > #right { grid-column: 2; grid-row: 1; align-items: center; }
 #image_seal_container { position: relative; margin: 0; width: 56px; height: 64px; }
 #image_seal { width: 56px; height: 64px; margin: 0; object-fit: contain; border: 0; border-radius: 0; }
-#image_seal_container[update]::before, #image_seal_container[update]::after { animation: none; border-color: var(--primary-light); }
+.launcher-update { display: flex; align-items: center; gap: 12px; min-width: 0; max-width: 460px; margin-top: 4px; padding: 10px 10px 10px 14px; background: var(--card); border: 1px solid var(--primary-line); border-radius: 6px; }
+.launcher-update[hidden] { display: none; }
+.launcher-update-icon { width: 20px; height: 20px; flex-shrink: 0; color: var(--primary-light); }
+.launcher-update-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+#launcherUpdateTitle { font-size: 13px; font-weight: 600; color: var(--foreground); }
+#launcherUpdateStatus { font-size: 12px; line-height: 1.5; color: var(--muted-foreground); }
+#launcherUpdateTitle { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#launcherUpdateButton { flex-shrink: 0; min-height: 32px; padding: 6px 12px; background: var(--primary-fill); border: 1px solid var(--primary-fill); border-radius: 4px; color: var(--foreground); font: 600 12px var(--font-sans); white-space: nowrap; cursor: pointer; }
+#launcherUpdateButton:hover { background: var(--fj-primary-hover); border-color: var(--primary-light); }
+#launcherUpdateButton:disabled { opacity: 0.6; cursor: default; }
 .realm-intro { align-self: center; padding-bottom: 8px; max-width: 760px; }
 .realm-kicker, .auth-kicker { color: var(--primary-light); font: 500 12px/1.5 var(--font-display); }
 .realm-intro h1 { font: 900 clamp(56px, 8vw, 112px)/1.15 var(--font-display); color: var(--foreground); margin: 20px 0 28px; }
@@ -146,7 +155,7 @@ input[error] { border-color: var(--danger-fg); color: var(--danger-fg); backgrou
 .mediaSVG { width: 18px; height: 18px; fill: var(--muted-foreground); }
 .mediaButton:hover .mediaSVG, .mediaURL:hover .mediaSVG, .mediaSVG:hover { fill: var(--primary-light); filter: none; }
 .mediaDivider { display: none; }
-#settingsTooltip, #updateAvailableTooltip, #mojangStatusTooltip { background: var(--surface-2); border: 1px solid var(--border-2); color: var(--foreground); box-shadow: var(--shadow-dialog); border-radius: 6px; font-size: 11px; }
+#settingsTooltip, #mojangStatusTooltip { background: var(--surface-2); border: 1px solid var(--border-2); color: var(--foreground); box-shadow: var(--shadow-dialog); border-radius: 6px; font-size: 11px; }
 #settingsTooltip { top: 44px; left: auto; right: 0; }
 #landingContainer > #lower { height: 124px; padding: 24px 32px; display: grid; grid-template-columns: minmax(160px, 1fr) minmax(0, 620px) minmax(160px, 1fr); gap: 24px; background: var(--card); border-top: 1px solid var(--border-2); align-items: center; }
 #landingContainer > #lower > #left, #landingContainer > #lower > #center, #landingContainer > #lower > #right { width: auto; height: auto; min-width: 0; justify-content: center; }
@@ -317,7 +326,17 @@ input[error] { border-color: var(--danger-fg); color: var(--danger-fg); backgrou
 #settingsAboutLogo { content: url('../images/oblyvium-mark.svg'); width: 56px; height: 64px; object-fit: contain; }
 #settingsAboutTitle, #settingsUpdateTitle { font-size: 20px; font-weight: 600; }
 #settingsAboutCurrentVersion, #settingsUpdateVersion, .serverListingVersion { color: var(--primary-fg); background: var(--primary-soft); border: 1px solid var(--primary-line); border-radius: 4px; padding: 4px 8px; font: 11px var(--font-mono); }
-#settingsAboutCurrentVersionLine, #settingsUpdateVersionLine { background: var(--border); }
+#settingsAboutCurrentVersionLine, #settingsUpdateVersionLine { background: none; color: var(--muted-foreground); font: 12px var(--font-mono); }
+#settingsAboutCurrentVersionTitle, #settingsUpdateVersionTitle { color: var(--primary-fg); font: 600 12px var(--font-sans); }
+#settingsAboutCurrentVersionCheck, #settingsUpdateVersionCheck { background: var(--primary-fill); }
+#settingsUpdateStatusContainer { background: var(--card); border: 1px solid var(--border-2); border-radius: 6px; }
+#settingsUpdateStatusContent { padding: 20px; gap: 16px; }
+#settingsUpdateStatusHeadline { padding: 0; border: 0; }
+#settingsUpdateTitle { padding-left: 0; }
+#settingsUpdateVersion { padding: 6px 4px; }
+#settingsUpdateActionContainer { padding-top: 0; }
+#settingsUpdateActionButton { align-self: flex-start; }
+#settingsUpdateActionButton:disabled { opacity: 0.6; }
 .settingsAboutButton, .settingsChangelogButton { font-size: 12px; padding: 6px 10px; background: var(--surface-2); color: var(--foreground); border: 1px solid var(--border-2); border-radius: 4px; }
 .rangeSlider { background: var(--border-2); }
 .rangeSliderBar { background: var(--primary); }
