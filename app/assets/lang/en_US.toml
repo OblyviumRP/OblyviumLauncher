@@ -373,6 +373,11 @@ stableReleaseTitle = "Versão Estável"
 releaseNotesFailed = "Falha ao carregar notas da versão."
 releaseNotesDiscord = "As novidades de cada versão são publicadas no nosso Discord."
 
+[js.settings.changelog]
+loading = "Carregando as novidades..."
+missing = "As novidades da versão {version} ainda não foram publicadas. Acompanhe no nosso Discord."
+failed = "Não foi possível carregar as novidades agora. Tente de novo mais tarde."
+
 [js.settings.updates]
 newReleaseTitle = "Nova Versão Disponível"
 newPreReleaseTitle = "Nova Pré-release Disponível"
