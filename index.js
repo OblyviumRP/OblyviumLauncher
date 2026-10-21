@@ -352,6 +352,12 @@ function getPlatformIcon(filename){
     return path.join(__dirname, 'app', 'assets', 'images', `${filename}.${ext}`)
 }
 
+// Windows only shows notifications from an app with an id that matches its
+// Start menu shortcut, which the installer creates from appId.
+if(process.platform === 'win32'){
+    app.setAppUserModelId(isDev ? process.execPath : 'oblyviumlauncher')
+}
+
 app.on('ready', createWindow)
 app.on('ready', createMenu)
 

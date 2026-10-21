@@ -88,6 +88,36 @@ function notificationsCanShow(){
     return !document.hidden && [VIEWS.landing, VIEWS.settings, VIEWS.mods].includes(getCurrentView())
 }
 
+/** Ids already sent to Windows this session, so the 30 s reads never repeat one. */
+const nativeNotified = new Set()
+
+/** Past login, but the player is elsewhere: launcher minimised, behind another window or in the game. */
+function notificationsAway(){
+    return [VIEWS.landing, VIEWS.settings, VIEWS.mods].includes(getCurrentView()) && (document.hidden || !document.hasFocus())
+}
+
+/** Bring the launcher to the front, restoring it when minimised. */
+function focusLauncherWindow(){
+    const win = remote.getCurrentWindow()
+    if(win.isMinimized()) win.restore()
+    win.show()
+    win.focus()
+}
+
+/**
+ * Send pending notifications to the system while the player is away. The cards
+ * still show in the launcher once it is back on screen.
+ */
+function sendNativeNotifications(pending){
+    if(!notificationsAway()) return
+    for(const item of pending.filter(item => !nativeNotified.has(item.id)).slice(0, Notifications.MAX_TOASTS)){
+        nativeNotified.add(item.id)
+        const type = Lang.queryJS('notifications.type.' + NOTIFICATION_TYPE_KEYS[item.type])
+        const native = new Notification(`${type} · ${item.title}`, { body: item.body })
+        native.onclick = focusLauncherWindow
+    }
+}
+
 function launcherUpdateButton(status, dismiss){
     const button = notifButton(Lang.queryJS(process.platform === 'darwin' ? 'notifications.download' : 'notifications.updateNow'))
     const offerRetry = text => {
@@ -403,12 +433,14 @@ function renderNotifications(){
         focusHighlight()
     }
     shownToasts.forEach(shown => shown.syncTimer())
-    if(notificationsFeed == null || !notificationsCanShow()) return
+    if(notificationsFeed == null) return
     const pending = Notifications.pendingItems(notificationsFeed.feed, {
         serverId: ConfigManager.getSelectedServer(),
         seen: new Set(ConfigManager.getNotificationsSeen()),
         feedNowMs: Notifications.feedClock(notificationsFeed.clock)
     })
+    sendNativeNotifications(pending)
+    if(!notificationsCanShow()) return
     if(!overlay && shownHighlight == null){
         const highlight = pending.find(item => item.highlight)
         if(highlight) openHighlight(highlight)
