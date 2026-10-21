@@ -111,6 +111,7 @@ A staff dispara notificações pelo painel do site (Launcher → Notificações)
 - Destaque: abre no centro, com imagem, e só fecha pelo jogador (Esc ou Fechar).
 - "Atualizar agora": no launcher, procura e baixa a versão nova e oferece "Reiniciar e instalar" (no macOS abre o `.dmg`); no modpack, confere e baixa os arquivos do servidor sem abrir o jogo (desativado com o jogo aberto).
 - Nada aparece antes do login nem com a janela minimizada. Texto sempre como texto, links só `https://`, imagens só do CDN do launcher.
+- Notificação do Windows: com o launcher minimizado, atrás de outra janela ou com o jogador no jogo, cada aviso novo também vai para o Windows, uma vez só. Clicar nela traz o launcher para a frente, e o cartão aparece quando a janela volta. Com o launcher em foco, só o cartão aparece.
 
 `npm run verify:notifications` testa tudo isso contra um servidor local (`test/helpers/fakeNotifications.js`); `OBLYVIUM_NOTIFICATIONS_URL` troca o endereço do feed só para testes. `verify:mods` e `verify:visual` apontam essa mesma variável para um endereço local inalcançável, para nunca ler o feed de produção durante o QA.
 

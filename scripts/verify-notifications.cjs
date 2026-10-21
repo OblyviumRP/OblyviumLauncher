@@ -77,6 +77,11 @@ api.distribution = new HeliosDistribution(raw, C.getCommonDirectory(), C.getInst
 api.refreshDistributionOrFallback = async () => api.distribution;
 C.setSelectedServer(${JSON.stringify(SERVER)});
 C.save();
+// Record system notifications instead of showing them; the hidden QA window counts as focused.
+window.__native = [];
+window.Notification = class { constructor(title, options){ this.title = title; this.options = options; window.__native.push(this) } };
+window.__focused = true;
+document.hasFocus = () => window.__focused;
 `)
 
         const ejs = require('ejs')
@@ -408,6 +413,21 @@ C.save();
         assert.equal(await highlightHidden(), true)
         assert.equal(await run('document.activeElement.id'), 'launch_button')
         check('closing the highlight focuses Jogar when the old focus is gone')
+
+        // Away from the launcher, new items also go to Windows, once each; clicking one brings the launcher back.
+        await run('window.__native = []; window.__focused = false; true')
+        publish(extraItem('fora-de-foco', 'announcement', 'Fora de foco', { body: 'Corpo do aviso.' }))
+        await run('pollNotifications()')
+        const announcement = await run(`Lang.queryJS('notifications.type.' + NOTIFICATION_TYPE_KEYS.announcement)`)
+        assert.deepEqual(await run('window.__native.map(n => [n.title, n.options.body])'), [[announcement + ' · Fora de foco', 'Corpo do aviso.']])
+        assert.equal(await run('window.__native[0].onclick === focusLauncherWindow'), true)
+        await run('pollNotifications()')
+        assert.equal(await run('window.__native.length'), 1, 'not sent again on the next read')
+        await run('window.__focused = true; true')
+        publish(extraItem('em-foco', 'announcement', 'Em foco'))
+        await run('pollNotifications()')
+        assert.equal(await run('window.__native.length'), 1, 'nothing sent while the launcher has focus')
+        check('Windows notification only while away, once per item, click focuses the launcher')
 
         assert.deepEqual(errors, [], 'renderer errors')
         check('no renderer exceptions')
