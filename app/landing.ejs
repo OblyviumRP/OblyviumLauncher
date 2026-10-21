@@ -3,8 +3,15 @@
         <div id="left">
             <div id="image_seal_container">
                 <img id="image_seal" src="assets/images/oblyvium-mark.svg" alt="Oblyvium"/>
-                <div id="updateAvailableTooltip"><%- lang('landing.updateAvailableTooltip') %></div>
             </div>
+            <section id="launcherUpdateNotice" class="launcher-update" aria-labelledby="launcherUpdateTitle" hidden>
+                <svg class="launcher-update-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3v9m0 0 3.5-3.5M10 12 6.5 8.5M4 15.5h12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <div class="launcher-update-text">
+                    <strong id="launcherUpdateTitle"></strong>
+                    <span id="launcherUpdateStatus" role="status" aria-live="polite"></span>
+                </div>
+                <button id="launcherUpdateButton" type="button" hidden></button>
+            </section>
         </div>
         <div id="content">
             <div class="realm-intro">

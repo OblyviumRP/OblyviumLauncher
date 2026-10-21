@@ -99,7 +99,12 @@ function launcherUpdateButton(status, dismiss){
         button.textContent = Lang.queryJS('notifications.restartToInstall')
         button.disabled = false
         button.onclick = () => {
-            if(notificationsUpdaterEnabled) ipcRenderer.send('autoUpdateAction', 'installUpdateNow')
+            if(!notificationsUpdaterEnabled) return
+            if(typeof isLaunchLocked === 'function' && isLaunchLocked()){
+                setNotificationStatus(status, Lang.queryJS('uicore.autoUpdate.noticeGameRunning'))
+                return
+            }
+            ipcRenderer.send('autoUpdateAction', 'installUpdateNow')
         }
         setNotificationStatus(status, Lang.queryJS('notifications.updateReady'))
     }
