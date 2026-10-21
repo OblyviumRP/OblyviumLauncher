@@ -95,6 +95,8 @@ function fetchChangelog(){
     if(cache != null && Date.now() - cache.at < CACHE_MS) return cache.promise
     const promise = (async () => {
         const res = await http.get(CHANGELOG_URL)
+        // Nothing published yet: no notes for any version, which is not an error.
+        if(res.statusCode === 404) return { releases: [], dropped: 0 }
         if(res.statusCode !== 200) throw new Error(`HTTP ${res.statusCode}`)
         if(Buffer.byteLength(res.body) > MAX_BODY_BYTES) throw new Error('Changelog is too large')
         return parseChangelog(JSON.parse(res.body))
@@ -104,8 +106,14 @@ function fetchChangelog(){
     return promise
 }
 
+/** Tests only: forget the cached read. */
+function resetCache(){
+    cache = null
+}
+
 module.exports = {
     CHANGELOG_URL,
+    resetCache,
     parseRelease,
     parseChangelog,
     findRelease,

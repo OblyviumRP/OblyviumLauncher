@@ -68,6 +68,9 @@ test('noteBlocks agrupa itens de lista e separa parágrafos', () => {
 test('fetchChangelog lê o arquivo, guarda em cache e não guarda falha', async () => {
     served = { status: 500, body: '' }
     await assert.rejects(C.fetchChangelog(), /HTTP 500/)
+    served = { status: 404, body: '' }
+    assert.deepEqual(await C.fetchChangelog(), { releases: [], dropped: 0 }, 'not published yet reads as empty')
+    C.resetCache()
     served = { status: 200, body: JSON.stringify(changelogOf(release())) }
     const readsBefore = reads
     const first = await C.fetchChangelog()
