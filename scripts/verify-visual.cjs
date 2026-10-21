@@ -13,8 +13,15 @@ const runProfile = path.join(output, 'runs', String(process.pid))
 fs.mkdirSync(runProfile, { recursive: true })
 process.env.APPDATA = path.join(runProfile, 'profile')
 process.env.ELECTRON_IS_DEV = '1'
-// Never let QA read the production notifications feed.
+// Never let QA read the production notifications feed or changelog.
 process.env.OBLYVIUM_NOTIFICATIONS_URL = 'http://127.0.0.1:9/notifications.json'
+// A local changelog with notes for 9.9.9 only; every other version has none.
+const changelogServer = require('http').createServer((_req, res) => {
+    res.writeHead(200, { 'content-type': 'application/json' })
+    res.end(JSON.stringify({ version: 1, generatedAt: new Date().toISOString(), releases: [
+        { version: '9.9.9', title: 'Teste visual', notes: 'Resumo da versão.\n- Primeiro item\n- <b>Segundo</b> item', publishedAt: new Date().toISOString() }
+    ] }))
+})
 app.setPath('userData', path.join(runProfile, 'userData'))
 app.disableHardwareAcceleration()
 const preload = path.join(output, 'preload.cjs')
@@ -38,6 +45,8 @@ let microsoftRequested = false
 ipcMain.on('MSFT_AUTH_OPEN_LOGIN', () => { microsoftRequested = true })
 
 app.whenReady().then(async () => {
+    await new Promise(resolve => changelogServer.listen(0, '127.0.0.1', resolve))
+    process.env.OBLYVIUM_CHANGELOG_URL = `http://127.0.0.1:${changelogServer.address().port}/changelog.json`
     const ejs = require('ejs')
     const Lang = require('../app/assets/js/langloader')
     Lang.setupLanguage()
@@ -129,6 +138,17 @@ app.whenReady().then(async () => {
         await screenshot('settings-' + tab.toLowerCase())
         assert.equal(await run(`document.getElementById('settingsBackButton').getClientRects().length > 0`), true)
     }
+    await run(`populateSettingsUpdateInformation({ version: '9.9.9' })`)
+    for (let i = 0; i < 50 && !(await run(`document.querySelector('#settingsTabUpdate .settingsChangelogText').textContent.includes('Primeiro item')`)); i++) await pause(100)
+    assert.equal(await run(`document.querySelector('#settingsTabUpdate .settingsChangelogTitle').textContent`), 'v9.9.9 · Teste visual')
+    assert.deepEqual(await run(`[...document.querySelectorAll('#settingsTabUpdate .settingsChangelogText li')].map(li => li.textContent)`), ['Primeiro item', '<b>Segundo</b> item'])
+    assert.equal(await run(`document.querySelector('#settingsTabUpdate .settingsChangelogText b')`), null, 'notes are text, never HTML')
+    await screenshot('settings-update-changelog')
+    await run(`populateSettingsUpdateInformation({ version: '1.2.3' })`)
+    for (let i = 0; i < 50 && (await run(`document.querySelector('#settingsTabUpdate .settingsChangelogText').textContent.includes('Carregando')`)); i++) await pause(100)
+    assert.equal(await run(`document.querySelector('#settingsTabUpdate .settingsChangelogText').textContent`), 'As novidades da versão 1.2.3 ainda não foram publicadas. Acompanhe no nosso Discord.')
+    assert.equal(await run(`document.getElementById('settingsTabUpdate').textContent.includes('undefined')`), false)
+    await run(`populateSettingsUpdateInformation(null)`)
     await click('.settingsNavItem[rsc="settingsTabMinecraft"]')
     const previous = await run(`document.querySelector('#settingsTabMinecraft .toggleSwitch input').checked`)
     await click('#settingsTabMinecraft .toggleSwitch input')
@@ -212,7 +232,8 @@ app.whenReady().then(async () => {
     await run(`$('#main > div').hide(); $('#loadingContainer').show();`)
     await screenshot('loading')
     assert.deepEqual(errors, [], 'renderer errors')
-    console.log(JSON.stringify({ result: 'PASS', output, checks: ['EJS rendering', 'centered login modals and field focus', 'welcome → accounts → offline → landing', 'username validation', 'all five settings tabs', 'three settings exits', 'settings toggle', 'server dialog and selected icon', 'centered launch controls and aligned profile', 'conditional RSS, description fallback and long titles', 'update notice: progress, restart button, blocked while the game runs', 'Escape dialog and dropdown behavior', 'launch progress', '800px and 390px landing layouts', '800px and 1920px settings layouts', 'Microsoft login request and error-dialog focus', 'no renderer exceptions'], microsoftRequested }, null, 2))
+    console.log(JSON.stringify({ result: 'PASS', output, checks: ['EJS rendering', 'centered login modals and field focus', 'welcome → accounts → offline → landing', 'username validation', 'all five settings tabs', 'three settings exits', 'settings toggle', 'server dialog and selected icon', 'centered launch controls and aligned profile', 'conditional RSS, description fallback and long titles', 'update notice: progress, restart button, blocked while the game runs', 'changelog from the API: notes as text, missing version message', 'Escape dialog and dropdown behavior', 'launch progress', '800px and 390px landing layouts', '800px and 1920px settings layouts', 'Microsoft login request and error-dialog focus', 'no renderer exceptions'], microsoftRequested }, null, 2))
+    changelogServer.close()
     app.quit()
 }).catch(error => { console.error(error); app.exit(1) })
 app.on('quit', () => { if (fs.existsSync(fixture)) fs.unlinkSync(fixture) })

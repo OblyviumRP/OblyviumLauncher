@@ -212,6 +212,9 @@ async function fetchFeed({ etag }){
 
 module.exports = {
     FEED_URL,
+    isText,
+    isIsoUtc,
+    hasUnsafeChars,
     IMAGE_PREFIX,
     POLL_MS,
     AUTO_DISMISS_MS,
