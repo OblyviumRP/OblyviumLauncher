@@ -3,6 +3,7 @@ const os = require('os')
 const semver = require('semver')
 
 const {MSFT_OPCODE, MSFT_REPLY_TYPE, MSFT_ERROR} = require('./assets/js/ipcconstants')
+const Changelog = require('./assets/js/changelog')
 
 const settingsState = {
     invalid: new Set()
@@ -1024,12 +1025,64 @@ function populateAboutVersionInformation() {
     populateVersionInformation(remote.app.getVersion(), document.getElementById('settingsAboutCurrentVersionValue'), document.getElementById('settingsAboutCurrentVersionTitle'), document.getElementById('settingsAboutCurrentVersionCheck'))
 }
 
+const changelogLogger = LoggerUtil.getLogger('Changelog')
+
 /**
- * Release notes are published on the Oblyvium Discord.
+ * Fill a changelog box with the notes the website publishes for one version.
+ * Notes are text only: every piece goes in through textContent.
+ *
+ * @param {Element} titleElement Gets "v<version>" and the release title.
+ * @param {Element} textElement Gets the notes, or a message when there are none.
+ * @param {string} version The version to show.
+ */
+async function populateChangelog(titleElement, textElement, version) {
+    textElement.dataset.version = version
+    titleElement.textContent = 'v' + version
+    const message = key => {
+        const p = document.createElement('p')
+        p.textContent = Lang.queryJS('settings.changelog.' + key, { version })
+        return p
+    }
+    textElement.replaceChildren(message('loading'))
+    let release = null
+    let failed = false
+    try {
+        release = Changelog.findRelease(await Changelog.fetchChangelog(), version)
+    } catch (err) {
+        changelogLogger.warn('Could not read the changelog:', err.message)
+        failed = true
+    }
+    // Another version was asked for while this one loaded.
+    if (textElement.dataset.version !== version) {
+        return
+    }
+    if (release == null) {
+        textElement.replaceChildren(message(failed ? 'failed' : 'missing'))
+        return
+    }
+    if (release.title) {
+        titleElement.textContent = `v${version} · ${release.title}`
+    }
+    textElement.replaceChildren(...Changelog.noteBlocks(release.notes).map(block => {
+        const element = document.createElement(block.type)
+        if (block.type === 'ul') {
+            for (const item of block.items) {
+                const li = document.createElement('li')
+                li.textContent = item
+                element.append(li)
+            }
+        } else {
+            element.textContent = block.text
+        }
+        return element
+    }))
+}
+
+/**
+ * Notes for the running version, from the website.
  */
 function populateReleaseNotes() {
-    settingsAboutChangelogTitle.innerHTML = 'v' + remote.app.getVersion()
-    settingsAboutChangelogText.innerHTML = Lang.queryJS('settings.about.releaseNotesDiscord')
+    populateChangelog(settingsAboutChangelogTitle, settingsAboutChangelogText, remote.app.getVersion())
     settingsAboutChangelogButton.href = 'https://discord.gg/oblyvium'
 }
 
@@ -1079,8 +1132,7 @@ function populateSettingsUpdateInformation(data) {
     if (data != null) {
         settingsUpdateTitle.innerHTML = isPrerelease(data.version) ? Lang.queryJS('settings.updates.newPreReleaseTitle') : Lang.queryJS('settings.updates.newReleaseTitle')
         settingsUpdateChangelogCont.style.display = null
-        settingsUpdateChangelogTitle.innerHTML = data.releaseName
-        settingsUpdateChangelogText.innerHTML = data.releaseNotes
+        populateChangelog(settingsUpdateChangelogTitle, settingsUpdateChangelogText, data.version)
         populateVersionInformation(data.version, settingsUpdateVersionValue, settingsUpdateVersionTitle, settingsUpdateVersionCheck)
 
         if (process.platform === 'darwin') {

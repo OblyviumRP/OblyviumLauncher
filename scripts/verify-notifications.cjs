@@ -58,6 +58,7 @@ app.whenReady().then(async () => {
         fake = await Fake.start()
         fake.setFeed(feed(fake.base))
         process.env.OBLYVIUM_NOTIFICATIONS_URL = fake.url
+        process.env.OBLYVIUM_CHANGELOG_URL = 'http://127.0.0.1:9/changelog.json'
 
         const preload = path.join(output, 'preload.cjs')
         fs.writeFileSync(preload, `

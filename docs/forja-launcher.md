@@ -115,6 +115,12 @@ A staff dispara notificações pelo painel do site (Launcher → Notificações)
 
 `npm run verify:notifications` testa tudo isso contra um servidor local (`test/helpers/fakeNotifications.js`); `OBLYVIUM_NOTIFICATIONS_URL` troca o endereço do feed só para testes. `verify:mods` e `verify:visual` apontam essa mesma variável para um endereço local inalcançável, para nunca ler o feed de produção durante o QA.
 
+## Novidades de cada versão
+
+A staff escreve as notas de cada versão no painel do site (Launcher → Novidades). O site publica `https://launcher.oblyvium.com.br/changelog.json` (`{ version: 1, generatedAt, releases: [{ version, title, notes, publishedAt }] }`), e o launcher mostra as notas em Configurações → Atualizações (versão nova) e → Sobre (versão atual). As notas são texto simples: linhas que começam com `- ` viram itens de lista, e nunca entra HTML. O launcher guarda a leitura por 5 minutos. Sem notas para a versão, ele diz que ainda não foram publicadas; se a leitura falhar, diz que não conseguiu carregar.
+
+`OBLYVIUM_CHANGELOG_URL` troca o endereço só para testes (`test/changelog.test.js`, `verify:visual`); os outros scripts de QA apontam para um endereço inalcançável.
+
 ## Publicar uma versão
 
 A action `Build` (`.github/workflows/build.yml`) gera Windows, macOS e Linux nos runners do GitHub e publica cada plataforma no site, que serve o auto-update em `https://launcher.oblyvium.com.br/updates/`.
