@@ -42,6 +42,26 @@ const user_text               = document.getElementById('user_text')
 
 const loggerLanding = LoggerUtil.getLogger('Landing')
 
+/**
+ * FullRepair that forks repairreceiver.js, which keeps the player's in-game
+ * settings instead of restoring the pack's copy on every launch.
+ */
+class SettingsSafeRepair extends FullRepair {
+    // Same as helios-core's spawnReceiver, forking our entry instead of its executor.
+    spawnReceiver(){
+        if(this.receiver != null){
+            throw new Error('Receiver already spawned!')
+        }
+        this.receiver = require('child_process').fork(require.resolve('./assets/js/repairreceiver'), [this.receiverName()], { stdio: 'pipe' })
+        for(const [fd, color] of [[1, 32], [2, 31]]){
+            this.receiver.stdio[fd].setEncoding('utf8')
+            this.receiver.stdio[fd].on('data', (data) => {
+                `${data}`.trim().split('\n').forEach(line => console.log(`\x1b[${color}m[_]\x1b[0m ${line}`))
+            })
+        }
+    }
+}
+
 /* Launch Progress Wrapper Functions */
 
 // True while the loading area is shown (Java scan, file checks, downloads,
@@ -704,7 +724,7 @@ async function runPrepareServerFiles() {
     // The child process resolves File-type pack modules under this profile's
     // instance root. Renderer-side mdl.getPath() for File modules still points
     // at the default instance, so don't rely on it for other profiles.
-    const fullRepairModule = new FullRepair(
+    const fullRepairModule = new SettingsSafeRepair(
         ConfigManager.getCommonDirectory(),
         ProfileManager.getInstanceRoot(profile.id),
         ConfigManager.getLauncherDirectory(),

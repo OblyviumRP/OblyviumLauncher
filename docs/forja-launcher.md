@@ -60,6 +60,8 @@ O QA no Electron também verifica centralização do modal offline, foco dos cam
 
 Cada servidor tem perfis. O **Padrão** usa a pasta de jogo de sempre (`instances/<servidor>`); perfis novos ficam em `instances/.perfis/<id>/<servidor>`. Cada perfil tem os próprios mods, resource packs, shaders, `options.txt`, teclas, mundos, memória, Java, argumentos da JVM, resolução e mods opcionais do pack. Os mods obrigatórios do pack ficam em `common/` e não são baixados de novo por perfil.
 
+Arquivos do pack em `options.txt`, `optionsof.txt`, `optionsshaders.txt` e `config/` só são baixados quando faltam na pasta do perfil (`app/assets/js/repairreceiver.js`). O resto do pack continua sendo verificado pelo hash a cada abertura. Assim, vídeo, idioma e configs de mod que o jogador muda no jogo não voltam ao padrão. Em troca, uma config nova publicada no pack só chega a quem ainda não tem o arquivo.
+
 O jogador escolhe o perfil ao lado do servidor, na tela principal, e abre a tela **Mods** pelo botão no topo. Nela há:
 
 - **Instalados:** mods, resource packs e shaders do perfil, com ligar/desligar, remover e atualizar; o grupo "Mods do pack" mostra o que a staff mantém.
