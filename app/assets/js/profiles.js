@@ -152,6 +152,13 @@ exports.removeProfile = function(store, serverId, profileId) {
 }
 
 /**
+ * True when a path inside the game folder is one of the settings the player edits in game.
+ */
+exports.isSettingsPath = function(relativePath) {
+    return SETTINGS_FILES.includes(relativePath.split(/[\\/]/)[0])
+}
+
+/**
  * Copy video options, key binds and mod configs from one game folder to another.
  */
 exports.copySettingsFiles = async function(srcGameDir, dstGameDir) {
