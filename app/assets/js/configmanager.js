@@ -554,12 +554,6 @@ function defaultJavaConfig8(ram) {
         minRAM: resolveSelectedRAM(ram),
         maxRAM: resolveSelectedRAM(ram),
         executable: null,
-        jvmOptions: [
-            '-XX:+UseConcMarkSweepGC',
-            '-XX:+CMSIncrementalMode',
-            '-XX:-UseAdaptiveSizePolicy',
-            '-Xmn128M'
-        ],
     }
 }
 
@@ -568,14 +562,6 @@ function defaultJavaConfig17(ram) {
         minRAM: resolveSelectedRAM(ram),
         maxRAM: resolveSelectedRAM(ram),
         executable: null,
-        jvmOptions: [
-            '-XX:+UnlockExperimentalVMOptions',
-            '-XX:+UseG1GC',
-            '-XX:G1NewSizePercent=20',
-            '-XX:G1ReservePercent=20',
-            '-XX:MaxGCPauseMillis=50',
-            '-XX:G1HeapRegionSize=32M'
-        ],
     }
 }
 
@@ -659,31 +645,6 @@ exports.getJavaExecutable = function(serverid){
  */
 exports.setJavaExecutable = function(serverid, executable){
     config.javaConfig[serverid].executable = executable
-}
-
-/**
- * Retrieve the additional arguments for JVM initialization. Required arguments,
- * such as memory allocation, will be dynamically resolved and will not be included
- * in this value.
- * 
- * @param {string} serverid The server id.
- * @returns {Array.<string>} An array of the additional arguments for JVM initialization.
- */
-exports.getJVMOptions = function(serverid){
-    return config.javaConfig[serverid].jvmOptions
-}
-
-/**
- * Set the additional arguments for JVM initialization. Required arguments,
- * such as memory allocation, will be dynamically resolved and should not be
- * included in this value.
- * 
- * @param {string} serverid The server id.
- * @param {Array.<string>} jvmOptions An array of the new additional arguments for JVM 
- * initialization.
- */
-exports.setJVMOptions = function(serverid, jvmOptions){
-    config.javaConfig[serverid].jvmOptions = jvmOptions
 }
 
 // Game Settings
