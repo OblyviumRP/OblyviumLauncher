@@ -48,3 +48,13 @@ test('erro de leitura não apaga uma config boa', () => {
     }
     assert.equal(fs.readFileSync(configPath, 'utf8'), good)
 })
+
+test('status no Discord vem ligado, inclusive em config antiga, e desligar fica salvo', () => {
+    fs.writeFileSync(configPath, JSON.stringify({ settings: { launcher: { allowPrerelease: false } } }))
+    ConfigManager.load()
+    assert.equal(ConfigManager.getDiscordPresence(), true)
+    ConfigManager.setDiscordPresence(false)
+    ConfigManager.save()
+    ConfigManager.load()
+    assert.equal(ConfigManager.getDiscordPresence(), false)
+})
