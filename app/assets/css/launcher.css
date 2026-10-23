@@ -1657,8 +1657,6 @@ input:checked + .toggleSwitchSlider:before {
     width: 75%;
     display: flex;
     flex-direction: column;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.50);
-    margin-bottom: 20px;
 }
 
 /* Memory management title. */
