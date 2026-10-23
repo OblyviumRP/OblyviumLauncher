@@ -99,7 +99,7 @@ input[error] { border-color: var(--danger-fg); color: var(--danger-fg); backgrou
 #landingContainer > #upper > #left { display: flex; flex-direction: row; gap: 20px; align-items: flex-start; justify-content: flex-start; }
 #landingContainer > #upper > #content { grid-column: 1 / -1; grid-row: 2; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 400px); align-content: start; align-items: center; gap: 48px; max-width: 1440px; width: 100%; margin: 0 auto; }
 #landingContainer > #upper > #content:has(#landingNewsNotice[hidden]) { grid-template-columns: 1fr; }
-#landingContainer > #upper > #right { grid-column: 2; grid-row: 1; align-items: center; }
+#landingContainer > #upper > #right { grid-column: 2; grid-row: 2; align-self: end; justify-self: end; position: relative; z-index: 1; }
 .launcher-update { display: flex; align-items: center; gap: 12px; min-width: 0; max-width: 460px; margin-top: 4px; padding: 10px 10px 10px 14px; background: var(--card); border: 1px solid var(--primary-line); border-radius: 6px; }
 .launcher-update[hidden] { display: none; }
 .launcher-update-icon { width: 20px; height: 20px; flex-shrink: 0; color: var(--primary-light); }
@@ -145,7 +145,7 @@ input[error] { border-color: var(--danger-fg); color: var(--danger-fg); backgrou
 .mediaSVG { width: 18px; height: 18px; fill: var(--muted-foreground); }
 .mediaButton:hover .mediaSVG, .mediaURL:hover .mediaSVG, .mediaSVG:hover { fill: var(--primary-light); filter: none; }
 #settingsTooltip, #mojangStatusTooltip { background: var(--surface-2); border: 1px solid var(--border-2); color: var(--foreground); box-shadow: var(--shadow-dialog); border-radius: 6px; font-size: 11px; }
-#settingsTooltip { top: 44px; left: auto; right: 0; }
+#settingsTooltip { top: auto; bottom: calc(100% + 8px); left: auto; right: 0; }
 #landingContainer > #lower { height: 124px; padding: 24px 32px; display: grid; grid-template-columns: minmax(160px, 1fr) minmax(0, 620px) minmax(160px, 1fr); gap: 24px; background: var(--card); border-top: 1px solid var(--border-2); align-items: center; }
 #landingContainer > #lower > #left, #landingContainer > #lower > #center, #landingContainer > #lower > #right { width: auto; height: auto; min-width: 0; justify-content: center; }
 #landingContainer > #lower > #left { grid-column: 1; grid-row: 1; }
@@ -537,8 +537,8 @@ button.mods-row-title:hover { color: var(--primary-light); text-decoration: unde
 @media (max-width: 650px) {
     #landingContainer > #upper { grid-template-columns: 1fr; grid-template-rows: 110px minmax(0, 1fr); height: calc(100% - 180px); padding: 16px 20px 32px; gap: 20px; }
     #landingContainer > #upper > #left { display: none; }
-    #landingContainer > #upper > #right { grid-column: 1; grid-row: 1; justify-content: flex-end; }
-    #landingContainer > #upper > #content { grid-column: 1; grid-row: 2; display: flex; flex-direction: column; gap: 24px; max-height: 100%; overflow-y: auto; margin: 0; }
+    #landingContainer > #upper > #right { grid-column: 1; grid-row: 2; align-self: end; justify-self: end; }
+    #landingContainer > #upper > #content { grid-column: 1; grid-row: 2; display: flex; flex-direction: column; gap: 24px; max-height: 100%; overflow-y: auto; margin: 0; padding-bottom: 56px; }
     .realm-intro { align-self: flex-start; }
     .landing-news-notice { width: 100%; padding: 20px; }
     .realm-intro h1 { font-size: 44px; }
