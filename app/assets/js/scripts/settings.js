@@ -177,6 +177,8 @@ function saveSettingsValues(root = document.getElementById('settingsContainer'),
                     // Special Conditions
                     if (cVal === 'AllowPrerelease') {
                         changeAllowPrerelease(v.checked)
+                    } else if (cVal === 'DiscordPresence') {
+                        updateLauncherPresence()
                     }
                 }
             } else if (v.tagName === 'DIV') {
