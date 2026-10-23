@@ -198,16 +198,6 @@ body, button {
     background-color: #ffde7b;
 }
 
-#frameButtonDarwin_restoredown {
-    background-color: #96e734;
-}
-#frameButtonDarwin_restoredown:hover,
-#frameButtonDarwin_restoredown:focus {
-    background-color: #D6FFA6;
-}
-#frameButtonDarwin_restoredown:active {
-    background-color: #bfff76;
-}
 
 /*******************************************************************************
  *                                                                             *
@@ -3372,12 +3362,6 @@ input:checked + .toggleSwitchSlider:before {
 }
 
 /* Description for the server listing. */
-.serverListingDescription {
-    font-size: 10px;
-    line-height: 10px;
-    font-weight: bold;
-    text-align: left;
-}
 
 /* Content container for the server listing's information. */
 .serverListingInfo {
