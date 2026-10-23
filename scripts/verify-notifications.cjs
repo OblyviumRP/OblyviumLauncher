@@ -312,6 +312,37 @@ document.hasFocus = () => window.__focused;
         await run('preparingServerFiles = false')
         check('prepareServerFiles ignores a call while another run is going on')
 
+        // The file-check process dies without a message: the run fails instead of waiting forever.
+        const silentChild = path.join(output, 'silent-child.cjs')
+        fs.writeFileSync(silentChild, 'process.exit(3)\n')
+        await run(`window.__spawn = SettingsSafeRepair.prototype.spawnReceiver;
+SettingsSafeRepair.prototype.spawnReceiver = function(){ this.receiver = require('child_process').fork(${JSON.stringify(silentChild)}, [], { stdio: 'pipe' }) }; true`)
+        assert.equal(await run('prepareServerFiles()'), null)
+        assert.equal(await run('preparingServerFiles'), false)
+        assert.equal(await run('isLaunchLocked()'), false)
+        assert.equal(await run('isOverlayVisible()'), true, 'the failure dialog shows')
+        await run('toggleOverlay(false); SettingsSafeRepair.prototype.spawnReceiver = window.__spawn; true')
+        check('a file-check process that dies silently fails the launch and frees Jogar')
+
+        // The game exits before its startup line: the failure shows and Jogar comes back.
+        await run(`window.__prepare = prepareServerFiles;
+prepareServerFiles = async () => { toggleLaunchArea(true); return { distro: DistroAPI.distribution, serv: DistroAPI.distribution.getServerById(${JSON.stringify(SERVER)}), gameDir: '', configKey: ${JSON.stringify(SERVER)}, loggerLaunchSuite: LoggerUtil.getLogger('QA') } };
+window.__modLoader = DistributionIndexProcessor.prototype.loadModLoaderVersionJson;
+window.__version = MojangIndexProcessor.prototype.getVersionJson;
+window.__build = ProcessBuilder.prototype.build;
+DistributionIndexProcessor.prototype.loadModLoaderVersionJson = async () => ({});
+MojangIndexProcessor.prototype.getVersionJson = async () => ({});
+ProcessBuilder.prototype.build = () => require('child_process').spawn(process.execPath, ['-e', 'process.exit(1)'], { env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' } }); true`)
+        await run('dlAsync()')
+        await waitFor('isOverlayVisible() && !isLaunchLocked()', 'early game exit is reported', 10000)
+        assert.match(await run('document.getElementById("overlayDesc").innerHTML'), /código 1/)
+        assert.notEqual(await run('getComputedStyle(document.getElementById("launch_content")).display'), 'none')
+        await run(`toggleOverlay(false); prepareServerFiles = window.__prepare;
+DistributionIndexProcessor.prototype.loadModLoaderVersionJson = window.__modLoader;
+MojangIndexProcessor.prototype.getVersionJson = window.__version;
+ProcessBuilder.prototype.build = window.__build; true`)
+        check('a game that exits before it starts shows the failure and brings Jogar back')
+
         // Minimised window: a new read waits until the window is back.
         await run(`Object.defineProperty(document, 'hidden', { configurable: true, get: () => true }); document.dispatchEvent(new Event('visibilitychange')); true`)
         publish(extraItem('escondida', 'announcement', 'Chegou minimizado'))
