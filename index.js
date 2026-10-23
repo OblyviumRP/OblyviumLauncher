@@ -232,8 +232,9 @@ function createWindow() {
     win = new BrowserWindow({
         width: 1100,
         height: 700,
-        minWidth: 800,
-        minHeight: 560,
+        resizable: false,
+        maximizable: false,
+        fullscreenable: false,
         icon: getPlatformIcon('OblyviumIcon'),
         frame: false,
         webPreferences: {

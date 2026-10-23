@@ -305,7 +305,7 @@ function updateSelectedServer(serv){
     const available = serv != null && serv.rawServer.id !== 'SELECT'
     const serverName = available ? serv.rawServer.name : 'Escolher servidor'
     document.getElementById('server_selection_name').textContent = serverName
-    server_selection_button.setAttribute('aria-label', 'Selecionar servidor: ' + serverName)
+    server_selection_button.setAttribute('aria-label', 'Selecionar modpack: ' + serverName)
     const serverIcon = document.getElementById('server_selection_icon')
     serverIcon.hidden = !available
     serverIcon.src = available ? (serv.rawServer.icon || 'assets/images/oblyvium-mark.svg') : 'assets/images/oblyvium-mark.svg'

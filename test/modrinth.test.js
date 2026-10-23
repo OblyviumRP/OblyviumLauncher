@@ -294,6 +294,34 @@ test('getModpackProjects não guarda em cache quando falta um mod esperado no di
     assert.deepEqual([...second].sort(), ['AAAAAAAA', 'BBBBBBBB'])
 })
 
+test('getModpackProjects com download baixa os mods do pack que faltam antes de identificar', async () => {
+    const dir = await tmpGameDir()
+    const missingPath = path.join(dir, 'modstore', 'sodium.jar')
+    const md5 = require('crypto').createHash('md5').update('sodium 1.0').digest('hex')
+    const serv = {
+        rawServer: { id: 'teste-download-modpack', version: '1' },
+        modules: [
+            { rawModule: { type: Type.FabricMod, artifact: { url: `${fake.base}/files/sodium-1.0.jar`, MD5: md5 } }, getPath: () => missingPath, subModules: [] }
+        ]
+    }
+    const pack = await Modrinth.getModpackProjects(serv, { download: true })
+    assert.deepEqual([...pack], ['AAAAAAAA'])
+    assert.equal(await fs.readFile(missingPath, 'utf8'), 'sodium 1.0')
+})
+
+test('getModpackProjects com download recusa arquivo do pack com MD5 errado', async () => {
+    const dir = await tmpGameDir()
+    const missingPath = path.join(dir, 'modstore', 'sodium.jar')
+    const serv = {
+        rawServer: { id: 'teste-download-md5', version: '1' },
+        modules: [
+            { rawModule: { type: Type.FabricMod, artifact: { url: `${fake.base}/files/sodium-1.0.jar`, MD5: '0'.repeat(32) } }, getPath: () => missingPath, subModules: [] }
+        ]
+    }
+    await assert.rejects(Modrinth.getModpackProjects(serv, { download: true }), { code: 'HASH_MISMATCH' })
+    assert.equal(await fs.pathExists(missingPath), false)
+})
+
 test('vanilla não busca mods na API', async () => {
     const vanilla = { gameVersion: '1.20.1', loader: null }
     const before = fake.requests.length

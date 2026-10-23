@@ -41,7 +41,7 @@ loginWithMojang = "Entrar com Mojang"
 cancelButton = "Cancelar"
 
 [ejs.overlay]
-serverSelectHeader = "Servidores Disponíveis"
+serverSelectHeader = "Modpacks Disponíveis"
 serverSelectConfirm = "Selecionar"
 serverSelectCancel = "Cancelar"
 accountSelectHeader = "Selecionar uma Conta"

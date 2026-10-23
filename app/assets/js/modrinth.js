@@ -172,29 +172,43 @@ const packProjectsCache = new Map()
  * disk; a partial scan (e.g. while files are still being downloaded) is
  * returned but not remembered, so the next call tries again.
  *
+ * Mods are identified by the files on disk, so with `download` the missing
+ * modpack mods are fetched first (checked against the distribution's MD5).
+ * Without it, a modpack that was never launched would look empty and its
+ * mods would be installed a second time as dependencies.
+ *
  * @param {HeliosServer} serv The distribution server.
+ * @param {{download?: boolean}} [options]
  * @returns {Promise<Set<string>>}
  */
-exports.getModpackProjects = async function(serv) {
+exports.getModpackProjects = async function(serv, { download = false } = {}) {
     const key = `${serv.rawServer.id}@${serv.rawServer.version}`
     if(packProjectsCache.has(key)) {
         return packProjectsCache.get(key)
     }
     const files = []
-    let complete = true
+    const missing = []
     const walk = mdls => {
         for(const mdl of mdls) {
             if(mdl.rawModule.type === Type.ForgeMod || mdl.rawModule.type === Type.FabricMod) {
                 if(fs.existsSync(mdl.getPath())) {
                     files.push(mdl.getPath())
                 } else {
-                    complete = false
+                    missing.push(mdl)
                 }
             }
             walk(mdl.subModules)
         }
     }
     walk(serv.modules)
+    if(download) {
+        for(const mdl of missing.splice(0)) {
+            const { url, MD5 } = mdl.rawModule.artifact
+            await downloadChecked(url, mdl.getPath(), 'md5', MD5, path.basename(mdl.getPath()))
+            files.push(mdl.getPath())
+        }
+    }
+    const complete = missing.length === 0
     const result = exports.identifyFiles(files).then(ids => new Set([...ids.values()].map(v => v.project_id)))
     if(!complete) {
         return result
@@ -324,13 +338,13 @@ function safeFileName(name, type) {
 exports.safeFileName = safeFileName
 
 /**
- * Download a file, verifying its sha512 hash as it streams in. Never leaves
+ * Download a file, verifying its hash as it streams in. Never leaves
  * a partial file behind: on any failure (network, HTTP status, hash
  * mismatch) the temporary file is removed before the error is rethrown.
  */
-async function downloadVerified(file, dest) {
+async function downloadChecked(url, dest, algorithm, expected, label) {
     const tmp = `${dest}.part`
-    const hash = crypto.createHash('sha512')
+    const hash = crypto.createHash(algorithm)
     await fs.ensureDir(path.dirname(dest))
     const hashingTransform = new Transform({
         transform(chunk, encoding, callback) {
@@ -340,7 +354,7 @@ async function downloadVerified(file, dest) {
     })
     try {
         await pipeline(
-            got.stream(file.url, {
+            got.stream(url, {
                 headers: { 'user-agent': USER_AGENT },
                 // Per-phase timeouts instead of one overall cap, so a large file
                 // that keeps making progress is not killed by a fixed deadline.
@@ -354,11 +368,16 @@ async function downloadVerified(file, dest) {
         await fs.remove(tmp).catch(() => {})
         throw err
     }
-    if(hash.digest('hex') !== file.hashes.sha512) {
+    if(hash.digest('hex') !== String(expected).toLowerCase()) {
         await fs.remove(tmp)
-        throw new ModrinthError('HASH_MISMATCH', `Hash mismatch for ${file.filename}`)
+        throw new ModrinthError('HASH_MISMATCH', `Hash mismatch for ${label}`)
     }
     await fs.move(tmp, dest, { overwrite: true })
+}
+
+/** Download a Modrinth version file, verifying its sha512 hash. */
+function downloadVerified(file, dest) {
+    return downloadChecked(file.url, dest, 'sha512', file.hashes.sha512, file.filename)
 }
 
 /**
