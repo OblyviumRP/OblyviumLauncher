@@ -278,11 +278,6 @@ settingsNavDone.onclick = () => {
 }
 
 /* Saves the settings and opens the editor of the selected profile, where memory and Java live. */
-document.getElementById('settingsOpenProfileEditor').onclick = () => {
-    fullSettingsSave()
-    openModsView({ editProfile: true })
-}
-
 /**
  * Account Management Tab
  */

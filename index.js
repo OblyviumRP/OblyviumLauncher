@@ -2,7 +2,7 @@ const remoteMain = require('@electron/remote/main')
 remoteMain.initialize()
 
 // Requirements
-const { app, BrowserWindow, ipcMain, Menu, shell } = require('electron')
+const { app, BrowserWindow, ipcMain, Menu, shell, Tray } = require('electron')
 const autoUpdater                       = require('electron-updater').autoUpdater
 const ejse                              = require('ejs-electron')
 const fs                                = require('fs')
@@ -10,7 +10,7 @@ const isDev                             = require('./app/assets/js/isdev')
 const path                              = require('path')
 const semver                            = require('semver')
 const { pathToFileURL }                 = require('url')
-const { AZURE_CLIENT_ID, MSFT_OPCODE, MSFT_REPLY_TYPE, MSFT_ERROR, SHELL_OPCODE } = require('./app/assets/js/ipcconstants')
+const { AZURE_CLIENT_ID, MSFT_OPCODE, MSFT_REPLY_TYPE, MSFT_ERROR, SHELL_OPCODE, GAME_OPCODE } = require('./app/assets/js/ipcconstants')
 const LangLoader                        = require('./app/assets/js/langloader')
 const NavigationGuard                   = require('./app/assets/js/navigationguard')
 
@@ -95,6 +95,37 @@ ipcMain.on('distributionIndexDone', (event, res) => {
 })
 
 // Handle trash item.
+// While the game runs the window can hide in the system tray; it comes back
+// when the game closes or when the player clicks the tray icon.
+let tray = null
+
+function showLauncher(){
+    if(tray != null){
+        tray.destroy()
+        tray = null
+    }
+    if(win != null && !win.isDestroyed()){
+        win.show()
+        win.focus()
+    }
+}
+
+ipcMain.on(GAME_OPCODE.HIDE_LAUNCHER, () => {
+    if(win == null || win.isDestroyed() || tray != null){
+        return
+    }
+    tray = new Tray(getPlatformIcon('OblyviumIcon'))
+    tray.setToolTip('Oblyvium Launcher')
+    tray.setContextMenu(Menu.buildFromTemplate([
+        { label: 'Abrir o launcher', click: showLauncher },
+        { label: 'Sair', click: () => app.quit() }
+    ]))
+    tray.on('click', showLauncher)
+    win.hide()
+})
+
+ipcMain.on(GAME_OPCODE.SHOW_LAUNCHER, showLauncher)
+
 ipcMain.handle(SHELL_OPCODE.TRASH_ITEM, async (event, ...args) => {
     try {
         await shell.trashItem(args[0])

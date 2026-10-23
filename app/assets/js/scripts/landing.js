@@ -3,6 +3,7 @@
  */
 // Requirements
 const { URL }                 = require('url')
+const { GAME_OPCODE }         = require('./assets/js/ipcconstants')
 const {
     MojangRestAPI,
     getServerStatus
@@ -865,6 +866,9 @@ async function dlAsync(login = true) {
             // One chunk can carry several log lines.
             if(!started && `${data}`.split('\n').some(line => GAME_LAUNCH_REGEX.test(line.trim()))){
                 started = true
+                if(ConfigManager.getHideLauncherWhilePlaying()){
+                    ipcRenderer.send(GAME_OPCODE.HIDE_LAUNCHER)
+                }
                 const diff = Date.now()-start
                 if(diff < MIN_LINGER) {
                     setTimeout(onLoadComplete, MIN_LINGER-diff)
@@ -911,6 +915,7 @@ async function dlAsync(login = true) {
             }
             gameProc.on('close', (code) => {
                 releaseGameLock()
+                ipcRenderer.send(GAME_OPCODE.SHOW_LAUNCHER)
                 if(!started){
                     loggerLaunchSuite.error(`Game exited with code ${code} before it finished starting.`)
                     showLaunchFailure(Lang.queryJS('landing.dlAsync.errorDuringLaunchTitle'), Lang.queryJS('landing.dlAsync.gameExitedEarly', { code }))

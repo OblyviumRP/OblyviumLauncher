@@ -102,12 +102,10 @@ class ProcessBuilder {
         const child = child_process.spawn(ConfigManager.getJavaExecutable(this.configKey), args, {
             cwd: this.gameDir,
             env: launchEnv(),
-            detached: ConfigManager.getLaunchDetached()
+            detached: true
         })
 
-        if(ConfigManager.getLaunchDetached()){
-            child.unref()
-        }
+        child.unref()
 
         child.stdout.setEncoding('utf8')
         child.stderr.setEncoding('utf8')
