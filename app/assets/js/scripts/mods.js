@@ -58,7 +58,7 @@ const modsState = {
     updates: new Map(),
     updatingAll: false,
     installedRequest: 0,
-    search: { query: '', sort: 'relevance', categories: new Set(), offset: 0, request: 0, lastKey: null },
+    search: { query: '', sort: 'relevance', categories: new Set(), page: 1, request: 0, lastKey: null },
     projectRequest: 0,
     editing: null
 }
@@ -77,8 +77,9 @@ let modsProjectOrigin = null
 // otherwise download it to the same .part file at once.
 let modsInstallQueue = Promise.resolve()
 
-// Extra pages fetched automatically when a page has no visible results.
-const MODS_MAX_AUTO_PAGES = 3
+// Typing searches on its own after this pause, like Modrinth.
+const MODS_SEARCH_DELAY_MS = 300
+const MODS_PAGE_SIZE = Modrinth.PAGE_SIZE
 
 function modsEl(id){
     return document.getElementById(id)
@@ -294,7 +295,7 @@ async function openModsView({ createProfile = false, editProfile = false } = {})
         modsState.packProjects = null
         modsInvalidateInstalled()
         modsState.search.query = ''
-        modsState.search.offset = 0
+        modsState.search.page = 1
         modsState.search.lastKey = null
         modsState.updates = new Map()
         modsState.installed = []
@@ -878,77 +879,83 @@ async function modsRenderCategories(){
     }))
 }
 
-function modsSetMoreBusy(more, busy){
-    more.disabled = busy
-    if(busy){
-        more.setAttribute('aria-busy', 'true')
-    } else {
-        more.removeAttribute('aria-busy')
+/** Page numbers to show: first, last, and the ones around the current page. */
+function modsPageNumbers(page, pages){
+    const shown = new Set([1, pages, page - 1, page, page + 1].filter(n => n >= 1 && n <= pages))
+    const out = []
+    let last = 0
+    for(const n of [...shown].sort((a, b) => a - b)){
+        if(n - last > 1){
+            out.push(null)
+        }
+        out.push(n)
+        last = n
     }
+    return out
 }
 
-async function modsRunSearch(append = false){
+function modsRenderPager(page, pages){
+    const pager = modsEl('modsSearchPager')
+    pager.hidden = pages <= 1
+    if(pages <= 1){
+        pager.replaceChildren()
+        return
+    }
+    const button = (label, target, aria, current = false) => {
+        const btn = modsText('button', 'mods-page', label)
+        btn.type = 'button'
+        btn.setAttribute('aria-label', aria)
+        if(current){
+            btn.setAttribute('aria-current', 'page')
+        }
+        btn.disabled = target < 1 || target > pages || current
+        btn.onclick = () => modsRunSearch(target)
+        return btn
+    }
+    pager.replaceChildren(
+        button('‹', page - 1, Lang.queryJS('mods.explore.pagePrev')),
+        ...modsPageNumbers(page, pages).map(n => n == null
+            ? modsText('span', 'mods-page-gap', '…')
+            : button(String(n), n, Lang.queryJS('mods.explore.page', { page: n }), n === page)),
+        button('›', page + 1, Lang.queryJS('mods.explore.pageNext'))
+    )
+}
+
+async function modsRunSearch(page = 1){
     const s = modsState.search
     const request = ++s.request
     const epoch = modsState.installedEpoch
     const results = modsEl('modsSearchResults')
-    const more = modsEl('modsSearchMore')
-    // "Carregar mais" stays visible (busy) while it loads, so it keeps focus.
-    const moreHadFocus = append && document.activeElement === more
-    let key = null
-    if(append){
-        modsSetMoreBusy(more, true)
-    } else {
-        s.query = modsEl('modsSearchQuery').value.trim()
-        s.sort = modsEl('modsSearchSort').value
-        s.offset = 0
-        results.replaceChildren()
-        // Captured now: by the time this finishes, the context may have
-        // moved on to a search this one didn't fetch.
-        key = modsSearchKey()
-        s.lastKey = null
-        more.hidden = true
-        modsSetMoreBusy(more, false)
+    s.query = modsEl('modsSearchQuery').value.trim()
+    s.sort = modsEl('modsSearchSort').value
+    s.page = page
+    // Captured now: by the time this finishes, the context may have
+    // moved on to a search this one didn't fetch.
+    const key = modsSearchKey()
+    s.lastKey = null
+    // The old results stay (dimmed) while typing, so the list does not flash.
+    results.setAttribute('aria-busy', 'true')
+    if(results.childElementCount === 0){
+        modsSetStatus('modsSearchStatus', Lang.queryJS('mods.explore.loading'))
     }
-    modsSetStatus('modsSearchStatus', Lang.queryJS('mods.explore.loading'))
     try {
         const [pack, installed] = await Promise.all([modsGetPackProjects(), modsGetInstalledProjects()])
-        let firstNew = null
-        let autoPages = 0
-        let res
-        for(;;){
-            res = await Modrinth.search(
-                { query: s.query, type: modsState.type, categories: [...s.categories], sort: s.sort, offset: s.offset },
-                modsState.target, modsState.blocklist, pack
-            )
-            if(request !== s.request){
-                return
-            }
-            for(const hit of res.hits){
-                const row = modsSearchRow(hit, installed.has(hit.project_id))
-                results.appendChild(row)
-                firstNew ??= row
-            }
-            s.offset = res.offset + res.pageSize
-            // A page whose hits were all filtered out (blocked, in the pack)
-            // would leave an empty list with only "Carregar mais".
-            if(firstNew != null || s.offset >= res.total || autoPages >= MODS_MAX_AUTO_PAGES){
-                break
-            }
-            autoPages++
+        const res = await Modrinth.search(
+            { query: s.query, type: modsState.type, categories: [...s.categories], sort: s.sort, offset: (page - 1) * MODS_PAGE_SIZE },
+            modsState.target, modsState.blocklist, pack
+        )
+        if(request !== s.request){
+            return
         }
-        more.hidden = s.offset >= res.total
-        modsSetMoreBusy(more, false)
-        modsSetStatus('modsSearchStatus', results.childElementCount === 0 && more.hidden ? Lang.queryJS('mods.explore.empty') : '')
-        if(!append && epoch === modsState.installedEpoch){
+        results.replaceChildren(...res.hits.map(hit => modsSearchRow(hit, installed.has(hit.project_id))))
+        results.removeAttribute('aria-busy')
+        modsRenderPager(page, Math.ceil(res.total / res.pageSize))
+        modsSetStatus('modsSearchStatus', res.hits.length === 0 ? Lang.queryJS('mods.explore.empty') : '')
+        if(epoch === modsState.installedEpoch){
             s.lastKey = key
         }
-        if(modsStillFocused(more, moreHadFocus)){
-            if(!more.hidden){
-                more.focus()
-            } else {
-                (firstNew?.querySelector('.mods-row-title') ?? modsEl('modsSearchQuery')).focus()
-            }
+        if(page > 1 || document.activeElement?.closest('#modsSearchPager') != null){
+            modsEl('modsPanelExplore').scrollIntoView({ block: 'start' })
         }
     } catch(err) {
         if(request !== s.request){
@@ -956,17 +963,12 @@ async function modsRunSearch(append = false){
         }
         loggerMods.error('Search failed.', err)
         s.lastKey = null
-        if(append){
-            modsSetMoreBusy(more, false)
-            if(modsStillFocused(more, moreHadFocus)){
-                more.focus()
-            }
-        }
+        results.removeAttribute('aria-busy')
         // The Retry button is destroyed by the next status update, so focus
         // goes to a control that survives it.
         modsSetStatus('modsSearchStatus', modsErrorMessage(err), () => {
-            (append ? more : modsEl('modsSearchQuery')).focus()
-            modsRunSearch(append)
+            modsEl('modsSearchQuery').focus()
+            modsRunSearch(page)
         })
     }
 }
@@ -1049,40 +1051,88 @@ function modsInstallButton(projectId, title, installed, rowStatus, onInstalled =
     return btn
 }
 
+const modsRelativeTime = new Intl.RelativeTimeFormat('pt-BR', { numeric: 'auto' })
+
+/** "há 3 dias", "há 2 meses"… for a date in the past. */
+function modsTimeAgo(iso){
+    const seconds = (new Date(iso).getTime() - Date.now()) / 1000
+    if(!Number.isFinite(seconds)){
+        return ''
+    }
+    for(const [unit, size] of [['year', 31536000], ['month', 2592000], ['week', 604800], ['day', 86400], ['hour', 3600], ['minute', 60]]){
+        if(Math.abs(seconds) >= size){
+            return modsRelativeTime.format(Math.round(seconds / size), unit)
+        }
+    }
+    return modsRelativeTime.format(0, 'minute')
+}
+
+/** Compact counts like Modrinth: 1,2 mi, 88,2 mil. */
+const modsCompact = new Intl.NumberFormat('pt-BR', { notation: 'compact', maximumFractionDigits: 1 })
+
+function modsStat(icon, text, title){
+    const stat = document.createElement('span')
+    stat.className = 'mods-hit-stat'
+    stat.title = title
+    stat.innerHTML = icon
+    stat.appendChild(modsText('span', '', text))
+    return stat
+}
+
+const MODS_ICON_DOWNLOAD = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v8m0 0 3-3m-3 3L5 7M3 13h10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+const MODS_ICON_HEART = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 13.5S2.5 10.2 2.5 6.3A2.8 2.8 0 0 1 8 5a2.8 2.8 0 0 1 5.5 1.3c0 3.9-5.5 7.2-5.5 7.2Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>'
+const MODS_ICON_CLOCK = '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 5v3l2 1.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>'
+
 function modsSearchRow(hit, installed){
     const row = document.createElement('div')
-    row.className = 'mods-row'
+    row.className = 'mods-row mods-hit'
     row.dataset.projectId = hit.project_id
     const info = document.createElement('div')
     info.className = 'mods-row-info'
+    const heading = document.createElement('div')
+    heading.className = 'mods-hit-heading'
     const titleBtn = modsText('button', 'mods-row-title', hit.title)
     titleBtn.type = 'button'
     titleBtn.onclick = () => modsOpenProject(hit.project_id, titleBtn)
+    heading.append(titleBtn, modsText('span', 'mods-hit-author', Lang.queryJS('mods.explore.by', { author: hit.author })))
     const tags = document.createElement('div')
     tags.className = 'mods-tags'
-    for(const c of hit.categories.filter(c => MODS_CATEGORY_LABELS[c] != null).slice(0, 3)){
+    for(const c of hit.categories.filter(c => MODS_CATEGORY_LABELS[c] != null).slice(0, 4)){
         tags.appendChild(modsText('span', 'mods-tag', modsCategoryLabel(c)))
     }
     const rowStatus = modsText('span', 'mods-row-status', '')
     rowStatus.setAttribute('role', 'status')
-    info.append(
-        titleBtn,
-        modsText('span', 'mods-row-meta', `${Lang.queryJS('mods.explore.by', { author: hit.author })} · ${Lang.queryJS('mods.explore.downloads', { count: (hit.downloads ?? 0).toLocaleString('pt-BR') })}`),
-        modsText('span', 'mods-row-desc', hit.description),
-        tags,
-        rowStatus
+    info.append(heading, modsText('span', 'mods-row-desc', hit.description), tags, rowStatus)
+
+    const side = document.createElement('div')
+    side.className = 'mods-hit-side'
+    const downloads = hit.downloads ?? 0
+    const follows = hit.follows ?? 0
+    side.append(
+        modsStat(MODS_ICON_DOWNLOAD, modsCompact.format(downloads), Lang.queryJS('mods.explore.downloads', { count: downloads.toLocaleString('pt-BR') })),
+        modsStat(MODS_ICON_HEART, modsCompact.format(follows), Lang.queryJS('mods.explore.follows', { count: follows.toLocaleString('pt-BR') }))
     )
+    if(hit.date_modified != null){
+        side.appendChild(modsStat(MODS_ICON_CLOCK, modsTimeAgo(hit.date_modified), Lang.queryJS('mods.explore.updated')))
+    }
     // Dependencies installed along with it get re-badged in the other rows.
-    row.append(modsIcon(hit.icon_url), info, modsInstallButton(hit.project_id, hit.title, installed, rowStatus, modsRebadgeResults))
+    side.appendChild(modsInstallButton(hit.project_id, hit.title, installed, rowStatus, modsRebadgeResults))
+    row.append(modsIcon(hit.icon_url), info, side)
     return row
 }
 
+let modsSearchTimer = null
+
+modsEl('modsSearchQuery').addEventListener('input', () => {
+    clearTimeout(modsSearchTimer)
+    modsSearchTimer = setTimeout(() => modsRunSearch(), MODS_SEARCH_DELAY_MS)
+})
 modsEl('modsSearchForm').addEventListener('submit', e => {
     e.preventDefault()
+    clearTimeout(modsSearchTimer)
     modsRunSearch()
 })
 modsEl('modsSearchSort').addEventListener('change', () => modsRunSearch())
-modsEl('modsSearchMore').onclick = () => modsRunSearch(true)
 
 // Project page
 
