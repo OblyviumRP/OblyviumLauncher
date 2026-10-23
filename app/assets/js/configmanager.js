@@ -88,6 +88,7 @@ const DEFAULT_CONFIG = {
         },
         launcher: {
             allowPrerelease: false,
+            discordPresence: true,
             dataDirectory: dataPath
         }
     },
@@ -823,6 +824,21 @@ exports.getAllowPrerelease = function(def = false){
  */
 exports.setAllowPrerelease = function(allowPrerelease){
     config.settings.launcher.allowPrerelease = allowPrerelease
+}
+
+/**
+ * @param {boolean} def Optional. If true, the default value will be returned.
+ * @returns {boolean} Whether the launcher and the game show a status on Discord.
+ */
+exports.getDiscordPresence = function(def = false){
+    return !def ? config.settings.launcher.discordPresence : DEFAULT_CONFIG.settings.launcher.discordPresence
+}
+
+/**
+ * @param {boolean} discordPresence Whether the launcher and the game show a status on Discord.
+ */
+exports.setDiscordPresence = function(discordPresence){
+    config.settings.launcher.discordPresence = discordPresence
 }
 
 // Profiles
