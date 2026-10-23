@@ -84,7 +84,7 @@ const DEFAULT_CONFIG = {
             resHeight: 720,
             fullscreen: false,
             autoConnect: true,
-            launchDetached: true
+            hideLauncherWhilePlaying: true
         },
         launcher: {
             allowPrerelease: false,
@@ -748,22 +748,23 @@ exports.setAutoConnect = function(autoConnect){
 }
 
 /**
- * Check if the game should launch as a detached process.
- * 
+ * Check if the launcher hides in the system tray while the game is running.
+ *
  * @param {boolean} def Optional. If true, the default value will be returned.
- * @returns {boolean} Whether or not the game will launch as a detached process.
+ * @returns {boolean} Whether the launcher hides while the game runs.
  */
-exports.getLaunchDetached = function(def = false){
-    return !def ? config.settings.game.launchDetached : DEFAULT_CONFIG.settings.game.launchDetached
+exports.getHideLauncherWhilePlaying = function(def = false){
+    const value = config.settings.game.hideLauncherWhilePlaying
+    return !def && value != null ? value : DEFAULT_CONFIG.settings.game.hideLauncherWhilePlaying
 }
 
 /**
- * Change the status of whether or not the game should launch as a detached process.
- * 
- * @param {boolean} launchDetached Whether or not the game should launch as a detached process.
+ * Change whether the launcher hides in the system tray while the game is running.
+ *
+ * @param {boolean} hide Whether the launcher hides while the game runs.
  */
-exports.setLaunchDetached = function(launchDetached){
-    config.settings.game.launchDetached = launchDetached
+exports.setHideLauncherWhilePlaying = function(hide){
+    config.settings.game.hideLauncherWhilePlaying = hide
 }
 
 // Launcher Settings
