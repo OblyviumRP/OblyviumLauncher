@@ -264,11 +264,10 @@ input[error] { border-color: var(--danger-fg); color: var(--danger-fg); backgrou
 .settingsNavDivider { width: 100%; background: var(--border); margin: 0 0 16px; }
 #settingsNavDone { width: 100%; margin: 0; text-align: center; }
 #settingsContainerRight { width: auto; flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
-.settings-topbar { flex-shrink: 0; height: 56px; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 36px; background: var(--sidebar); border-bottom: 1px solid var(--border); }
+.settings-topbar { flex-shrink: 0; height: 56px; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 36px; }
 #settingsBackButton { display: inline-flex; align-items: center; gap: 8px; background: transparent; border-color: transparent; padding: 6px 8px; white-space: nowrap; }
 #settingsBackButton:hover { background: var(--accent); }
 #settingsBackButton svg { width: 16px; height: 16px; }
-#settingsBackButton kbd { margin-left: 8px; font: 11px var(--font-mono); padding: 1px 5px; color: var(--muted-foreground); background: var(--surface-2); border: 1px solid var(--border-2); border-radius: 3px; }
 #settingsSaveHint { color: var(--muted-foreground); font-size: 12px; }
 .settingsTab { flex: 1; min-height: 0; max-width: 1160px; padding: 28px 36px; }
 .settingsTab > *:first-child { margin-top: 0; }
@@ -356,6 +355,11 @@ input:checked + .toggleSwitchSlider::before { transform: translateX(15px); }
 #overlayActionContainer { justify-content: center; }
 #serverSelectList, #accountSelectList { margin: 20px 0; width: 100%; }
 #serverSelectListScrollable, #accountSelectListScrollable { max-height: 320px; padding: 4px; }
+#serverSelectContent { width: min(100%, 760px); }
+#serverSelectList { max-height: none; }
+#serverSelectListScrollable { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 16px; width: 100%; max-height: none; overflow: visible; }
+.serverListingColumn { min-width: 0; }
+.serverListingGroup { display: block; margin: 0 0 8px; font: 600 11px var(--font-sans); letter-spacing: .08em; text-transform: uppercase; color: var(--muted-foreground); }
 .serverListing, .accountListing { width: 100%; border: 1px solid var(--border-2); border-radius: 6px; background: var(--surface-2); padding: 14px; margin: 0 0 8px !important; }
 .serverListing:hover, .accountListing:hover { background: var(--accent); border-color: var(--input-border); }
 .serverListing[selected], .accountListing[selected] { border-color: var(--primary-light); background: var(--primary-soft); }
@@ -383,11 +387,10 @@ input:checked + .toggleSwitchSlider::before { transform: translateX(15px); }
 /* Mods screen (mods.ejs). Classes below set display, so [hidden] must win explicitly. */
 #modsContainer [hidden] { display: none !important; }
 #modsContainer { height: 100%; display: flex; flex-direction: column; background: var(--background); color: var(--foreground); }
-.mods-topbar { flex-shrink: 0; height: 56px; display: flex; align-items: center; padding: 0 36px; background: var(--sidebar); border-bottom: 1px solid var(--border); }
+.mods-topbar { flex-shrink: 0; height: 56px; display: flex; align-items: center; padding: 0 36px; }
 #modsBackButton { display: inline-flex; align-items: center; gap: 8px; background: transparent; border: 1px solid transparent; color: var(--foreground); padding: 6px 8px; border-radius: 4px; font: 13px var(--font-sans); cursor: pointer; }
 #modsBackButton:hover { background: var(--accent); }
 #modsBackButton svg { width: 16px; height: 16px; }
-#modsBackButton kbd { margin-left: 8px; font: 11px var(--font-mono); padding: 1px 5px; color: var(--muted-foreground); background: var(--surface-2); border: 1px solid var(--border-2); border-radius: 3px; }
 #modsMain { flex: 1; min-height: 0; overflow-y: auto; padding: 24px 36px 36px; display: flex; flex-direction: column; gap: 16px; max-width: 1160px; width: 100%; margin-inline: auto; box-sizing: border-box; }
 .mods-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .mods-profile { display: flex; align-items: center; gap: 14px; }
@@ -561,7 +564,7 @@ button.mods-row-title:hover { color: var(--primary-light); text-decoration: unde
     #welcomeContent, #loginOptionsContent, #loginContent, #waitingContent { padding: 24px; }
     #settingsContainerLeft { width: 144px; padding: 20px 10px 12px; }
     .settings-topbar { padding: 0 12px; }
-    #settingsSaveHint, #settingsBackButton kbd { display: none; }
+    #settingsSaveHint { display: none; }
     #settingsBackButton { font-size: 12px; }
     #settingsNavDone { padding: 8px; font-size: 12px; }
     .settings-brand { gap: 8px; margin: 0 0 24px; }
@@ -580,7 +583,6 @@ button.mods-row-title:hover { color: var(--primary-light); text-decoration: unde
     .mods-profile-actions { width: 100%; justify-content: flex-start; }
     .mods-row { flex-wrap: wrap; }
     .mods-row-actions { width: 100%; justify-content: flex-end; }
-    #modsBackButton kbd { display: none; }
 }
 @media (max-height: 600px) {
     #landingContainer > #upper { padding: 16px 24px 24px; row-gap: 12px; }

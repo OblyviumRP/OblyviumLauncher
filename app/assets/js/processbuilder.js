@@ -12,6 +12,23 @@ const ConfigManager            = require('./configmanager')
 
 const logger = LoggerUtil.getLogger('ProcessBuilder')
 
+/** JVM flags for Java 25 and newer. Fixed in the launcher: players cannot edit them. */
+const JVM_OPTIONS_JAVA_25 = ['-XX:+UseCompactObjectHeaders']
+
+/**
+ * The launcher environment without the variables the JVM reads extra options
+ * from, so no flag or agent reaches the game outside the launcher.
+ */
+function launchEnv(){
+    const env = { ...process.env }
+    for(const key of Object.keys(env)){
+        if(/^(JAVA_TOOL_OPTIONS|_JAVA_OPTIONS|JDK_JAVA_OPTIONS)$/i.test(key)){
+            delete env[key]
+        }
+    }
+    return env
+}
+
 
 /**
  * Only forge and fabric are top level mod loaders.
@@ -84,12 +101,11 @@ class ProcessBuilder {
 
         const child = child_process.spawn(ConfigManager.getJavaExecutable(this.configKey), args, {
             cwd: this.gameDir,
-            detached: ConfigManager.getLaunchDetached()
+            env: launchEnv(),
+            detached: true
         })
 
-        if(ConfigManager.getLaunchDetached()){
-            child.unref()
-        }
+        child.unref()
 
         child.stdout.setEncoding('utf8')
         child.stderr.setEncoding('utf8')
@@ -381,8 +397,8 @@ class ProcessBuilder {
             args.push('-Xdock:icon=' + path.join(__dirname, '..', 'images', 'minecraft.icns'))
         }
         args.push('-Xmx' + ConfigManager.getMaxRAM(this.configKey))
-        args.push('-Xms' + ConfigManager.getMinRAM(this.configKey))
-        args = args.concat(ConfigManager.getJVMOptions(this.configKey))
+        args.push('-Xms' + ConfigManager.getMaxRAM(this.configKey))
+        args = args.concat(this.server.effectiveJavaOptions.suggestedMajor >= 25 ? JVM_OPTIONS_JAVA_25 : [])
         args.push('-Djava.library.path=' + tempNativePath)
 
         // Main Java Class
@@ -432,8 +448,8 @@ class ProcessBuilder {
             args.push('-Xdock:icon=' + path.join(__dirname, '..', 'images', 'minecraft.icns'))
         }
         args.push('-Xmx' + ConfigManager.getMaxRAM(this.configKey))
-        args.push('-Xms' + ConfigManager.getMinRAM(this.configKey))
-        args = args.concat(ConfigManager.getJVMOptions(this.configKey))
+        args.push('-Xms' + ConfigManager.getMaxRAM(this.configKey))
+        args = args.concat(this.server.effectiveJavaOptions.suggestedMajor >= 25 ? JVM_OPTIONS_JAVA_25 : [])
 
         // Main Java Class
         args.push(this.modManifest.mainClass)

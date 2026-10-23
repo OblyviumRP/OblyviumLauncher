@@ -25,8 +25,7 @@
         <header class="settings-topbar">
             <button id="settingsBackButton" aria-describedby="settingsSaveHint" title="Salvar alterações e voltar ao launcher" data-view-focus>
                 <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m11 5-5 5 5 5M6 10h10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                <span>Voltar ao launcher</span>
-                <kbd>Esc</kbd>
+                <span>Voltar</span>
             </button>
             <span id="settingsSaveHint" role="status" aria-live="polite">Voltar salva suas preferências.</span>
         </header>
@@ -112,23 +111,14 @@
             </div>
             <div class="settingsFieldContainer">
                 <div class="settingsFieldLeft">
-                    <span class="settingsFieldTitle"><%- lang('settings.launchDetachedTitle') %></span>
-                    <span class="settingsFieldDesc"><%- lang('settings.launchDetachedDesc') %></span>
+                    <span class="settingsFieldTitle"><%- lang('settings.hideLauncherTitle') %></span>
+                    <span class="settingsFieldDesc"><%- lang('settings.hideLauncherDesc') %></span>
                 </div>
                 <div class="settingsFieldRight">
                     <label class="toggleSwitch">
-                        <input type="checkbox" cValue="LaunchDetached">
+                        <input type="checkbox" cValue="HideLauncherWhilePlaying">
                         <span class="toggleSwitchSlider"></span>
                     </label>
-                </div>
-            </div>
-            <div class="settingsFieldContainer">
-                <div class="settingsFieldLeft">
-                    <span class="settingsFieldTitle"><%- lang('settings.profileSettingsTitle') %></span>
-                    <span class="settingsFieldDesc"><%- lang('settings.profileSettingsDesc') %></span>
-                </div>
-                <div class="settingsFieldRight">
-                    <button id="settingsOpenProfileEditor" type="button" class="settingsChangelogButton"><%- lang('settings.profileSettingsButton') %></button>
                 </div>
             </div>
         </div>

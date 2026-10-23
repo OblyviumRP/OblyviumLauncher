@@ -84,7 +84,7 @@ const DEFAULT_CONFIG = {
             resHeight: 720,
             fullscreen: false,
             autoConnect: true,
-            launchDetached: true
+            hideLauncherWhilePlaying: true
         },
         launcher: {
             allowPrerelease: false,
@@ -554,12 +554,6 @@ function defaultJavaConfig8(ram) {
         minRAM: resolveSelectedRAM(ram),
         maxRAM: resolveSelectedRAM(ram),
         executable: null,
-        jvmOptions: [
-            '-XX:+UseConcMarkSweepGC',
-            '-XX:+CMSIncrementalMode',
-            '-XX:-UseAdaptiveSizePolicy',
-            '-Xmn128M'
-        ],
     }
 }
 
@@ -568,14 +562,6 @@ function defaultJavaConfig17(ram) {
         minRAM: resolveSelectedRAM(ram),
         maxRAM: resolveSelectedRAM(ram),
         executable: null,
-        jvmOptions: [
-            '-XX:+UnlockExperimentalVMOptions',
-            '-XX:+UseG1GC',
-            '-XX:G1NewSizePercent=20',
-            '-XX:G1ReservePercent=20',
-            '-XX:MaxGCPauseMillis=50',
-            '-XX:G1HeapRegionSize=32M'
-        ],
     }
 }
 
@@ -659,31 +645,6 @@ exports.getJavaExecutable = function(serverid){
  */
 exports.setJavaExecutable = function(serverid, executable){
     config.javaConfig[serverid].executable = executable
-}
-
-/**
- * Retrieve the additional arguments for JVM initialization. Required arguments,
- * such as memory allocation, will be dynamically resolved and will not be included
- * in this value.
- * 
- * @param {string} serverid The server id.
- * @returns {Array.<string>} An array of the additional arguments for JVM initialization.
- */
-exports.getJVMOptions = function(serverid){
-    return config.javaConfig[serverid].jvmOptions
-}
-
-/**
- * Set the additional arguments for JVM initialization. Required arguments,
- * such as memory allocation, will be dynamically resolved and should not be
- * included in this value.
- * 
- * @param {string} serverid The server id.
- * @param {Array.<string>} jvmOptions An array of the new additional arguments for JVM 
- * initialization.
- */
-exports.setJVMOptions = function(serverid, jvmOptions){
-    config.javaConfig[serverid].jvmOptions = jvmOptions
 }
 
 // Game Settings
@@ -787,22 +748,23 @@ exports.setAutoConnect = function(autoConnect){
 }
 
 /**
- * Check if the game should launch as a detached process.
- * 
+ * Check if the launcher hides in the system tray while the game is running.
+ *
  * @param {boolean} def Optional. If true, the default value will be returned.
- * @returns {boolean} Whether or not the game will launch as a detached process.
+ * @returns {boolean} Whether the launcher hides while the game runs.
  */
-exports.getLaunchDetached = function(def = false){
-    return !def ? config.settings.game.launchDetached : DEFAULT_CONFIG.settings.game.launchDetached
+exports.getHideLauncherWhilePlaying = function(def = false){
+    const value = config.settings.game.hideLauncherWhilePlaying
+    return !def && value != null ? value : DEFAULT_CONFIG.settings.game.hideLauncherWhilePlaying
 }
 
 /**
- * Change the status of whether or not the game should launch as a detached process.
- * 
- * @param {boolean} launchDetached Whether or not the game should launch as a detached process.
+ * Change whether the launcher hides in the system tray while the game is running.
+ *
+ * @param {boolean} hide Whether the launcher hides while the game runs.
  */
-exports.setLaunchDetached = function(launchDetached){
-    config.settings.game.launchDetached = launchDetached
+exports.setHideLauncherWhilePlaying = function(hide){
+    config.settings.game.hideLauncherWhilePlaying = hide
 }
 
 // Launcher Settings

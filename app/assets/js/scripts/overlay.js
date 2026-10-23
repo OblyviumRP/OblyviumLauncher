@@ -292,15 +292,23 @@ function setAccountListingHandlers(){
 async function populateServerListings(){
     const distro = await DistroAPI.getDistribution()
     const giaSel = ConfigManager.getSelectedServer()
-    const servers = distro.servers
+    const servers = distro.servers.filter(serv => serv.rawServer.id !== 'SELECT')
+    // Teto: o grupo sai do id ter "vulkan"; o upgrade é um campo próprio na distribuição.
+    const groups = [
+        { title: 'Vulkan', servers: servers.filter(serv => serv.rawServer.id.includes('vulkan')) },
+        { title: 'OpenGL', servers: servers.filter(serv => !serv.rawServer.id.includes('vulkan')) }
+    ]
     let htmlString = ''
-    for(const serv of servers){
+    for(const group of groups.filter(g => g.servers.length > 0)){
+        htmlString += `<div class="serverListingColumn"><span class="serverListingGroup">${group.title}</span>${group.servers.map(serv => serverListingHtml(serv, giaSel)).join('')}</div>`
+    }
 
-        if(serv.rawServer.id === 'SELECT'){
-            continue
-        }
+    document.getElementById('serverSelectListScrollable').innerHTML = htmlString
 
-        htmlString += `<button class="serverListing" servid="${serv.rawServer.id}" ${serv.rawServer.id === giaSel ? 'selected' : ''}>
+}
+
+function serverListingHtml(serv, giaSel){
+    return `<button class="serverListing" servid="${serv.rawServer.id}" ${serv.rawServer.id === giaSel ? 'selected' : ''}>
             <img class="serverListingImg" src="${serv.rawServer.icon}"/>
             <div class="serverListingDetails">
                 <span class="serverListingName">${serv.rawServer.name}</span>
@@ -320,10 +328,6 @@ async function populateServerListings(){
                 </div>
             </div>
         </button>`
-    }
-
-    document.getElementById('serverSelectListScrollable').innerHTML = htmlString
-
 }
 
 function populateAccountListings(){
