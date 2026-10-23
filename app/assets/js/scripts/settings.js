@@ -13,7 +13,6 @@ function bindFileSelectors() {
     for (let ele of document.getElementsByClassName('settingsFileSelButton')) {
 
         ele.onclick = async e => {
-            const isJavaExecSel = ele.id === 'settingsJavaExecSel'
             const directoryDialog = ele.hasAttribute('dialogDirectory') && ele.getAttribute('dialogDirectory') == 'true'
             const properties = directoryDialog ? ['openDirectory', 'createDirectory'] : ['openFile']
 
@@ -25,19 +24,9 @@ function bindFileSelectors() {
                 options.title = ele.getAttribute('dialogTitle')
             }
 
-            if (isJavaExecSel && process.platform === 'win32') {
-                options.filters = [
-                    {name: Lang.queryJS('settings.fileSelectors.executables'), extensions: ['exe']},
-                    {name: Lang.queryJS('settings.fileSelectors.allFiles'), extensions: ['*']}
-                ]
-            }
-
             const res = await remote.dialog.showOpenDialog(remote.getCurrentWindow(), options)
             if (!res.canceled) {
                 ele.previousElementSibling.value = res.filePaths[0]
-                if (isJavaExecSel) {
-                    await populateJavaExecDetails(ele.previousElementSibling.value)
-                }
             }
         }
     }
@@ -107,16 +96,7 @@ async function initSettingsValues(root = document.getElementById('settingsContai
             if (v.tagName === 'INPUT') {
                 if (v.type === 'number' || v.type === 'text') {
                     // Special Conditions
-                    if (cVal === 'JavaExecutable') {
-                        v.value = gFn.apply(null, gFnOpts)
-                        await populateJavaExecDetails(v.value)
-                    } else if (cVal === 'DataDirectory') {
-                        v.value = gFn.apply(null, gFnOpts)
-                    } else if (cVal === 'JVMOptions') {
-                        v.value = gFn.apply(null, gFnOpts).join(' ')
-                    } else {
-                        v.value = gFn.apply(null, gFnOpts)
-                    }
+                    v.value = gFn.apply(null, gFnOpts)
                 } else if (v.type === 'checkbox') {
                     v.checked = gFn.apply(null, gFnOpts)
                 }
@@ -159,18 +139,8 @@ function saveSettingsValues(root = document.getElementById('settingsContainer'),
             if (v.tagName === 'INPUT') {
                 if (v.type === 'number' || v.type === 'text') {
                     // Special Conditions
-                    if (cVal === 'JVMOptions') {
-                        if (!v.value.trim()) {
-                            sFnOpts.push([])
-                            sFn.apply(null, sFnOpts)
-                        } else {
-                            sFnOpts.push(v.value.trim().split(/\s+/))
-                            sFn.apply(null, sFnOpts)
-                        }
-                    } else {
-                        sFnOpts.push(v.value)
-                        sFn.apply(null, sFnOpts)
-                    }
+                    sFnOpts.push(v.value)
+                    sFn.apply(null, sFnOpts)
                 } else if (v.type === 'checkbox') {
                     sFnOpts.push(v.checked)
                     sFn.apply(null, sFnOpts)
@@ -194,6 +164,9 @@ function saveSettingsValues(root = document.getElementById('settingsContainer'),
 
                         sFnOpts.push(val)
                         sFn.apply(null, sFnOpts)
+                        if (cVal === 'MaxRAM') {
+                            ConfigManager.setMinRAM(...sFnOpts)
+                        }
                     } else {
                         sFnOpts.push(v.getAttribute('value'))
                         sFn.apply(null, sFnOpts)
@@ -698,19 +671,6 @@ function prepareAccountsTab() {
  * Minecraft Tab
  */
 
-/**
- * Disable decimals, negative signs, and scientific notation.
- */
-document.getElementById('settingsGameWidth').addEventListener('keydown', (e) => {
-    if (/^[-.eE]$/.test(e.key)) {
-        e.preventDefault()
-    }
-})
-document.getElementById('settingsGameHeight').addEventListener('keydown', (e) => {
-    if (/^[-.eE]$/.test(e.key)) {
-        e.preventDefault()
-    }
-})
 
 /**
  * Function to refresh the current tab whenever the selected
@@ -729,53 +689,13 @@ function animateSettingsTabRefresh() {
 
 // DOM Cache
 const settingsMaxRAMRange = document.getElementById('settingsMaxRAMRange')
-const settingsMinRAMRange = document.getElementById('settingsMinRAMRange')
 const settingsMaxRAMLabel = document.getElementById('settingsMaxRAMLabel')
-const settingsMinRAMLabel = document.getElementById('settingsMinRAMLabel')
 const settingsMemoryTotal = document.getElementById('settingsMemoryTotal')
 const settingsMemoryAvail = document.getElementById('settingsMemoryAvail')
-const settingsJavaExecDetails = document.getElementById('settingsJavaExecDetails')
-const settingsJavaReqDesc = document.getElementById('settingsJavaReqDesc')
-const settingsJvmOptsLink = document.getElementById('settingsJvmOptsLink')
-
-// Bind on change event for min memory container.
-settingsMinRAMRange.onchange = (e) => {
-
-    // Current range values
-    const sMaxV = Number(settingsMaxRAMRange.getAttribute('value'))
-    const sMinV = Number(settingsMinRAMRange.getAttribute('value'))
-
-    // Get reference to range bar.
-    const bar = e.target.getElementsByClassName('rangeSliderBar')[0]
-    // Calculate effective total memory.
-    const max = os.totalmem() / 1073741824
-
-    // Change range bar color based on the selected value.
-    if (sMinV >= max / 2) {
-        bar.style.background = '#e86060'
-    } else if (sMinV >= max / 4) {
-        bar.style.background = '#e8e18b'
-    } else {
-        bar.style.background = null
-    }
-
-    // Increase maximum memory if the minimum exceeds its value.
-    if (sMaxV < sMinV) {
-        const sliderMeta = calculateRangeSliderMeta(settingsMaxRAMRange)
-        updateRangedSlider(settingsMaxRAMRange, sMinV,
-            ((sMinV - sliderMeta.min) / sliderMeta.step) * sliderMeta.inc)
-        settingsMaxRAMLabel.innerHTML = sMinV.toFixed(1) + 'G'
-    }
-
-    // Update label
-    settingsMinRAMLabel.innerHTML = sMinV.toFixed(1) + 'G'
-}
 
 // Bind on change event for max memory container.
 settingsMaxRAMRange.onchange = (e) => {
-    // Current range values
     const sMaxV = Number(settingsMaxRAMRange.getAttribute('value'))
-    const sMinV = Number(settingsMinRAMRange.getAttribute('value'))
 
     // Get reference to range bar.
     const bar = e.target.getElementsByClassName('rangeSliderBar')[0]
@@ -791,13 +711,6 @@ settingsMaxRAMRange.onchange = (e) => {
         bar.style.background = null
     }
 
-    // Decrease the minimum memory if the maximum value is less.
-    if (sMaxV < sMinV) {
-        const sliderMeta = calculateRangeSliderMeta(settingsMaxRAMRange)
-        updateRangedSlider(settingsMinRAMRange, sMaxV,
-            ((sMaxV - sliderMeta.min) / sliderMeta.step) * sliderMeta.inc)
-        settingsMinRAMLabel.innerHTML = sMaxV.toFixed(1) + 'G'
-    }
     settingsMaxRAMLabel.innerHTML = sMaxV.toFixed(1) + 'G'
 }
 
@@ -912,42 +825,6 @@ function populateMemoryStatus() {
     settingsMemoryAvail.innerHTML = Number(os.freemem() / 1073741824).toFixed(1) + 'G'
 }
 
-/**
- * Validate the provided executable path and display the data on
- * the UI.
- *
- * @param {string} execPath The executable path to populate against.
- */
-async function populateJavaExecDetails(execPath) {
-    const server = (await DistroAPI.getDistribution()).getServerById(ConfigManager.getSelectedServer())
-
-    const details = await validateSelectedJvm(ensureJavaDirIsRoot(execPath), server.effectiveJavaOptions.supported)
-
-    if (details != null) {
-        settingsJavaExecDetails.innerHTML = Lang.queryJS('settings.java.selectedJava', { version: details.semverStr, vendor: details.vendor })
-    } else {
-        settingsJavaExecDetails.innerHTML = Lang.queryJS('settings.java.invalidSelection')
-    }
-}
-
-function populateJavaReqDesc(server) {
-    settingsJavaReqDesc.innerHTML = Lang.queryJS('settings.java.requiresJava', { major: server.effectiveJavaOptions.suggestedMajor })
-}
-
-function populateJvmOptsLink(server) {
-    const major = server.effectiveJavaOptions.suggestedMajor
-    settingsJvmOptsLink.innerHTML = Lang.queryJS('settings.java.availableOptions', { major: major })
-    if (major >= 12) {
-        settingsJvmOptsLink.href = `https://docs.oracle.com/en/java/javase/${major}/docs/specs/man/java.html#extra-options-for-java`
-    } else if (major >= 11) {
-        settingsJvmOptsLink.href = 'https://docs.oracle.com/en/java/javase/11/tools/java.html#GUID-3B1CE181-CD30-4178-9602-230B800D4FAE'
-    } else if (major >= 9) {
-        settingsJvmOptsLink.href = `https://docs.oracle.com/javase/${major}/tools/java.htm`
-    } else {
-        settingsJvmOptsLink.href = `https://docs.oracle.com/javase/${major}/docs/technotes/tools/${process.platform === 'win32' ? 'windows' : 'unix'}/java.html`
-    }
-}
-
 function bindMinMaxRam(server) {
     // Store maximum memory values.
     const SETTINGS_MAX_MEMORY = ConfigManager.getAbsoluteMaxRAM(server.rawServer.javaOptions?.ram)
@@ -956,8 +833,6 @@ function bindMinMaxRam(server) {
     // Set the max and min values for the ranged sliders.
     settingsMaxRAMRange.setAttribute('max', SETTINGS_MAX_MEMORY)
     settingsMaxRAMRange.setAttribute('min', SETTINGS_MIN_MEMORY)
-    settingsMinRAMRange.setAttribute('max', SETTINGS_MAX_MEMORY)
-    settingsMinRAMRange.setAttribute('min', SETTINGS_MIN_MEMORY)
 }
 
 /**
@@ -968,8 +843,6 @@ async function prepareJavaTab() {
     bindMinMaxRam(server)
     bindRangeSlider(server)
     populateMemoryStatus()
-    populateJavaReqDesc(server)
-    populateJvmOptsLink(server)
 }
 
 /**

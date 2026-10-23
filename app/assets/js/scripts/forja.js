@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
         settingsBack.disabled = settingsDone.disabled
         document.getElementById('settingsSaveHint').textContent = settingsDone.disabled
             ? 'Revise os campos destacados antes de voltar.'
-            : 'Voltar salva suas preferências.'
+            : ''
     }
     settingsBack.addEventListener('click', () => settingsDone.click())
     new MutationObserver(syncSettingsExit).observe(settingsDone, { attributes: true, attributeFilter: ['disabled'] })
