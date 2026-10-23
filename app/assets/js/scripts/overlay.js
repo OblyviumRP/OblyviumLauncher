@@ -254,6 +254,24 @@ document.getElementById('accountSelectCancel').addEventListener('click', () => {
 function setServerListingHandlers(){
     const listings = Array.from(document.getElementsByClassName('serverListing'))
     listings.map((val) => {
+        // The gear opens that modpack's Mods screen instead of only selecting it.
+        val.querySelector('.serverListingMods').onclick = async e => {
+            e.stopPropagation()
+            if(isLaunchLocked()){
+                return
+            }
+            const serv = (await DistroAPI.getDistribution()).getServerById(val.getAttribute('servid'))
+            updateSelectedServer(serv)
+            refreshServerStatus(true)
+            toggleOverlay(false)
+            openModsView()
+        }
+        val.onkeydown = e => {
+            if(e.target === val && (e.key === 'Enter' || e.key === ' ')){
+                e.preventDefault()
+                val.click()
+            }
+        }
         val.onclick = e => {
             if(val.hasAttribute('selected')){
                 return
@@ -308,7 +326,7 @@ async function populateServerListings(){
 }
 
 function serverListingHtml(serv, giaSel){
-    return `<button class="serverListing" servid="${serv.rawServer.id}" ${serv.rawServer.id === giaSel ? 'selected' : ''}>
+    return `<div class="serverListing" role="button" tabindex="0" servid="${serv.rawServer.id}" ${serv.rawServer.id === giaSel ? 'selected' : ''}>
             <img class="serverListingImg" src="${serv.rawServer.icon}"/>
             <div class="serverListingDetails">
                 <span class="serverListingName">${serv.rawServer.name}</span>
@@ -327,7 +345,10 @@ function serverListingHtml(serv, giaSel){
                     </div>` : ''}
                 </div>
             </div>
-        </button>`
+            <button class="serverListingMods" type="button" aria-label="${Lang.queryJS('overlay.modsOf', { name: serv.rawServer.name })}">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg><span>${Lang.queryJS('overlay.mods')}</span>
+            </button>
+        </div>`
 }
 
 function populateAccountListings(){
