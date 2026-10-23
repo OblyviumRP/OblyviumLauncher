@@ -83,11 +83,10 @@ function isLaunchLocked(){
 }
 
 /**
- * Disable the Mods button and the profile selector while the game is opening
- * or running; re-enable them otherwise.
+ * Disable the profile selector while the game is opening or running;
+ * re-enable it otherwise.
  */
 function refreshLaunchLock(){
-    document.getElementById('modsMediaButton').disabled = isLaunchLocked()
     if(isLaunchLocked()){
         document.getElementById('profile_selection').disabled = true
     } else {
@@ -232,7 +231,6 @@ document.getElementById('settingsMediaButton').onclick = async e => {
 }
 
 // Bind mods button
-document.getElementById('modsMediaButton').onclick = () => openModsView()
 
 // Bind avatar overlay button.
 document.getElementById('avatarOverlay').onclick = async e => {

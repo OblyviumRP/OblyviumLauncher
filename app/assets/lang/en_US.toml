@@ -245,6 +245,8 @@ joining = "Entrando no Oblyvium!"
 joined = "Explorando o Reino!"
 
 [js.overlay]
+mods = "Mods"
+modsOf = "Mods do {name}"
 dismiss = "Fechar"
 
 [js.settings.fileSelectors]
