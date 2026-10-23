@@ -343,6 +343,24 @@ MojangIndexProcessor.prototype.getVersionJson = window.__version;
 ProcessBuilder.prototype.build = window.__build; true`)
         check('a game that exits before it starts shows the failure and brings Jogar back')
 
+        // Discord status toggle: the real settings checkbox turns the status off and back on.
+        const discordToggle = 'document.querySelector(\'#settingsContainer input[cValue="DiscordPresence"]\')'
+        await run(`window.__discord = []; window.__dw = { set: DiscordWrapper.setPresence, off: DiscordWrapper.shutdownRPC };
+DiscordWrapper.setPresence = () => window.__discord.push('set'); DiscordWrapper.shutdownRPC = () => window.__discord.push('off'); true`)
+        await run('initSettingsValues()')
+        assert.equal(await run(`${discordToggle}.checked`), true, 'on by default')
+        await run(`${discordToggle}.checked = false; fullSettingsSave(); true`)
+        await waitFor('window.__discord.length > 0', 'status cleared')
+        assert.deepEqual(await run('window.__discord'), ['off'])
+        assert.equal(await run('ConfigManager.getDiscordPresence()'), false)
+        await run('window.__discord = []; hasRPC = true; updateLauncherPresence()')
+        assert.deepEqual(await run('window.__discord'), ['off'], 'off also while the game owns the status')
+        await run(`hasRPC = false; window.__discord = []; ${discordToggle}.checked = true; fullSettingsSave(); true`)
+        await waitFor('window.__discord.length > 0', 'status back')
+        assert.deepEqual(await run('window.__discord'), ['set'])
+        await run('DiscordWrapper.setPresence = window.__dw.set; DiscordWrapper.shutdownRPC = window.__dw.off; true')
+        check('Discord status toggle clears the status and brings it back')
+
         // Minimised window: a new read waits until the window is back.
         await run(`Object.defineProperty(document, 'hidden', { configurable: true, get: () => true }); document.dispatchEvent(new Event('visibilitychange')); true`)
         publish(extraItem('escondida', 'announcement', 'Chegou minimizado'))
