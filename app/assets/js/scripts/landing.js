@@ -264,6 +264,11 @@ updateSelectedAccount(ConfigManager.getSelectedAccount())
  * @param {boolean} resetTimer Restart the elapsed time (e.g. after the game closes).
  */
 async function updateLauncherPresence(resetTimer = false){
+    // Checked before hasRPC so turning it off while the game runs also clears the status.
+    if(!ConfigManager.getDiscordPresence()){
+        DiscordWrapper.shutdownRPC()
+        return
+    }
     if(hasRPC){
         return
     }
@@ -927,7 +932,7 @@ async function dlAsync(login = true) {
             setLaunchDetails(Lang.queryJS('landing.dlAsync.doneEnjoyServer'))
 
             // Discord: switch from the launcher status to the game's.
-            if(distro.rawDistribution.discord != null && serv.rawServer.discord != null){
+            if(ConfigManager.getDiscordPresence() && distro.rawDistribution.discord != null && serv.rawServer.discord != null){
                 DiscordWrapper.initRPC(distro.rawDistribution.discord, serv.rawServer.discord)
                 hasRPC = true
             }
