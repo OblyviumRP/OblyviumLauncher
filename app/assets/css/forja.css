@@ -118,14 +118,14 @@ input[error] { border-color: var(--danger-fg); color: var(--danger-fg); backgrou
 .landing-news-notice h2 { font: 700 24px/1.3 var(--font-display); margin: 12px 0; overflow-wrap: anywhere; text-wrap: balance; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .landing-news-notice p { color: var(--muted-foreground); font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .news-notice-link { display: inline-flex; margin-top: 20px; min-height: 32px; align-items: center; font-size: 13px; }
-#landingContainer > #lower > #accountDock { grid-column: 3; grid-row: 1; justify-self: start; position: relative; }
+#landingContainer > #lower > #accountDock { grid-column: 3; grid-row: 1; justify-self: start; display: flex; align-items: stretch; gap: 8px; }
 #user_content { min-width: 140px; justify-content: space-between; }
 #user_content { gap: 12px; padding: 8px 10px 8px 14px; border: 1px solid var(--border-2); border-radius: 6px; background: var(--sidebar); }
 #user_text { position: static; min-width: 0; max-width: 160px; overflow: hidden; text-overflow: ellipsis; text-align: right; font-size: 13px; font-weight: 500; }
 #avatarContainer { width: 36px; height: 36px; border: 1px solid var(--input-border); border-radius: 4px; box-shadow: none; background-color: var(--surface-2); image-rendering: pixelated; }
 #avatarOverlay { min-height: 0; padding: 0; border-radius: 0; background: var(--fj-overlay); font-size: 11px; }
-#accountDock > #internalMedia { position: absolute; left: 0; right: 0; bottom: calc(100% + 51px); flex-direction: row; gap: 8px; }
-#modsMediaContainer, #modsMediaButton { flex: 1; width: 100%; }
+#accountDock > #settingsMediaContainer { height: auto; }
+#accountDock #settingsMediaButton { height: 100%; width: auto; aspect-ratio: 1; padding: 14px; border-radius: 6px; }
 #settingsMediaButton { width: 44px; height: 44px; }
 .social-rail-heading { font: 11px var(--font-display); color: var(--muted-foreground); margin-bottom: 16px; }
 .social-links-rail { display: flex; flex-direction: row; align-items: center; gap: 12px; margin-top: 28px; }
@@ -144,7 +144,7 @@ input[error] { border-color: var(--danger-fg); color: var(--danger-fg); backgrou
 .mediaSVG { width: 18px; height: 18px; fill: var(--muted-foreground); }
 .mediaButton:hover .mediaSVG, .mediaURL:hover .mediaSVG, .mediaSVG:hover { fill: var(--primary-light); filter: none; }
 #settingsTooltip, #mojangStatusTooltip { background: var(--surface-2); border: 1px solid var(--border-2); color: var(--foreground); box-shadow: var(--shadow-dialog); border-radius: 6px; font-size: 11px; }
-#settingsTooltip { top: 44px; left: auto; right: 0; }
+#settingsTooltip { top: auto; bottom: calc(100% + 8px); left: auto; right: 0; }
 #landingContainer > #lower { height: 124px; padding: 24px 32px; display: grid; grid-template-columns: minmax(160px, 1fr) minmax(0, 620px) minmax(160px, 1fr); gap: 24px; background: var(--card); border-top: 1px solid var(--border-2); align-items: center; }
 #landingContainer > #lower > #left, #landingContainer > #lower > #center, #landingContainer > #lower > #right { width: auto; height: auto; min-width: 0; justify-content: center; }
 #landingContainer > #lower > #left { grid-column: 1; grid-row: 1; }
@@ -359,6 +359,10 @@ input:checked + .toggleSwitchSlider::before { transform: translateX(15px); }
 #serverSelectList { max-height: none; }
 #serverSelectListScrollable { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 16px; width: 100%; max-height: none; overflow: visible; }
 .serverListingColumn { min-width: 0; }
+.serverListing { position: relative; }
+.serverListingMods { position: absolute; right: 10px; bottom: 10px; height: 34px; padding: 0 12px 0 10px; display: flex; align-items: center; justify-content: center; gap: 6px; font: 600 13px var(--font-sans); border-radius: 6px; border: 1px solid var(--border-2); background: var(--sidebar); color: var(--muted-foreground); cursor: pointer; }
+.serverListingMods:hover { color: var(--primary-light); border-color: var(--primary-line); }
+.serverListingMods svg { width: 20px; height: 20px; }
 .serverListingGroup { display: block; margin: 0 0 8px; font: 600 11px var(--font-sans); letter-spacing: .08em; text-transform: uppercase; color: var(--muted-foreground); }
 .serverListing, .accountListing { width: 100%; border: 1px solid var(--border-2); border-radius: 6px; background: var(--surface-2); padding: 14px; margin: 0 0 8px !important; }
 .serverListing:hover, .accountListing:hover { background: var(--accent); border-color: var(--input-border); }
@@ -497,9 +501,6 @@ button.mods-row-title:hover { color: var(--primary-light); text-decoration: unde
 .mods-project-body pre { padding: 10px; overflow-x: auto; }
 .mods-project-body table { border-collapse: collapse; }
 .mods-project-body td, .mods-project-body th { border: 1px solid var(--border-2); padding: 4px 8px; }
-#modsMediaButton { width: auto; height: 44px; gap: 6px; padding: 8px 10px; color: var(--foreground); font: 500 12px var(--font-sans); cursor: pointer; }
-#modsMediaButton .mediaSVG { width: 18px; height: 18px; fill: none; }
-#modsMediaButton:hover .mediaSVG { fill: none; color: var(--primary-light); }
 #modsPanelEdit { display: flex; flex-direction: column; gap: 16px; }
 #modsPanelEdit[hidden] { display: none; }
 #modsEditTitle { margin: 0; font-size: 18px; font-weight: 600; }

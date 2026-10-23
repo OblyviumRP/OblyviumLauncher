@@ -347,7 +347,7 @@ class ProcessBuilder {
     }
 
     _processAutoConnectArg(args){
-        if(ConfigManager.getAutoConnect() && this.server.rawServer.autoconnect){
+        if(ConfigManager.getAutoConnect()){
             if(mcVersionAtLeast('1.20', this.server.rawServer.minecraftVersion)){
                 args.push('--quickPlayMultiplayer')
                 args.push(`${this.server.hostname}:${this.server.port}`)
