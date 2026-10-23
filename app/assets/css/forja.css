@@ -39,8 +39,7 @@
     --danger-fg: #fda4af;
     --ember: #f59e0b;
     --fj-overlay: #060509d9;
-    --fj-scene-shade: #06050991;
-    --fj-scene-clear: #06050900;
+    --fj-scene-glow: #1c1236;
     --shadow-dialog: 0 24px 80px #030207b3;
     --dur-fast: 120ms;
     --dur-base: 180ms;
@@ -91,14 +90,11 @@ input[error] { border-color: var(--danger-fg); color: var(--danger-fg); backgrou
 #main { display: none; position: absolute; inset: var(--fj-frame-height) 0 0; width: 100%; height: calc(100% - var(--fj-frame-height)) !important; background: var(--background) !important; z-index: 10; overflow: clip; }
 #main[overlay] { filter: brightness(.55); }
 
-/* A static night scene carries the player-facing identity without continuous motion. */
 #landingContainer, #welcomeContainer, #loginOptionsContainer, #loginContainer, #loginOfflineContainer, #waitingContainer {
     position: relative; height: 100%; width: 100%;
-    background: linear-gradient(90deg, var(--background) 0%, var(--fj-scene-shade) 50%, var(--fj-scene-clear) 100%), linear-gradient(0deg, var(--background), var(--fj-scene-clear) 65%), url('../images/oblyvium-night.webp') center/cover no-repeat;
+    background: url('../images/oblyvium-logo.png') right -18vw center / auto 120% no-repeat, radial-gradient(ellipse at 75% 40%, var(--fj-scene-glow), var(--background) 70%);
 }
 #landingContainer { overflow: clip; }
-.scene-credit { position: absolute; left: 32px; bottom: 16px; color: var(--muted-foreground); font-size: 11px; pointer-events: none; }
-#landingContainer::after { content: 'Arte conceitual, não é uma captura do servidor.'; position: absolute; right: 32px; bottom: 136px; color: var(--muted-foreground); font-size: 11px; }
 #landingContainer > #upper { height: calc(100% - 124px); padding: 24px 32px 36px; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 110px minmax(0, 1fr); gap: 16px 32px; }
 #landingContainer > #upper > #left, #landingContainer > #upper > #content, #landingContainer > #upper > #right { width: auto; height: auto; min-width: 0; }
 #landingContainer > #upper > #left { display: flex; flex-direction: row; gap: 20px; align-items: flex-start; justify-content: flex-start; }
@@ -595,7 +591,6 @@ button.mods-row-title:hover { color: var(--primary-light); text-decoration: unde
     .settingsAuthAccountLeft { display: none; }
     .settingsAuthAccountRight { flex-wrap: wrap; }
     .settingsAuthAccountDetails { margin: 16px; }
-    .scene-credit { left: 16px; right: 16px; bottom: 12px; }
     .mods-profile { flex-wrap: wrap; }
     .mods-profile-actions { width: 100%; justify-content: flex-start; }
     .mods-row { flex-wrap: wrap; }
