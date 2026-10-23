@@ -23,6 +23,7 @@ const logger = LoggerUtil.getLogger('Modrinth')
 // The override exists for tests only.
 const API = process.env.OBLYVIUM_MODRINTH_API || 'https://api.modrinth.com/v2'
 const PAGE_SIZE = 20
+exports.PAGE_SIZE = PAGE_SIZE
 
 // Modrinth asks every client to identify itself.
 const USER_AGENT = `OblyviumRP/OblyviumLauncher/${version}`

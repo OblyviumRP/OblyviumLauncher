@@ -62,7 +62,6 @@
                             <option value="updated"><%- lang('mods.sortUpdated') %></option>
                         </select>
                     </label>
-                    <button type="submit" class="mods-btn mods-btn-primary"><%- lang('mods.searchButton') %></button>
                 </form>
                 <div class="mods-explore">
                     <fieldset class="mods-categories">
@@ -72,7 +71,7 @@
                     <div class="mods-explore-results">
                         <div id="modsSearchStatus" class="mods-status" role="status" aria-live="polite"></div>
                         <div id="modsSearchResults" class="mods-list"></div>
-                        <button id="modsSearchMore" type="button" class="mods-btn mods-more" hidden><%- lang('mods.loadMore') %></button>
+                        <nav id="modsSearchPager" class="mods-pager" aria-label="<%- lang('mods.pagerLabel') %>" hidden></nav>
                     </div>
                 </div>
             </section>
