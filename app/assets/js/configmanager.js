@@ -115,7 +115,10 @@ let config = null
  * Save the current configuration to a file.
  */
 exports.save = function(){
-    fs.writeFileSync(configPath, JSON.stringify(config, null, 4), 'UTF-8')
+    // Write a temp file and swap it in, so a crash mid-write never leaves a half-written config.
+    const tmpPath = configPath + '.tmp'
+    fs.writeFileSync(tmpPath, JSON.stringify(config, null, 4), 'UTF-8')
+    fs.renameSync(tmpPath, configPath)
 }
 
 /**
@@ -144,10 +147,15 @@ exports.load = function(){
             config = JSON.parse(fs.readFileSync(configPath, 'UTF-8'))
             doValidate = true
         } catch (err){
+            // A failed read (file locked by an antivirus, EPERM) is not a corrupt
+            // file: resetting would overwrite a good config.
+            if(!(err instanceof SyntaxError)){
+                throw err
+            }
             logger.error(err)
             logger.info('Configuration file contains malformed JSON or is corrupt.')
-            logger.info('Generating a new configuration file.')
-            fs.ensureDirSync(path.join(configPath, '..'))
+            logger.info(`Keeping it as ${configPath}.corrupt and generating a new configuration file.`)
+            fs.copySync(configPath, configPath + '.corrupt')
             config = DEFAULT_CONFIG
             exports.save()
         }

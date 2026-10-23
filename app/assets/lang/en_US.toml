@@ -236,6 +236,7 @@ launchingGame = "Iniciando o jogo.."
 launchWrapperNotDownloaded = "O arquivo principal, LaunchWrapper, não foi baixado corretamente. Como resultado, o jogo não pode iniciar.<br><br>Para corrigir, desative temporariamente seu antivírus e tente novamente.<br><br>Se possível, <a href=\"https://discord.gg/oblyvium\">fale com a gente no Discord</a> informando qual antivírus você utiliza."
 doneEnjoyServer = "Concluído. Aproveite o servidor!"
 checkConsoleForDetails = "Verifique o console (CTRL + Shift + i) para mais detalhes."
+gameExitedEarly = "O jogo fechou antes de terminar de abrir (código {code}).<br><br>Se você mudou a memória ou os argumentos da JVM, confira esses valores. Veja o console (CTRL + Shift + i) para mais detalhes."
 
 [js.landing.news]
 checking = "Verificando Notícias"
