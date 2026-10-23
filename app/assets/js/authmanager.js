@@ -189,7 +189,7 @@ async function fullMicrosoftAuthFlow(entryCode, authMode) {
         if(authMode !== AUTH_MODE.MC_REFRESH) {
             const accessTokenResponse = await MicrosoftAuth.getAccessToken(entryCode, authMode === AUTH_MODE.MS_REFRESH, AZURE_CLIENT_ID)
             if(accessTokenResponse.responseStatus === RestResponseStatus.ERROR) {
-                return Promise.reject(microsoftErrorDisplayable(accessTokenResponse.microsoftErrorCode))
+                return Promise.reject(microsoftFlowError(accessTokenResponse))
             }
             accessToken = accessTokenResponse.data
             accessTokenRaw = accessToken.access_token
@@ -199,19 +199,19 @@ async function fullMicrosoftAuthFlow(entryCode, authMode) {
         
         const xblResponse = await MicrosoftAuth.getXBLToken(accessTokenRaw)
         if(xblResponse.responseStatus === RestResponseStatus.ERROR) {
-            return Promise.reject(microsoftErrorDisplayable(xblResponse.microsoftErrorCode))
+            return Promise.reject(microsoftFlowError(xblResponse))
         }
         const xstsResonse = await MicrosoftAuth.getXSTSToken(xblResponse.data)
         if(xstsResonse.responseStatus === RestResponseStatus.ERROR) {
-            return Promise.reject(microsoftErrorDisplayable(xstsResonse.microsoftErrorCode))
+            return Promise.reject(microsoftFlowError(xstsResonse))
         }
         const mcTokenResponse = await MicrosoftAuth.getMCAccessToken(xstsResonse.data)
         if(mcTokenResponse.responseStatus === RestResponseStatus.ERROR) {
-            return Promise.reject(microsoftErrorDisplayable(mcTokenResponse.microsoftErrorCode))
+            return Promise.reject(microsoftFlowError(mcTokenResponse))
         }
         const mcProfileResponse = await MicrosoftAuth.getMCProfile(mcTokenResponse.data.access_token)
         if(mcProfileResponse.responseStatus === RestResponseStatus.ERROR) {
-            return Promise.reject(microsoftErrorDisplayable(mcProfileResponse.microsoftErrorCode))
+            return Promise.reject(microsoftFlowError(mcProfileResponse))
         }
         return {
             accessToken,
@@ -223,7 +223,20 @@ async function fullMicrosoftAuthFlow(entryCode, authMode) {
         }
     } catch(err) {
         log.error(err)
-        return Promise.reject(microsoftErrorDisplayable(MicrosoftErrorCode.UNKNOWN))
+        return Promise.reject(microsoftFlowError(null))
+    }
+}
+
+/**
+ * Error for a failed step of the Microsoft flow. rejected is true only when
+ * Microsoft answered and refused (4xx other than 429). Network failures,
+ * timeouts and server errors leave it false.
+ */
+function microsoftFlowError(response) {
+    const status = response?.error?.response?.statusCode
+    return {
+        ...microsoftErrorDisplayable(response?.microsoftErrorCode ?? MicrosoftErrorCode.UNKNOWN),
+        rejected: status >= 400 && status < 500 && status !== 429
     }
 }
 
@@ -383,8 +396,10 @@ async function validateSelectedMicrosoftAccount(){
             )
             ConfigManager.save()
             return true
-        } catch {
-            return false
+        } catch(err) {
+            // Only a refusal from Microsoft ends the session; a network failure
+            // keeps the account so the next launch can try again.
+            return err.rejected !== true
         }
     } else {
         // Only MC expired, use existing MS token.
@@ -402,8 +417,8 @@ async function validateSelectedMicrosoftAccount(){
             ConfigManager.save()
             return true
         }
-        catch {
-            return false
+        catch(err) {
+            return err.rejected !== true
         }
     }
 }

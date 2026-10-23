@@ -502,12 +502,11 @@ async function asyncSystemScan(effectiveJavaOptions, launchAfter = true){
             setLaunchDetails(Lang.queryJS('landing.systemScan.javaDownloadPrepare'))
             toggleOverlay(false)
             
-            try {
-                downloadJava(effectiveJavaOptions, launchAfter)
-            } catch(err) {
+            downloadJava(effectiveJavaOptions, launchAfter).catch(err => {
                 loggerLanding.error('Unhandled error in Java Download', err)
+                remote.getCurrentWindow().setProgressBar(-1)
                 showLaunchFailure(Lang.queryJS('landing.systemScan.javaDownloadFailureTitle'), Lang.queryJS('landing.systemScan.javaDownloadFailureText'))
-            }
+            })
         })
         setDismissHandler(() => {
             $('#overlayContent').fadeOut(250, () => {
@@ -569,7 +568,7 @@ async function downloadJava(effectiveJavaOptions, launchAfter = true) {
     if(received != asset.size) {
         loggerLanding.warn(`Java Download: Expected ${asset.size} bytes but received ${received}`)
         if(!await validateLocalFile(asset.path, asset.algo, asset.hash)) {
-            log.error(`Hashes do not match, ${asset.id} may be corrupted.`)
+            loggerLanding.error(`Hashes do not match, ${asset.id} may be corrupted.`)
             // Don't know how this could happen, but report it.
             throw new Error(Lang.queryJS('landing.downloadJava.javaDownloadCorruptedError'))
         }
@@ -592,7 +591,12 @@ async function downloadJava(effectiveJavaOptions, launchAfter = true) {
         setLaunchDetails(eLStr + dotStr)
     }, 750)
 
-    const newJavaExec = await extractJdk(asset.path)
+    let newJavaExec
+    try {
+        newJavaExec = await extractJdk(asset.path)
+    } finally {
+        clearInterval(extractListener)
+    }
 
     // Extraction complete, remove the loading from the OS progress bar.
     remote.getCurrentWindow().setProgressBar(-1)
@@ -601,7 +605,6 @@ async function downloadJava(effectiveJavaOptions, launchAfter = true) {
     ConfigManager.setJavaExecutable(ProfileManager.getSelectedConfigKey(), newJavaExec)
     ConfigManager.save()
 
-    clearInterval(extractListener)
     setLaunchDetails(Lang.queryJS('landing.downloadJava.javaInstalled'))
 
     // TODO Callback hell
@@ -734,27 +737,26 @@ async function runPrepareServerFiles() {
 
     fullRepairModule.spawnReceiver()
 
-    fullRepairModule.childProcess.on('error', (err) => {
-        loggerLaunchSuite.error('Error during launch', err)
-        showLaunchFailure(Lang.queryJS('landing.dlAsync.errorDuringLaunchTitle'), err.message || Lang.queryJS('landing.dlAsync.errorDuringLaunchText'))
+    // verifyFiles() and download() only settle on a message from the child. If it
+    // dies without one (killed by an antivirus, a crash at startup), stop waiting.
+    // A reported error arrives as a message first, so its text is what the player sees.
+    const receiverGone = new Promise((_, reject) => {
+        fullRepairModule.childProcess.once('error', reject)
+        fullRepairModule.childProcess.once('close', code => reject(new Error(`File check process exited with code ${code}.`)))
     })
-    fullRepairModule.childProcess.on('close', (code, _signal) => {
-        if(code !== 0){
-            loggerLaunchSuite.error(`Full Repair Module exited with code ${code}, assuming error.`)
-            showLaunchFailure(Lang.queryJS('landing.dlAsync.errorDuringLaunchTitle'), Lang.queryJS('landing.dlAsync.seeConsoleForDetails'))
-        }
-    })
+    // It also closes after a normal run, when nothing waits on it.
+    receiverGone.catch(() => {})
 
     loggerLaunchSuite.info('Validating files.')
     setLaunchDetails(Lang.queryJS('landing.dlAsync.validatingFileIntegrity'))
     let invalidFileCount = 0
     try {
-        invalidFileCount = await fullRepairModule.verifyFiles(percent => {
+        invalidFileCount = await Promise.race([fullRepairModule.verifyFiles(percent => {
             setLaunchPercentage(percent)
-        })
+        }), receiverGone])
         setLaunchPercentage(100)
     } catch (err) {
-        loggerLaunchSuite.error('Error during file validation.')
+        loggerLaunchSuite.error('Error during file validation.', err)
         showLaunchFailure(Lang.queryJS('landing.dlAsync.errorDuringFileVerificationTitle'), err.displayable || Lang.queryJS('landing.dlAsync.seeConsoleForDetails'))
         return null
     }
@@ -765,12 +767,13 @@ async function runPrepareServerFiles() {
         setLaunchDetails(Lang.queryJS('landing.dlAsync.downloadingFiles'))
         setLaunchPercentage(0)
         try {
-            await fullRepairModule.download(percent => {
+            await Promise.race([fullRepairModule.download(percent => {
                 setDownloadPercentage(percent)
-            })
+            }), receiverGone])
             setDownloadPercentage(100)
         } catch(err) {
-            loggerLaunchSuite.error('Error during file download.')
+            loggerLaunchSuite.error('Error during file download.', err)
+            remote.getCurrentWindow().setProgressBar(-1)
             showLaunchFailure(Lang.queryJS('landing.dlAsync.errorDuringFileDownloadTitle'), err.displayable || Lang.queryJS('landing.dlAsync.seeConsoleForDetails'))
             return null
         }
@@ -845,13 +848,18 @@ async function dlAsync(login = true) {
             gameProc.stderr.removeListener('data', gameErrorListener)
         }
         const start = Date.now()
+        // Set once the game prints its startup line; a process that exits before
+        // that never reaches onLoadComplete, so its exit must show the failure.
+        let started = false
 
         // Attach a temporary listener to the client output.
         // Will wait for a certain bit of text meaning that
         // the client application has started, and we can hide
         // the progress bar stuff.
         const tempListener = function(data){
-            if(GAME_LAUNCH_REGEX.test(data.trim())){
+            // One chunk can carry several log lines.
+            if(!started && `${data}`.split('\n').some(line => GAME_LAUNCH_REGEX.test(line.trim()))){
+                started = true
                 const diff = Date.now()-start
                 if(diff < MIN_LINGER) {
                     setTimeout(onLoadComplete, MIN_LINGER-diff)
@@ -896,12 +904,19 @@ async function dlAsync(login = true) {
                     refreshLaunchButton()
                 }
             }
-            gameProc.on('close', releaseGameLock)
+            gameProc.on('close', (code) => {
+                releaseGameLock()
+                if(!started){
+                    loggerLaunchSuite.error(`Game exited with code ${code} before it finished starting.`)
+                    showLaunchFailure(Lang.queryJS('landing.dlAsync.errorDuringLaunchTitle'), Lang.queryJS('landing.dlAsync.gameExitedEarly', { code }))
+                }
+            })
             // A process that never spawned may emit 'error' without 'close'.
             gameProc.on('error', err => {
                 loggerLaunchSuite.error('Game process error', err)
                 if(gameProc.pid == null){
                     releaseGameLock()
+                    showLaunchFailure(Lang.queryJS('landing.dlAsync.errorDuringLaunchTitle'), Lang.queryJS('landing.dlAsync.checkConsoleForDetails'))
                 }
             })
 
