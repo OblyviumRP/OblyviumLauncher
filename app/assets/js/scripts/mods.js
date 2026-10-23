@@ -752,8 +752,10 @@ async function modsSettleLookup(promise, strict, message){
 
 function modsGetPackProjects(serv = modsState.serv, strict = false){
     let cache = modsState.packProjects
-    if(cache == null || cache.serv !== serv){
-        const entry = { serv, promise: Modrinth.getModpackProjects(serv) }
+    // Strict lookups guard an install, so they first download modpack mods
+    // that are not on disk yet; otherwise those would be installed again.
+    if(cache == null || cache.serv !== serv || (strict && !cache.download)){
+        const entry = { serv, download: strict, promise: Modrinth.getModpackProjects(serv, { download: strict }) }
         entry.promise.catch(() => {
             if(modsState.packProjects === entry){
                 modsState.packProjects = null

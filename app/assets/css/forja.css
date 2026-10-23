@@ -95,11 +95,10 @@ input[error] { border-color: var(--danger-fg); color: var(--danger-fg); backgrou
 }
 #landingContainer { overflow: clip; }
 #landingContainer > #upper { height: calc(100% - 124px); padding: 24px 32px 36px; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 110px minmax(0, 1fr); gap: 16px 32px; }
-#landingContainer > #upper > #left, #landingContainer > #upper > #content, #landingContainer > #upper > #right { width: auto; height: auto; min-width: 0; }
+#landingContainer > #upper > #left, #landingContainer > #upper > #content { width: auto; height: auto; min-width: 0; }
 #landingContainer > #upper > #left { display: flex; flex-direction: row; gap: 20px; align-items: flex-start; justify-content: flex-start; }
 #landingContainer > #upper > #content { grid-column: 1 / -1; grid-row: 2; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 400px); align-content: start; align-items: center; gap: 48px; max-width: 1440px; width: 100%; margin: 0 auto; }
 #landingContainer > #upper > #content:has(#landingNewsNotice[hidden]) { grid-template-columns: 1fr; }
-#landingContainer > #upper > #right { grid-column: 2; grid-row: 1; align-items: center; }
 .launcher-update { display: flex; align-items: center; gap: 12px; min-width: 0; max-width: 460px; margin-top: 4px; padding: 10px 10px 10px 14px; background: var(--card); border: 1px solid var(--primary-line); border-radius: 6px; }
 .launcher-update[hidden] { display: none; }
 .launcher-update-icon { width: 20px; height: 20px; flex-shrink: 0; color: var(--primary-light); }
@@ -119,14 +118,14 @@ input[error] { border-color: var(--danger-fg); color: var(--danger-fg); backgrou
 .landing-news-notice h2 { font: 700 24px/1.3 var(--font-display); margin: 12px 0; overflow-wrap: anywhere; text-wrap: balance; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .landing-news-notice p { color: var(--muted-foreground); font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .news-notice-link { display: inline-flex; margin-top: 20px; min-height: 32px; align-items: center; font-size: 13px; }
-#rightContainer { position: static; height: auto; width: auto; display: grid; grid-template-columns: auto auto; align-items: center; gap: 12px; }
-#landingContainer > #lower > #user_content { grid-column: 3; grid-row: 1; justify-self: start; }
+#landingContainer > #lower > #accountDock { grid-column: 3; grid-row: 1; justify-self: start; position: relative; }
+#user_content { min-width: 140px; justify-content: space-between; }
 #user_content { gap: 12px; padding: 8px 10px 8px 14px; border: 1px solid var(--border-2); border-radius: 6px; background: var(--sidebar); }
 #user_text { position: static; min-width: 0; max-width: 160px; overflow: hidden; text-overflow: ellipsis; text-align: right; font-size: 13px; font-weight: 500; }
 #avatarContainer { width: 36px; height: 36px; border: 1px solid var(--input-border); border-radius: 4px; box-shadow: none; background-color: var(--surface-2); image-rendering: pixelated; }
 #avatarOverlay { min-height: 0; padding: 0; border-radius: 0; background: var(--fj-overlay); font-size: 11px; }
-#mediaContent { display: contents; }
-#internalMedia { grid-column: 1 / -1; grid-row: 1; justify-content: flex-end; flex-direction: row; align-self: center; gap: 8px; }
+#accountDock > #internalMedia { position: absolute; left: 0; right: 0; bottom: calc(100% + 51px); flex-direction: row; gap: 8px; }
+#modsMediaContainer, #modsMediaButton { flex: 1; width: 100%; }
 #settingsMediaButton { width: 44px; height: 44px; }
 .social-rail-heading { font: 11px var(--font-display); color: var(--muted-foreground); margin-bottom: 16px; }
 .social-links-rail { display: flex; flex-direction: row; align-items: center; gap: 12px; margin-top: 28px; }
@@ -361,7 +360,7 @@ input:checked + .toggleSwitchSlider::before { transform: translateX(15px); }
 .serverListing:hover, .accountListing:hover { background: var(--accent); border-color: var(--input-border); }
 .serverListing[selected], .accountListing[selected] { border-color: var(--primary-light); background: var(--primary-soft); }
 .serverListingName, .accountListingName { font-size: 14px; font-weight: 500; }
-.serverListingDescription, .serverListingRevision { font-size: 11px; color: var(--muted-foreground); }
+.serverListingRevision { font-size: 11px; color: var(--muted-foreground); }
 #serverSelectActions, #accountSelectActions { gap: 12px; }
 #serverSelectCancel, #accountSelectCancel { font-size: 13px; padding: 8px 16px; color: var(--muted-foreground); }
 #newsContainer { background: var(--background); }
@@ -537,7 +536,6 @@ button.mods-row-title:hover { color: var(--primary-light); text-decoration: unde
 @media (max-width: 650px) {
     #landingContainer > #upper { grid-template-columns: 1fr; grid-template-rows: 110px minmax(0, 1fr); height: calc(100% - 180px); padding: 16px 20px 32px; gap: 20px; }
     #landingContainer > #upper > #left { display: none; }
-    #landingContainer > #upper > #right { grid-column: 1; grid-row: 1; justify-content: flex-end; }
     #landingContainer > #upper > #content { grid-column: 1; grid-row: 2; display: flex; flex-direction: column; gap: 24px; max-height: 100%; overflow-y: auto; margin: 0; }
     .realm-intro { align-self: flex-start; }
     .landing-news-notice { width: 100%; padding: 20px; }
@@ -545,14 +543,13 @@ button.mods-row-title:hover { color: var(--primary-light); text-decoration: unde
     .realm-intro p { font-size: 22px; }
     #user_content { padding: 6px; }
     #user_text { display: none; }
-    #rightContainer { justify-content: end; gap: 12px; }
     .social-links-rail { gap: 8px; }
     .social-links-rail .social-link { width: 32px; height: 36px; padding: 6px; }
     .social-rail-heading { display: none; }
         #landingContainer > #lower { height: 180px; grid-template-columns: 1fr 1fr; grid-template-rows: auto auto; gap: 16px; padding: 16px 20px; }
     #landingContainer > #lower > #left { grid-column: 1; grid-row: 1; }
     #landingContainer > #lower > #right { grid-column: 2; grid-row: 1; }
-    #landingContainer > #lower > #user_content { grid-column: 2; justify-self: end; }
+    #landingContainer > #lower > #accountDock { grid-column: 2; justify-self: end; }
     #landingContainer > #lower > #center { grid-column: 1 / -1; grid-row: 2; }
     #launch_button { width: 100px; }
     .profile-selector { flex-basis: 96px; min-width: 80px; }

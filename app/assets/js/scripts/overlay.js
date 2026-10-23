@@ -304,7 +304,6 @@ async function populateServerListings(){
             <img class="serverListingImg" src="${serv.rawServer.icon}"/>
             <div class="serverListingDetails">
                 <span class="serverListingName">${serv.rawServer.name}</span>
-                <span class="serverListingDescription">${serv.rawServer.description}</span>
                 <div class="serverListingInfo">
                     <div class="serverListingVersion">${serv.rawServer.minecraftVersion}</div>
                     <div class="serverListingRevision">${serv.rawServer.version}</div>
