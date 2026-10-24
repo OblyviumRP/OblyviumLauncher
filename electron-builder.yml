@@ -17,6 +17,8 @@ files:
   - '!app/.notifications-qa.html'
   - '!test/**'
   - '!app/.mods-qa.html'
+  - '!ui/**'
+  - '!scripts/preview-ui.cjs'
 
 extraResources:
   - 'libraries'

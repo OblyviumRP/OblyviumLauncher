@@ -1,0 +1,171 @@
+@import 'tailwindcss';
+
+@font-face { font-family: Geist; src: url('./assets/fonts/geist-latin.woff2') format('woff2'); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: 'Geist Mono'; src: url('./assets/fonts/geist-mono-latin.woff2') format('woff2'); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: Cinzel; src: url('./assets/fonts/cinzel-latin.woff2') format('woff2'); font-weight: 500 900; font-display: swap; }
+@font-face { font-family: 'Press Start 2P'; src: url('./assets/fonts/press-start-latin.woff2') format('woff2'); font-display: swap; }
+
+/* Tokens Forja (mesmos nomes de app/assets/css/forja.css e DESIGN.md). Mude o valor, nunca o nome. */
+:root {
+  color-scheme: dark;
+  --background: #060509;
+  --foreground: #ececf5;
+  --card: #0e0c16;
+  --surface: #0e0c16;
+  --surface-2: #15131f;
+  --popover: #15131f;
+  --sidebar: #0a0810;
+  --accent: #221d30;
+  --muted-foreground: #a69cb7;
+  --muted-2: #9487aa;
+  --border: #221d30;
+  --border-2: #3d3154;
+  --input-border: #796b91;
+  --ring: #c4b5fd;
+  --primary: #8b5cf6;
+  --primary-light: #a78bfa;
+  --primary-fill: #7c3aed;
+  --fj-primary-hover: #6d28d9;
+  --primary-soft: #1d142e;
+  --primary-line: #513781;
+  --primary-fg: #c4b5fd;
+  --success-soft: #0c2119;
+  --success-line: #245c43;
+  --success-fg: #86efac;
+  --warning-soft: #281e0e;
+  --warning-line: #72511f;
+  --warning-fg: #fcd34d;
+  --info-soft: #0b1a2c;
+  --info-line: #25507c;
+  --info-fg: #93c5fd;
+  --danger-soft: #2a101b;
+  --danger-line: #793048;
+  --danger-fg: #fda4af;
+  --ember: #f59e0b;
+  --ember-soft: #2a1a06;
+  --ember-line: #7a4a0f;
+  --ember-fg: #fcd34d;
+  --fj-overlay: #060509d9;
+  --fj-scene-glow: #1c1236;
+  --shadow-dialog: 0 24px 80px #030207b3;
+  --shadow-popover: 0 12px 32px #03020799;
+  --dur-fast: 120ms;
+  --dur-base: 180ms;
+  --dur-slow: 280ms;
+  --ease-forja: cubic-bezier(.22, 1, .36, 1);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-popover: var(--popover);
+  --color-sidebar: var(--sidebar);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted-2: var(--muted-2);
+  --color-border: var(--border);
+  --color-border-2: var(--border-2);
+  --color-input: var(--input-border);
+  --color-input-fill: var(--sidebar);
+  --color-ring: var(--ring);
+  --color-primary: var(--primary);
+  --color-primary-light: var(--primary-light);
+  --color-primary-fill: var(--primary-fill);
+  --color-primary-hover: var(--fj-primary-hover);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-line: var(--primary-line);
+  --color-primary-fg: var(--primary-fg);
+  --color-success-soft: var(--success-soft);
+  --color-success-line: var(--success-line);
+  --color-success-fg: var(--success-fg);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-line: var(--warning-line);
+  --color-warning-fg: var(--warning-fg);
+  --color-info-soft: var(--info-soft);
+  --color-info-line: var(--info-line);
+  --color-info-fg: var(--info-fg);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-line: var(--danger-line);
+  --color-danger-fg: var(--danger-fg);
+  --color-ember: var(--ember);
+  --color-ember-soft: var(--ember-soft);
+  --color-ember-line: var(--ember-line);
+  --color-ember-fg: var(--ember-fg);
+  --color-overlay: var(--fj-overlay);
+  --color-scene-glow: var(--fj-scene-glow);
+
+  --font-sans: Geist, 'Segoe UI', sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, monospace;
+  --font-display: Cinzel, Georgia, serif;
+  --font-minecraft: 'Press Start 2P', monospace;
+
+  --text-2xs: 11px;
+  --text-2xs--line-height: 16px;
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-sm--line-height: 20px;
+  --text-base: 14px;
+
+  /* Teto de 8px (DESIGN.md): xl, 2xl e 3xl colapsam em 8px. */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 8px;
+  --radius-2xl: 8px;
+  --radius-3xl: 8px;
+
+  --shadow-dialog: var(--shadow-dialog);
+  --shadow-popover: var(--shadow-popover);
+  --ease-forja: var(--ease-forja);
+}
+
+@layer base {
+  * { border-color: var(--border); }
+  html, body, #root { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+  ::selection { background: var(--primary-line); }
+  :focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 8px; border: 2px solid var(--background); }
+  ::-webkit-scrollbar-track { background: transparent; }
+}
+
+@keyframes shimmer {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: .35; }
+  50% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
+
+@keyframes pop-in {
+  from { opacity: 0; transform: translateY(4px) scale(.97); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes dialog-in {
+  from { opacity: 0; transform: translate(-50%, -48%) scale(.97); }
+  to { opacity: 1; transform: translate(-50%, -50%); }
+}
