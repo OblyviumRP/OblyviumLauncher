@@ -5,10 +5,12 @@ import { OblyviumMark } from '@/components/shared/oblyvium-mark'
 import { PixelScene } from '@/components/shared/pixel-scene'
 import { Button } from '@/components/ui/button'
 import { ConsolePage } from '@/pages/console'
+import { DiscoverPage } from '@/pages/discover'
 import { DownloadsPage } from '@/pages/downloads'
 import { HomePage } from '@/pages/home'
 import { OnboardingPage } from '@/pages/onboarding'
 import { ProfilePage } from '@/pages/profile'
+import { ProjectPage } from '@/pages/project'
 import { SettingsPage } from '@/pages/settings'
 import { SkinsPage } from '@/pages/skins'
 import { t } from '@/i18n'
@@ -82,6 +84,8 @@ export default function App() {
             <Route index element={<HomePage />} />
 
             <Route path="perfil" element={<ProfilePage />} />
+            <Route path="descobrir" element={<DiscoverPage />} />
+            <Route path="descobrir/:id" element={<ProjectPage />} />
             <Route path="skins" element={<SkinsPage />} />
             <Route path="downloads" element={<DownloadsPage />} />
             <Route path="console" element={<ConsolePage />} />
