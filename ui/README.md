@@ -36,6 +36,7 @@ A lógica do launcher que não depende de tela fica em módulos sem DOM, com tes
 | `app/assets/js/core/distrosync.js` | mods opcionais do pacote por perfil e configuração de Java por perfil |
 | `app/assets/js/core/news.js` | RSS da distribuição em texto puro (sem HTML) |
 | `app/assets/js/core/skins.js` | skin e capa pela API de serviços do Minecraft e a biblioteca local de skins |
+| `app/assets/js/modrinth.js`, `contentmanager.js`, `richtext.js` | busca e instalação no Modrinth (com a lista de bloqueio da staff), mods, resource packs e shaders do perfil, descrição dos projetos em HTML seguro |
 
 ## Idiomas
 
@@ -53,19 +54,20 @@ Funciona como uma janela comum do Windows: abre com 1100 × 700 (o tamanho míni
 
 ## Telas
 
-O launcher é exclusivo do Oblyvium: o jogador não instala mods, resource packs nem shaders, não cria perfis e não procura modpacks. Do servidor, só liga ou desliga os mods que a staff marcou como opcionais.
+O launcher é exclusivo do Oblyvium: o jogador não cria perfis nem instala modpacks. Pode adicionar mods, resource packs e shaders do Modrinth ao perfil (o que a staff bloquear não aparece na busca e é desligado antes de abrir o jogo) e ligar ou desligar os mods que a staff marcou como opcionais.
 
 | Rota | Tela |
 |---|---|
 | `/boas-vindas` | login Microsoft ou offline e escolha do servidor no primeiro acesso; `?adicionar=1` só adiciona conta |
 | `/` | arte do servidor com transição em pixels, nome, Jogar, ficha do servidor (jogadores, tempo de resposta, endereço, versão, renderizador Vulkan/OpenGL, pacote), notícias em destaque (a mais recente com resumo) e lista compacta dos outros servidores |
-| `/perfil` | mods do servidor (só os opcionais da staff podem ser desligados), capturas, `latest.log`, Java do servidor, renomear, verificar arquivos e excluir perfis antigos |
+| `/descobrir` | busca no Modrinth de mods, resource packs e shaders compatíveis com o servidor, com categorias e ordenação; `/descobrir/:id` mostra o projeto e instala no perfil |
+| `/perfil` | conteúdo instalado (ativar, atualizar, remover), mods do servidor (só os opcionais da staff podem ser desligados), capturas, `latest.log`, Java do servidor, renomear, verificar arquivos e excluir perfis antigos |
 | `/skins` | skin e capa da conta Microsoft com prévia 3D a partir da textura, biblioteca local de skins |
 | `/downloads` | tarefas da sessão: arquivos do jogo, Java, atualização do launcher |
 | `/console` | saída do jogo ao vivo, filtro por nível, rolagem automática que pausa ao rolar para cima, aviso de falha com o crash report |
 | `/configuracoes` | Geral (idioma, o que fazer ao abrir o jogo), Jogo (memória e janela globais), Contas, Sobre e atualizações |
 
-Endereços antigos (`/descobrir`, `/modpacks`, `/servidores`) voltam ao Início.
+Endereços antigos (`/modpacks`, `/servidores`) voltam ao Início.
 
 Comportamentos globais:
 
