@@ -1,4 +1,4 @@
-import { ArrowRight, Download, ExternalLink, Layers, Newspaper, Settings2 } from 'lucide-react'
+import { ArrowRight, Download, ExternalLink, Layers, Newspaper, Plus, Settings2 } from 'lucide-react'
 import { AnimatePresence, motion, type Variants } from 'motion/react'
 import { Link } from 'react-router'
 import { useShallow } from 'zustand/react/shallow'
@@ -215,6 +215,13 @@ export function HomePage() {
                 <Button variant="secondary" size="lg" asChild className="h-12 px-5">
                   <Link to="/perfil">{t('Gerenciar')}</Link>
                 </Button>
+                {server.loader !== 'Vanilla' && (
+                  <Button variant="secondary" size="lg" asChild className="h-12 px-5">
+                    <Link to="/descobrir?tipo=mod">
+                      <Plus /> {t('Adicionar mods')}
+                    </Link>
+                  </Button>
+                )}
                 <Tooltip content={t('Configurações do perfil')} side="top">
                   <Button variant="secondary" size="icon" className="size-12" asChild>
                     <Link to="/perfil?aba=config" aria-label={t('Configurações do perfil')}>
