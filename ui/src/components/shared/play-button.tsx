@@ -1,5 +1,6 @@
 import { Loader2, Play, Square } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
+import { t } from '@/i18n'
 import { cn } from '@/lib/utils'
 import { useLauncher, useServer } from '@/store/launcher'
 
@@ -11,14 +12,14 @@ export function PlayButton({ size = 'lg', className }: { size?: 'lg' | 'md'; cla
   const confirm = useLauncher((s) => s.confirm)
   const server = useServer()
   const state = launch.state
-  const name = server?.name ?? 'o jogo'
+  const name = server?.name ?? t('o jogo')
 
   const pct = launch.progress != null ? `${Math.round(launch.progress)}%` : null
-  const label = state === 'preparing' ? (pct ?? 'Abrindo') : state === 'running' ? 'Encerrar' : 'Jogar'
+  const label = state === 'preparing' ? (pct ?? t('Abrindo')) : state === 'running' ? t('Encerrar') : t('Jogar')
   const onClick = async () => {
     if (state === 'idle' || state === 'crashed') return start()
     if (state === 'running') {
-      const ok = await confirm({ title: 'Encerrar o jogo?', body: 'O Minecraft fecha na hora, sem salvar o que estiver aberto. Prefira sair pelo menu do jogo.', confirm: 'Encerrar', tone: 'danger' })
+      const ok = await confirm({ title: t('Encerrar o jogo?'), body: t('O Minecraft fecha na hora, sem salvar o que estiver aberto. Prefira sair pelo menu do jogo.'), confirm: t('Encerrar'), tone: 'danger' })
       if (ok) stop()
     }
   }
@@ -30,7 +31,8 @@ export function PlayButton({ size = 'lg', className }: { size?: 'lg' | 'md'; cla
       disabled={state === 'preparing' || !server}
       whileHover={{ scale: state === 'preparing' ? 1 : 1.02 }}
       whileTap={{ scale: 0.97 }}
-      aria-label={state === 'preparing' ? `Preparando ${name}${pct ? `, ${pct}` : ''}` : `${label} ${name}`}
+      aria-label={state === 'preparing' ? t('Preparando {name}', { name }) + (pct ? `, ${pct}` : '') : `${label} ${name}`}
+
       title={state === 'preparing' ? launch.status : undefined}
       className={cn(
         'relative isolate inline-flex cursor-pointer items-center justify-center gap-2.5 overflow-hidden rounded-md font-semibold uppercase tracking-[0.12em] text-white transition-colors disabled:cursor-progress',

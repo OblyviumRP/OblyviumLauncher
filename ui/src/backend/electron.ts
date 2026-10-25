@@ -11,6 +11,7 @@ import {
   type ContentFile,
   type ContentType,
   type FeedItem,
+  type GameSettings,
   type LaunchHandlers,
   type LauncherSettings,
   type LibrarySkin,
@@ -24,6 +25,7 @@ import {
   type SkinProfile,
   type UpdateEvent,
 } from './types'
+import { t } from '@/i18n'
 
 const w = window as any
 const nodeRequire: (id: string) => any = w.require
@@ -50,13 +52,13 @@ const Modrinth = mod('modrinth')
 const RichText = mod('richtext')
 const Notifications = mod('notifications')
 const Changelog = mod('changelog')
-const Lang = mod('langloader')
 const isDev: boolean = mod('isdev')
-const { MSFT_OPCODE, MSFT_REPLY_TYPE, MSFT_ERROR } = mod('ipcconstants')
+const { MSFT_OPCODE, MSFT_REPLY_TYPE, MSFT_ERROR, WINDOW_OPCODE } = mod('ipcconstants')
 const DistroSync = mod('core/distrosync')
 const LaunchService = mod('core/launchservice')
 const News = mod('core/news')
 const Skins = mod('core/skins')
+const GameSettingsCore = mod('core/gamesettings')
 const { getServerStatus } = req('helios-core/mojang')
 const { validateSelectedJvm, ensureJavaDirIsRoot, javaExecFromRoot, discoverBestJvmInstallation } = req('helios-core/java')
 
@@ -72,14 +74,6 @@ function sceneFor(id: string, main: boolean): SceneKey {
 
 function stripTags(text: unknown) {
   return String(text ?? '').replace(/<[^>]+>/g, '').trim()
-}
-
-function q(key: string, ph?: Record<string, unknown>) {
-  try {
-    return stripTags(Lang.queryJS(key, ph))
-  } catch {
-    return key
-  }
 }
 
 function server(id: string) {
@@ -105,7 +99,22 @@ function mapServer(s: any): ServerInfo {
     main: Boolean(raw.mainServer),
     scene: sceneFor(raw.id, Boolean(raw.mainServer)),
     packModCount: DistroSync.countPackMods(DistroSync.packModTree(s.modules, {})),
+    // Mesmo critério do launcher antigo: o id do modpack diz se ele é Vulkan.
+    group: raw.id.toLowerCase().includes('vulkan') ? 'Vulkan' : 'OpenGL',
   }
+}
+
+/** Depois de carregar a distribuição: mods opcionais, Java e a configuração global do jogo. */
+function sync(d: any) {
+  DistroSync.syncDistribution(d)
+  GameSettingsCore.apply(d, ConfigManager, ProfileManager)
+  ConfigManager.save()
+}
+
+/** Status do launcher (textos em português do en_US.toml) no idioma da interface. */
+function status(text: string) {
+  const java = /^Baixando Java (\d+)$/.exec(text)
+  return java ? t('Baixando Java {n}', { n: java[1] }) : t(text)
 }
 
 function mapProfile(p: any): ProfileInfo {
@@ -124,47 +133,54 @@ function configKey(serverId: string, profileId: string) {
   return ProfileManager.configKey(serverId, profileId)
 }
 
+// Mesmos textos de [js.mods.error] no en_US.toml, aqui para passarem pelo t().
 function modrinthMessage(err: any): string {
-  const title = err?.data?.title
+  const title = err?.data?.title ?? ''
   switch (err?.code) {
     case 'BLOCKED':
-      return q(err.data?.dependency ? 'mods.error.blockedDependency' : 'mods.error.blocked', { title })
+      return err.data?.dependency ? t('Não dá para instalar: ele precisa de {title}, que é proibido pela staff.', { title }) : t('{title} é proibido pela staff.', { title })
     case 'ALREADY_INSTALLED':
-      return q('mods.error.alreadyInstalled', { title })
+      return t('{title} já está instalado neste perfil.', { title })
     case 'NO_COMPATIBLE_VERSION':
-      return q('mods.error.noCompatibleVersion', { title })
+      return t('{title} não tem versão para este servidor.', { title })
     case 'HASH_MISMATCH':
-      return q('mods.error.hashMismatch')
+      return t('O arquivo baixado veio diferente do esperado e foi descartado. Tente novamente.')
     case 'RATE_LIMITED':
-      return q('mods.error.rateLimited')
+      return t('Muitas buscas seguidas, aguarde alguns segundos.')
     case 'DESTINATION_EXISTS':
-      return q('mods.error.destinationExists')
+      return t('Já existe um arquivo com esse nome na pasta.')
     case 'BAD_FILENAME':
-      return q('mods.error.badFile')
+      return t('O arquivo anunciado pela Modrinth tem um nome inválido e foi recusado.')
     case 'UNSUPPORTED_TYPE':
-      return q('mods.error.unsupported')
+      return t('Esse tipo de conteúdo não é suportado pelo launcher.')
     case 'ENOENT':
     case 'ENOSPC':
-      return q('mods.error.disk')
+      return t('Não foi possível ler a pasta do perfil.')
     default:
-      return 'Não foi possível falar com o Modrinth. Verifique a conexão e tente de novo.'
+      return t('Não foi possível falar com o Modrinth. Verifique a conexão e tente de novo.')
   }
+}
+
+// Mensagens do core/skins.js, por código.
+const SKIN_MESSAGES: Record<string, string> = {
+  TOO_LARGE: 'O arquivo é grande demais para uma skin.',
+  NOT_PNG: 'Escolha um arquivo .png.',
+  BAD_SIZE: 'A skin precisa ter 64×64 pixels.',
+  NETWORK: 'Sem conexão com os servidores do Minecraft.',
+  UNAUTHORIZED: 'A sessão expirou. Entre de novo na conta.',
+  RATE_LIMITED: 'Muitas trocas seguidas. Tente de novo em alguns minutos.',
+  HTTP: 'Os servidores do Minecraft recusaram o pedido.',
+  BAD_URL: 'Endereço de textura inválido.',
+  NOT_FOUND: 'Skin não encontrada na biblioteca.',
+  LIBRARY_FULL: 'A biblioteca aceita até 60 skins.',
 }
 
 function asUserError(err: any, title: string): UserError {
   if (err instanceof UserError) return err
   if (err?.title && (err.desc || err.message)) return new UserError(stripTags(err.title), stripTags(err.desc ?? err.message))
+  if (err instanceof Skins.SkinError) return new UserError(title, SKIN_MESSAGES[err.code] ?? err.message)
   if (err instanceof Modrinth.ModrinthError || err?.code) return new UserError(title, modrinthMessage(err))
-  if (err instanceof Skins.SkinError) return new UserError(title, err.message)
   return new UserError(title, 'Algo deu errado. Veja o console (Ctrl+Shift+I) para detalhes.')
-}
-
-function parseRamGB(value: string | null | undefined, fallback: number) {
-  if (value == null) return fallback
-  const m = /^(\d+(?:\.\d+)?)([MG])$/i.exec(String(value))
-  if (!m) return fallback
-  const n = Number(m[1])
-  return m[2].toUpperCase() === 'G' ? n : Math.round((n / 1024) * 2) / 2
 }
 
 function waitDistributionIndex(): Promise<boolean> {
@@ -253,7 +269,8 @@ export function createElectronBackend(): Backend {
         return { ok: false, message: 'Não foi possível carregar a lista de servidores. Verifique a conexão e abra o launcher de novo.' }
       }
       distro = await DistroAPI.getDistribution()
-      DistroSync.syncDistribution(distro)
+      sync(distro)
+      if (ConfigManager.getLauncherFullscreen()) ipcRenderer.send(WINDOW_OPCODE.SET_FULLSCREEN, true)
       if (!isDev) ipcRenderer.send('autoUpdateAction', 'initAutoUpdater', ConfigManager.getAllowPrerelease())
       LaunchService.updateLauncherPresence()
       return { ok: true, firstLaunch: ConfigManager.isFirstLaunch() || Object.keys(ConfigManager.getAuthAccounts()).length === 0 }
@@ -261,7 +278,7 @@ export function createElectronBackend(): Backend {
 
     async refreshDistribution() {
       distro = await DistroAPI.refreshDistributionOrFallback()
-      DistroSync.syncDistribution(distro)
+      sync(distro)
     },
 
     servers() {
@@ -289,7 +306,7 @@ export function createElectronBackend(): Backend {
     async createProfile(serverId, o) {
       try {
         const p = await ProfileManager.create(serverId, o)
-        DistroSync.syncDistribution(distro)
+        sync(distro)
         return mapProfile(p)
       } catch (err) {
         throw asUserError(err, 'Não foi possível criar o perfil')
@@ -298,7 +315,7 @@ export function createElectronBackend(): Backend {
     async duplicateProfile(serverId, profileId) {
       try {
         const p = await ProfileManager.duplicate(serverId, profileId)
-        DistroSync.syncDistribution(distro)
+        sync(distro)
         return mapProfile(p)
       } catch (err) {
         throw asUserError(err, 'Não foi possível duplicar o perfil')
@@ -399,6 +416,7 @@ export function createElectronBackend(): Backend {
       try {
         return await LaunchService.launch({
           ...h,
+          onStatus: (text: string) => h.onStatus(status(text)),
           onBlocked: (items: any[]) => h.onBlocked(items.map((i) => ({ title: i.title, type: i.type }))),
           onDistro: (d: any) => {
             distro = d
@@ -413,7 +431,7 @@ export function createElectronBackend(): Backend {
     },
     async verifyFiles(h) {
       try {
-        return await LaunchService.verifyOnly({ ...h, onDistro: (d: any) => (distro = d) })
+        return await LaunchService.verifyOnly({ ...h, onStatus: (text: string) => h.onStatus(status(text)), onDistro: (d: any) => (distro = d) })
       } catch (err) {
         throw asUserError(err, 'Não foi possível verificar os arquivos')
       }
@@ -604,63 +622,68 @@ export function createElectronBackend(): Backend {
         allowPrerelease: ConfigManager.getAllowPrerelease(),
         autoConnect: ConfigManager.getAutoConnect(),
         hideLauncherWhilePlaying: ConfigManager.getHideLauncherWhilePlaying(),
+        launcherFullscreen: ConfigManager.getLauncherFullscreen(),
         dataDirectory: ConfigManager.getDataDirectory(),
       }
     },
     setLauncherSetting(key, value) {
       if (key === 'discordPresence') {
         ConfigManager.setDiscordPresence(value)
-        ConfigManager.save()
         LaunchService.updateLauncherPresence()
       } else if (key === 'allowPrerelease') {
         ConfigManager.setAllowPrerelease(value)
-        ConfigManager.save()
         if (!isDev) ipcRenderer.send('autoUpdateAction', 'allowPrereleaseChange', value)
       } else if (key === 'autoConnect') {
         ConfigManager.setAutoConnect(value)
-        ConfigManager.save()
       } else if (key === 'hideLauncherWhilePlaying') {
         ConfigManager.setHideLauncherWhilePlaying(value)
-        ConfigManager.save()
+      } else if (key === 'launcherFullscreen') {
+        ConfigManager.setLauncherFullscreen(value)
+        ipcRenderer.send(WINDOW_OPCODE.SET_FULLSCREEN, Boolean(value))
       }
+      ConfigManager.save()
     },
     profileSettings(serverId, profileId): ProfileSettings {
       const s = server(serverId)
       const key = configKey(serverId, profileId)
       ConfigManager.ensureJavaConfig(key, s.effectiveJavaOptions, s.rawServer.javaOptions?.ram)
-      const ram = s.rawServer.javaOptions?.ram
-      const sys = Math.floor(os.totalmem() / 1024 ** 3)
-      const max = Math.max(1, Math.min(ConfigManager.getAbsoluteMaxRAM(ram), sys))
-      const min = Math.min(max, ConfigManager.getAbsoluteMinRAM(ram))
+      return { javaPath: ConfigManager.getJavaExecutable(key), javaSupported: s.effectiveJavaOptions?.supported ?? '' }
+    },
+    setProfileSetting(serverId, profileId, _key, value) {
+      ConfigManager.setJavaExecutable(configKey(serverId, profileId), value)
+      ConfigManager.save()
+    },
+    gameSettings(): GameSettings {
+      const servers = (distro?.servers ?? []).filter((s: any) => s.rawServer.id !== 'SELECT')
+      const b = GameSettingsCore.ramBounds(servers, ConfigManager)
+      const current = ConfigManager.getGlobalMaxRAM()
+      // Sem valor global ainda: mostra o que o modpack selecionado usa hoje.
+      const selected = ConfigManager.getSelectedServer()
+      const fallback = selected ? GameSettingsCore.parseRam(ConfigManager.getJavaConfigKeys().includes(selected) ? ConfigManager.getMaxRAM(selected) : null, b.recommended) : b.recommended
       return {
-        maxRamGB: parseRamGB(ConfigManager.getMaxRAM(key), min),
-        ramMinGB: min,
-        ramMaxGB: max,
-        ramRecommendedGB: ram?.recommended ? Math.round(ram.recommended / 512) / 2 : min,
-        systemRamGB: sys,
-        javaPath: ConfigManager.getJavaExecutable(key),
-        javaSupported: s.effectiveJavaOptions?.supported ?? '',
-        width: ConfigManager.getProfileGameWidth(key),
-        height: ConfigManager.getProfileGameHeight(key),
-        fullscreen: ConfigManager.getProfileFullscreen(key),
+        maxRamGB: Math.min(b.max, Math.max(b.min, current ?? fallback)),
+        ramMinGB: b.min,
+        ramMaxGB: b.max,
+        ramRecommendedGB: b.recommended,
+        systemRamGB: b.system,
+        width: ConfigManager.getGameWidth(),
+        height: ConfigManager.getGameHeight(),
+        fullscreen: ConfigManager.getFullscreen(),
       }
     },
-    setProfileSetting(serverId, profileId, key, value) {
-      const k = configKey(serverId, profileId)
-      if (key === 'maxRamGB') {
-        const gb = Number(value)
-        const v = Number.isInteger(gb) ? `${gb}G` : `${Math.round(gb * 1024)}M`
-        ConfigManager.setMaxRAM(k, v)
-        ConfigManager.setMinRAM(k, v)
-      } else if (key === 'width') {
-        if (ConfigManager.validateProfileGameWidth(Number(value))) ConfigManager.setProfileGameWidth(k, Number(value))
-      } else if (key === 'height') {
-        if (ConfigManager.validateProfileGameHeight(Number(value))) ConfigManager.setProfileGameHeight(k, Number(value))
-      } else if (key === 'fullscreen') {
-        ConfigManager.setProfileFullscreen(k, Boolean(value))
-      } else if (key === 'javaPath') {
-        ConfigManager.setJavaExecutable(k, value == null ? null : String(value))
-      }
+    setGameSetting(key, value) {
+      if (key === 'maxRamGB') ConfigManager.setGlobalMaxRAM(Number(value))
+      else if (key === 'width' && ConfigManager.validateGameWidth(Number(value))) ConfigManager.setGameWidth(Number(value))
+      else if (key === 'height' && ConfigManager.validateGameHeight(Number(value))) ConfigManager.setGameHeight(Number(value))
+      else if (key === 'fullscreen') ConfigManager.setFullscreen(Boolean(value))
+      if (distro) GameSettingsCore.apply(distro, ConfigManager, ProfileManager)
+      ConfigManager.save()
+    },
+    language() {
+      return ConfigManager.getLanguage()
+    },
+    setLanguage(lang) {
+      ConfigManager.setLanguage(lang)
       ConfigManager.save()
     },
     async detectJava(serverId, profileId) {
@@ -882,6 +905,12 @@ export function createElectronBackend(): Backend {
       } catch {
         // Endereço inválido: ignora.
       }
+    },
+    setWindowFullscreen(on) {
+      ipcRenderer.send(WINDOW_OPCODE.SET_FULLSCREEN, on)
+    },
+    onWindowFullscreen(cb) {
+      ipcRenderer.on(WINDOW_OPCODE.FULLSCREEN_CHANGED, (_e: unknown, on: boolean) => cb(on))
     },
     showFile(file) {
       shell.showItemInFolder(file)

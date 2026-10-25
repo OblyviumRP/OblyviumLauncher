@@ -1,16 +1,17 @@
-import { Check, Plus, RefreshCw, Settings2, Users } from 'lucide-react'
-import { motion } from 'motion/react'
+import { Check, ChevronDown, Package, Plus, RefreshCw, Settings2, Users } from 'lucide-react'
+import { AnimatePresence, motion } from 'motion/react'
 import { Dialog as DialogPrimitive } from 'radix-ui'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { toast } from 'sonner'
-import { backend, type ServerInfo } from '@/backend'
+import { backend, type PackMod, type ServerInfo } from '@/backend'
 import { Page, PageHeader } from '@/components/shared/page'
-import { ProfileIcon } from '@/components/shared/profile-icon'
-import { hasRealArt, ServerArt, ServerIcon } from '@/components/shared/server-art'
+import { ProfileIcon, profileLabel } from '@/components/shared/profile-icon'
+import { artNotice, hasRealArt, ServerArt, ServerIcon } from '@/components/shared/server-art'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { DialogContent } from '@/components/ui/dialog'
+import { t, tn } from '@/i18n'
 import { useAsync } from '@/lib/use-async'
 import { cn, formatDate } from '@/lib/utils'
 import { isBusy, useLauncher } from '@/store/launcher'
@@ -19,17 +20,49 @@ import { ProfileEditor } from './profile'
 function Players({ server }: { server: ServerInfo }) {
   const { data, loading } = useAsync(() => backend().serverStatus(server.id), [server.id])
   if (!server.address) return null
-  if (loading) return <span className="font-mono text-2xs text-muted-2">consultando…</span>
-  if (!data) return <span className="flex items-center gap-1.5 font-mono text-2xs text-muted-2"><span className="size-2 rounded-full bg-muted-2" aria-hidden />offline</span>
+  if (loading) return <span className="font-mono text-2xs text-muted-2">{t('consultando…')}</span>
+  if (!data)
+    return (
+      <span className="flex items-center gap-1.5 font-mono text-2xs text-muted-2">
+        <span className="size-2 rounded-full bg-muted-2" aria-hidden />
+        {t('offline')}
+      </span>
+    )
   return (
     <span className="flex items-center gap-1.5 font-mono text-2xs text-muted-foreground">
       <span className="size-2 rounded-full bg-success-fg" aria-hidden />
-      {data.online}/{data.max} online
+      {t('{online}/{max} online', { online: data.online, max: data.max })}
     </span>
   )
 }
 
-function ServerCard({ server, selected, locked, onSelect }: { server: ServerInfo; selected: boolean; locked: boolean; onSelect: () => void }) {
+/** Mods que vêm com o modpack: os de cima da árvore, como no card do launcher antigo. */
+function PackModList({ server }: { server: ServerInfo }) {
+  const [open, setOpen] = useState(false)
+  if (server.packModCount === 0) return <span className="text-xs text-muted-2">{t('Sem mods no pacote')}</span>
+  const profileId = backend().selectedProfileId(server.id)
+  const mods: PackMod[] = backend().packMods(server.id, profileId)
+  const shown = open ? mods : mods.slice(0, 6)
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex flex-wrap gap-1">
+        {shown.map((m) => (
+          <Badge key={m.id} tone={m.required ? 'neutral' : 'primary'} title={m.required ? t('obrigatório') : t('opcional')} className={cn(!m.required && !m.enabled && 'opacity-50')}>
+            {m.name}
+          </Badge>
+        ))}
+      </div>
+      {mods.length > 6 && (
+        <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} className="flex w-fit cursor-pointer items-center gap-1 text-xs text-primary-light hover:underline">
+          {open ? t('Mostrar menos') : t('Ver todos os {n} mods', { n: mods.length })}
+          <ChevronDown className={cn('size-3 transition-transform', open && 'rotate-180')} />
+        </button>
+      )}
+    </div>
+  )
+}
+
+function ModpackCard({ server, selected, locked, onSelect }: { server: ServerInfo; selected: boolean; locked: boolean; onSelect: () => void }) {
   return (
     <motion.article
       layout
@@ -39,32 +72,36 @@ function ServerCard({ server, selected, locked, onSelect }: { server: ServerInfo
       <div className="relative h-32 overflow-hidden">
         <ServerArt server={server} cols={64} rows={28} className="absolute inset-0 transition-transform duration-500 group-hover:scale-105" />
         <span className="absolute inset-x-2 bottom-2 flex justify-between gap-2">
-          <Badge className="bg-overlay">{server.loader === 'Vanilla' ? 'Vanilla' : server.loader} {server.mcVersion}</Badge>
+          <Badge className="bg-overlay">
+            {server.loader === 'Vanilla' ? 'Vanilla' : server.loader} {server.mcVersion}
+          </Badge>
           {selected && (
             <Badge tone="primary" className="bg-overlay">
-              <Check /> selecionado
+              <Check /> {t('selecionado')}
             </Badge>
           )}
         </span>
-        {!hasRealArt(server) && <span className="sr-only">Arte gerada, não é uma captura do servidor</span>}
+        {!hasRealArt(server) && <span className="sr-only">{artNotice()}</span>}
       </div>
       <div className="flex flex-1 flex-col gap-3 p-3">
         <div className="flex items-start gap-2.5">
           <ServerIcon server={server} className="size-10" />
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <h2 className="truncate text-base font-semibold">{server.name}</h2>
+            <h3 className="truncate text-base font-semibold">{server.name}</h3>
             <Players server={server} />
           </div>
-          {server.main && <Badge tone="primary">principal</Badge>}
+          {server.main && <Badge tone="primary">{t('principal')}</Badge>}
         </div>
         {server.description && <p className="line-clamp-2 text-sm text-muted-foreground">{server.description}</p>}
-        <div className="mt-auto flex items-center gap-2">
+        <PackModList server={server} />
+        <div className="mt-auto flex items-center gap-2 pt-1">
           <span className="font-mono text-2xs text-muted-2">
-            {server.packModCount} mods no pacote{server.version ? ` · v${server.version}` : ''}
+            {tn(server.packModCount, '{n} mod no pacote', '{n} mods no pacote')}
+            {server.version ? ` · v${server.version}` : ''}
           </span>
           <div className="flex-1" />
           <Button variant={selected ? 'soft' : 'secondary'} size="sm" disabled={selected || locked} onClick={onSelect}>
-            {selected ? 'Em uso' : 'Selecionar'}
+            {selected ? t('Em uso') : t('Selecionar')}
           </Button>
         </div>
       </div>
@@ -72,7 +109,7 @@ function ServerCard({ server, selected, locked, onSelect }: { server: ServerInfo
   )
 }
 
-export function ServersPage() {
+export function ModpacksPage() {
   const servers = useLauncher((s) => s.servers)
   const serverId = useLauncher((s) => s.serverId)
   const profiles = useLauncher((s) => s.profiles)
@@ -87,13 +124,15 @@ export function ServersPage() {
   const [creating, setCreating] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const server = servers.find((s) => s.id === serverId)
+  // Vulkan primeiro, como no launcher antigo; grupo vazio some.
+  const groups = (['Vulkan', 'OpenGL'] as const).map((g) => ({ title: g, servers: servers.filter((s) => s.group === g) })).filter((g) => g.servers.length > 0)
 
   const refresh = async () => {
     setRefreshing(true)
     try {
       await backend().refreshDistribution()
       refreshServers()
-      toast.success('Lista de servidores atualizada')
+      toast.success(t('Lista de modpacks atualizada'))
     } catch (err) {
       showError(err, 'Não foi possível atualizar a lista')
     } finally {
@@ -104,32 +143,44 @@ export function ServersPage() {
   return (
     <Page>
       <PageHeader
-        title="Servidores"
-        description="Os servidores vêm da staff. Cada um pode ter vários perfis, com mundos, mods extras e configurações separados."
+        title={t('Modpacks')}
+        description={t('Os modpacks vêm da staff. Cada um pode ter vários perfis, com mundos, mods extras e configurações separados.')}
         actions={
           <Button variant="secondary" onClick={refresh} disabled={refreshing}>
-            <RefreshCw className={cn(refreshing && 'animate-spin')} /> Atualizar lista
+            <RefreshCw className={cn(refreshing && 'animate-spin')} /> {t('Atualizar lista')}
           </Button>
         }
       />
 
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-3">
-        {servers.map((s) => (
-          <ServerCard key={s.id} server={s} selected={s.id === serverId} locked={locked} onSelect={() => selectServer(s.id)} />
-        ))}
-      </div>
+      {groups.map((g) => (
+        <section key={g.title} aria-labelledby={`grupo-${g.title}`} className="flex flex-col gap-2">
+          {groups.length > 1 && (
+            <h2 id={`grupo-${g.title}`} className="flex items-center gap-2 font-mono text-2xs uppercase tracking-wider text-muted-2">
+              <Package className="size-3.5" /> {g.title}
+              <span className="text-muted-2/70">· {g.title === 'Vulkan' ? t('placas de vídeo mais novas') : t('funciona em qualquer PC')}</span>
+            </h2>
+          )}
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-3">
+            <AnimatePresence initial={false}>
+              {g.servers.map((s) => (
+                <ModpackCard key={s.id} server={s} selected={s.id === serverId} locked={locked} onSelect={() => selectServer(s.id)} />
+              ))}
+            </AnimatePresence>
+          </div>
+        </section>
+      ))}
 
       {server && (
         <section aria-labelledby="perfis" className="flex flex-col gap-3">
           <div className="flex flex-wrap items-end gap-3">
             <div className="flex min-w-0 flex-1 flex-col gap-1">
               <h2 id="perfis" className="text-lg font-semibold">
-                Perfis de {server.name}
+                {t('Perfis de {name}', { name: server.name })}
               </h2>
-              <p className="text-sm text-muted-foreground">O perfil selecionado é o que abre no Jogar.</p>
+              <p className="text-sm text-muted-foreground">{t('O perfil selecionado é o que abre no Jogar.')}</p>
             </div>
             <Button onClick={() => setCreating(true)} disabled={locked}>
-              <Plus /> Novo perfil
+              <Plus /> {t('Novo perfil')}
             </Button>
           </div>
           <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-3">
@@ -152,14 +203,14 @@ export function ServersPage() {
                       <ProfileIcon name={p.icon} className="size-5" />
                     </span>
                     <span className="flex min-w-0 flex-col">
-                      <span className="truncate text-sm font-semibold">{p.name}</span>
-                      <span className="truncate font-mono text-2xs text-muted-2">{p.isDefault ? 'padrão' : p.created ? `criado em ${formatDate(p.created)}` : ''}</span>
+                      <span className="truncate text-sm font-semibold">{profileLabel(p)}</span>
+                      <span className="truncate font-mono text-2xs text-muted-2">{p.isDefault ? t('padrão') : p.created ? t('criado em {date}', { date: formatDate(p.created) }) : ''}</span>
                     </span>
                   </button>
                   <Button
                     variant="ghost"
                     size="icon-sm"
-                    aria-label={`Gerenciar ${p.name}`}
+                    aria-label={t('Gerenciar {name}', { name: profileLabel(p) })}
                     onClick={() => {
                       selectProfile(p.id)
                       navigate('/perfil')
@@ -173,14 +224,17 @@ export function ServersPage() {
             })}
           </div>
           <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Users className="size-3.5" /> A conta e a skin são as mesmas em todos os perfis. <Link to="/perfil" className="text-primary-light hover:underline">Abrir perfil atual</Link>
+            <Users className="size-3.5" /> {t('A conta e a skin são as mesmas em todos os perfis.')}{' '}
+            <Link to="/perfil" className="text-primary-light hover:underline">
+              {t('Abrir perfil atual')}
+            </Link>
           </p>
         </section>
       )}
 
       <DialogPrimitive.Root open={creating} onOpenChange={setCreating}>
         {creating && server && (
-          <DialogContent title="Novo perfil" description={`Um perfil novo de ${server.name}, com pasta própria.`}>
+          <DialogContent title={t('Novo perfil')} description={t('Um perfil novo de {name}, com pasta própria.', { name: server.name })}>
             <ProfileEditor
               serverId={server.id}
               profile={null}
@@ -189,7 +243,7 @@ export function ServersPage() {
                 if (p) {
                   refreshProfiles()
                   selectProfile(p.id)
-                  toast.success(`Perfil ${p.name} criado`)
+                  toast.success(t('Perfil {name} criado', { name: p.name }))
                 }
               }}
             />

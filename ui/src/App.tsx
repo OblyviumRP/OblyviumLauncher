@@ -11,9 +11,10 @@ import { HomePage } from '@/pages/home'
 import { OnboardingPage } from '@/pages/onboarding'
 import { ProfilePage } from '@/pages/profile'
 import { ProjectPage } from '@/pages/project'
-import { ServersPage } from '@/pages/servers'
+import { ModpacksPage } from '@/pages/modpacks'
 import { SettingsPage } from '@/pages/settings'
 import { SkinsPage } from '@/pages/skins'
+import { t } from '@/i18n'
 import { useLauncher } from '@/store/launcher'
 
 function Splash({ error }: { error?: string }) {
@@ -29,15 +30,15 @@ function Splash({ error }: { error?: string }) {
         {error ? (
           <>
             <p className="flex items-start gap-2 text-sm text-danger-fg">
-              <TriangleAlert className="mt-0.5 size-4 shrink-0" /> {error}
+              <TriangleAlert className="mt-0.5 size-4 shrink-0" /> {t(error)}
             </p>
             <Button variant="secondary" onClick={() => window.location.reload()}>
-              Tentar de novo
+              {t('Tentar de novo')}
             </Button>
           </>
         ) : (
           <span className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="size-4 animate-spin" /> Carregando servidores…
+            <Loader2 className="size-4 animate-spin" /> {t('Carregando modpacks…')}
           </span>
         )}
       </div>
@@ -66,6 +67,8 @@ export default function App() {
     <HashRouter>
       <Providers>
         <Routes>
+          {/* Endereço antigo: redireciona fora do AppShell, sem passar pela transição de tela. */}
+          <Route path="/servidores" element={<Navigate to="/modpacks" replace />} />
           <Route
             path="/boas-vindas"
             element={
@@ -82,7 +85,8 @@ export default function App() {
             }
           >
             <Route index element={<HomePage />} />
-            <Route path="servidores" element={<ServersPage />} />
+            <Route path="modpacks" element={<ModpacksPage />} />
+
             <Route path="perfil" element={<ProfilePage />} />
             <Route path="descobrir" element={<DiscoverPage />} />
             <Route path="descobrir/:id" element={<ProjectPage />} />

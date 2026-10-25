@@ -31,3 +31,9 @@ exports.GAME_OPCODE = {
     HIDE_LAUNCHER: 'GAME_HIDE_LAUNCHER',
     SHOW_LAUNCHER: 'GAME_SHOW_LAUNCHER'
 }
+
+// Tela cheia da janela do launcher (a janela normal tem tamanho fixo).
+exports.WINDOW_OPCODE = {
+    SET_FULLSCREEN: 'WINDOW_SET_FULLSCREEN',
+    FULLSCREEN_CHANGED: 'WINDOW_FULLSCREEN_CHANGED'
+}

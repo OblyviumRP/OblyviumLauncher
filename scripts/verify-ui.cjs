@@ -34,6 +34,8 @@ const root = ${JSON.stringify(root)};
 const { ipcRenderer } = require('electron');
 const C = require(root + '/app/assets/js/configmanager');
 C.load();
+// O teste lê os textos em português; o idioma do sistema da máquina de teste não importa.
+if(C.getLanguage() == null) C.setLanguage('pt-BR');
 require(root + '/app/assets/js/langloader').setupLanguage();
 const api = require(root + '/app/assets/js/distromanager').DistroAPI;
 api.commonDir = C.getCommonDirectory();
@@ -47,6 +49,12 @@ const raw = { version: '1.0.0', servers: [
         { id: 'net.minecraftforge:forge:1.20.1-47.3.0', name: 'Minecraft Forge', type: 'ForgeHosted', artifact },
         { id: 'com.exemplo:obrigatorio:1.0.0', name: 'Mod obrigatório', type: 'ForgeMod', artifact },
         { id: 'com.exemplo:opcional:1.0.0', name: 'Mod opcional', type: 'ForgeMod', required: { value: false, def: true }, artifact }
+      ] },
+    { id: 'qa-principal-vulkan', name: 'Principal Vulkan', description: 'Mesmo modpack com Vulkan', icon: '', address: '127.0.0.1:9',
+      minecraftVersion: '1.20.1', version: '1.0.0', mainServer: false, autoconnect: false,
+      modules: [
+        { id: 'net.minecraftforge:forge:1.20.1-47.3.0', name: 'Minecraft Forge', type: 'ForgeHosted', artifact },
+        { id: 'com.exemplo:vulkanmod:1.0.0', name: 'VulkanMod', type: 'ForgeMod', artifact }
       ] },
     { id: 'qa-vanilla', name: 'Eventos', description: 'Sem mods', icon: '', address: '127.0.0.1:9',
       minecraftVersion: '1.21.1', version: '1.0.0', mainServer: false, autoconnect: false, modules: [] }
@@ -135,8 +143,11 @@ app.whenReady().then(async () => {
         await noOverflow('início')
         await shot('02-inicio')
 
-        // Servidores e criação de perfil.
+        // Modpacks (agrupados em Vulkan e OpenGL, com os mods no card) e criação de perfil.
         await go('#/servidores')
+        assert.match(await run('location.hash'), /#\/modpacks/, 'rota antiga leva a Modpacks')
+        assert.match(await text(), /Vulkan[\s\S]*Principal Vulkan[\s\S]*OpenGL[\s\S]*Servidor principal/i, 'grupos Vulkan e OpenGL')
+        assert.match(await text(), /VulkanMod/)
         assert.match(await text(), /Perfis de Servidor principal/)
         await click('button', 'Novo perfil')
         await type('[role=dialog] input', 'Construção')
@@ -144,12 +155,12 @@ app.whenReady().then(async () => {
         await pause(800)
         const profiles = await config('C.getProfiles ? JSON.stringify(C.getProfiles()) : ""')
         assert.match(profiles, /Construção/, 'perfil criado no config')
-        await shot('03-servidores')
+        await shot('03-modpacks')
 
         // Perfil: conteúdo, mods do pacote e configurações.
         await go('#/perfil')
         assert.match(await text(), /Construção/)
-        await click('[role=tab]', 'Mods do servidor')
+        await click('[role=tab]', 'Mods do modpack')
         assert.match(await text(), /Mod opcional/)
         assert.match(await text(), /obrigatório/)
         await click('[role=switch][aria-label="Mod opcional"]')
@@ -158,9 +169,42 @@ app.whenReady().then(async () => {
         assert.match(modConf, /"com\.exemplo:opcional":false/, 'mod opcional desligado no perfil')
         await shot('04-perfil-pacote')
         await click('[role=tab]', 'Configurações')
-        assert.match(await text(), /Memória máxima/)
+        assert.match(await text(), /Versões aceitas/)
+        assert.doesNotMatch(await text(), /Memória máxima/, 'memória saiu do perfil')
         await noOverflow('perfil')
         await shot('05-perfil-config')
+
+        // Memória global: vale para todas as chaves (modpacks e perfis).
+        await go('#/configuracoes?aba=jogo')
+        assert.match(await text(), /Memória máxima/)
+        await click('[role=slider]')
+        for(const keyCode of ['Right', 'Right']){
+            win.webContents.sendInputEvent({ type: 'keyDown', keyCode })
+            win.webContents.sendInputEvent({ type: 'keyUp', keyCode })
+            await pause(200)
+        }
+        await pause(400)
+        const globalRam = await config('C.getGlobalMaxRAM()')
+        assert.ok(globalRam != null, 'memória global salva')
+        const rams = await config('JSON.stringify(C.getJavaConfigKeys().filter(k => k.startsWith("qa-principal")).map(k => C.getMaxRAM(k)))')
+        assert.ok(JSON.parse(rams).length >= 3, 'perfis e modpacks com configuração de Java: ' + rams)
+        assert.ok(JSON.parse(rams).every(v => v === JSON.parse(rams)[0]), 'mesma memória em todos: ' + rams)
+        await shot('05b-config-jogo')
+
+        // Idioma: troca para inglês e volta.
+        await go('#/configuracoes')
+        await click('button[aria-label="Idioma"]')
+        await click('[role=option]', 'English')
+        await pause(800)
+        assert.match(await text(), /Settings/)
+        assert.match(await text(), /Hide the launcher while playing/)
+        assert.equal(await config('C.getLanguage()'), 'en')
+        await shot('05c-ingles')
+        await click('button[aria-label="Language"]')
+        await click('[role=option]', 'Português')
+        await pause(800)
+        assert.match(await text(), /Configurações/)
+
 
         // Configurações do launcher gravam no ConfigManager.
         await go('#/configuracoes')
@@ -181,11 +225,16 @@ app.whenReady().then(async () => {
             await shot(name)
         }
 
-        // Servidor sem loader: Descobrir não oferece mods.
-        await go('#/servidores')
-        await click('button', 'Selecionar')
+        // Modpack sem loader: Descobrir não oferece mods.
+        await go('#/modpacks')
+        await run(`[...document.querySelectorAll('article')].find(a => a.textContent.includes('Eventos')).querySelector('button').scrollIntoView({ block: 'center' })`)
+        const sel = await run(`(() => { const b = [...document.querySelectorAll('article')].find(a => a.textContent.includes('Eventos')).querySelectorAll('button'); const e = b[b.length - 1]; const r = e.getBoundingClientRect(); return { x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2) } })()`)
+        win.webContents.sendInputEvent({ type: 'mouseDown', button: 'left', clickCount: 1, ...sel })
+        win.webContents.sendInputEvent({ type: 'mouseUp', button: 'left', clickCount: 1, ...sel })
+        await pause(600)
         await go('#/descobrir?tipo=mod')
-        assert.match(await text(), /Servidor sem mods/)
+        assert.match(await text(), /Modpack sem mods/)
+
         assert.equal(await config('C.getSelectedServer()'), 'qa-vanilla')
 
         // Sidebar recolhida continua navegável.

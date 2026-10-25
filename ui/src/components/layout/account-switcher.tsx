@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Tooltip } from '@/components/ui/tooltip'
+import { t } from '@/i18n'
 import { cn } from '@/lib/utils'
 import { isBusy, useAccount, useLauncher } from '@/store/launcher'
 
@@ -22,15 +23,15 @@ export async function logoutAccount(id: string) {
   const acc = s.accounts.find((a) => a.id === id)
   if (!acc) return
   if (isBusy(s.launch.state) && id === s.accountId) {
-    toast.warning('Jogo aberto', { description: 'Saia da conta depois de fechar o jogo.' })
+    toast.warning(t('Jogo aberto'), { description: t('Saia da conta depois de fechar o jogo.') })
     return
   }
-  const ok = await s.confirm({ title: `Sair de ${acc.name}?`, body: 'A conta sai deste launcher. Você pode entrar de novo quando quiser.', confirm: 'Sair', tone: 'danger' })
+  const ok = await s.confirm({ title: t('Sair de {name}?', { name: acc.name }), body: t('A conta sai deste launcher. Você pode entrar de novo quando quiser.'), confirm: t('Sair'), tone: 'danger' })
   if (!ok) return
   try {
     if (await backend().logout(id)) {
       s.refreshAccounts()
-      toast(`Você saiu de ${acc.name}`)
+      toast(t('Você saiu de {name}', { name: acc.name }))
     }
   } catch (err) {
     s.showError(err, 'Não foi possível sair da conta')
@@ -46,18 +47,20 @@ export function AccountSwitcher({ collapsed }: { collapsed: boolean }) {
 
   const trigger = (
     <DropdownMenuTrigger
-      aria-label={active ? `Conta ${active.name}. Trocar conta` : 'Entrar em uma conta'}
+      aria-label={active ? t('Conta {name}. Trocar conta', { name: active.name }) : t('Entrar em uma conta')}
       className={cn(
-        'flex w-full cursor-pointer items-center gap-2.5 rounded-md border border-border bg-card text-left transition-colors hover:bg-accent data-[state=open]:border-primary-line data-[state=open]:bg-primary-soft',
-        collapsed ? 'justify-center p-1.5' : 'p-2',
+        'flex cursor-pointer items-center gap-2.5 rounded-md border border-border bg-card text-left transition-colors hover:bg-accent data-[state=open]:border-primary-line data-[state=open]:bg-primary-soft',
+        // Recolhido: um quadrado fixo, para a cabeça não esticar junto com a animação do menu.
+        collapsed ? 'mx-auto size-10 shrink-0 justify-center p-0' : 'w-full p-2',
+
       )}
     >
-      <Avatar name={active?.name ?? ''} className="size-8" />
+      <Avatar name={active?.name ?? ''} className="size-8 min-w-8" />
       {!collapsed && (
         <>
           <span className="flex min-w-0 flex-1 flex-col">
-            <span className="truncate text-sm font-semibold">{active?.name ?? 'Sem conta'}</span>
-            <span className="truncate text-2xs text-muted-foreground">{active ? `${kindLabel[active.kind]} · trocar conta` : 'Entrar'}</span>
+            <span className="truncate text-sm font-semibold">{active?.name ?? t('Sem conta')}</span>
+            <span className="truncate text-2xs text-muted-foreground">{active ? t('{kind} · trocar conta', { kind: kindLabel[active.kind] }) : t('Entrar')}</span>
           </span>
           <ChevronsUpDown className="size-4 text-muted-foreground" />
         </>
@@ -67,9 +70,9 @@ export function AccountSwitcher({ collapsed }: { collapsed: boolean }) {
 
   return (
     <DropdownMenu>
-      {collapsed ? <Tooltip content={active ? `${active.name} · trocar conta` : 'Entrar'}>{trigger}</Tooltip> : trigger}
+      {collapsed ? <Tooltip content={active ? t('{name} · trocar conta', { name: active.name }) : t('Entrar')}>{trigger}</Tooltip> : trigger}
       <DropdownMenuContent side={collapsed ? 'right' : 'top'} align={collapsed ? 'end' : 'start'} className="w-64">
-        <DropdownMenuLabel>Contas</DropdownMenuLabel>
+        <DropdownMenuLabel>{t('Contas')}</DropdownMenuLabel>
         {accounts.map((a) => (
           <DropdownMenuItem key={a.id} disabled={locked && a.id !== active?.id} onSelect={() => a.id !== active?.id && select(a.id)} className="py-2">
             <Avatar name={a.name} className="size-7" />
@@ -77,19 +80,20 @@ export function AccountSwitcher({ collapsed }: { collapsed: boolean }) {
               <span className="truncate font-medium">{a.name}</span>
               <span className="text-2xs text-muted-foreground">{kindLabel[a.kind]}</span>
             </span>
-            {a.id === active?.id && <Check className="text-success-fg" aria-label="Conta ativa" />}
+            {a.id === active?.id && <Check className="text-success-fg" aria-label={t('Conta ativa')} />}
           </DropdownMenuItem>
         ))}
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={() => navigate('/boas-vindas?adicionar=1')}>
-          <UserPlus /> Adicionar conta
+          <UserPlus /> {t('Adicionar conta')}
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => navigate('/skins')}>
-          <Shirt /> Trocar skin
+          <Shirt /> {t('Trocar skin')}
         </DropdownMenuItem>
         {active && (
           <DropdownMenuItem tone="danger" onSelect={() => logoutAccount(active.id)}>
-            <LogOut /> Sair desta conta
+            <LogOut /> {t('Sair desta conta')}
+
           </DropdownMenuItem>
         )}
       </DropdownMenuContent>
