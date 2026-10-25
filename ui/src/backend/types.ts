@@ -28,6 +28,17 @@ export type AccountInfo = { id: string; name: string; kind: 'microsoft' | 'offli
 
 export type ContentType = 'mod' | 'resourcepack' | 'shader'
 
+export type ContentFile = {
+  fileName: string
+  type: ContentType
+  enabled: boolean
+  title: string
+  projectId: string | null
+  iconUrl: string | null
+  version: string | null
+  update: { id: string; number: string } | null
+}
+
 export type PackMod = {
   id: string
   path: string[]
@@ -67,6 +78,39 @@ export type LauncherSettings = {
 }
 
 export type Article = { title: string; link: string | null; date: string | null; author: string; summary: string }
+
+export type SearchHit = {
+  id: string
+  slug: string
+  title: string
+  author: string
+  description: string
+  iconUrl: string | null
+  downloads: number
+  follows: number
+  updated: string | null
+  categories: string[]
+  installed: boolean
+}
+
+export type ProjectDetails = {
+  id: string
+  slug: string
+  title: string
+  description: string
+  bodyHtml: string
+  iconUrl: string | null
+  downloads: number
+  follows: number
+  updated: string | null
+  categories: string[]
+  gallery: { url: string; title: string | null }[]
+  license: string | null
+  sourceUrl: string | null
+  type: ContentType
+  installed: boolean
+  compatibleVersion: { id: string; number: string; date: string | null } | null
+}
 
 export type LogLine = { t: string; level: 'INFO' | 'WARN' | 'ERROR' | 'DEBUG'; msg: string }
 
@@ -158,12 +202,23 @@ export interface Backend {
   stop(): void
   verifyFiles(h: Pick<LaunchHandlers, 'onStatus' | 'onProgress'>): Promise<boolean>
 
-  // Perfil
+  // Conteúdo do perfil
+  listContent(serverId: string, profileId: string, type: ContentType): Promise<ContentFile[]>
+  setContentEnabled(serverId: string, profileId: string, type: ContentType, fileName: string, enabled: boolean): Promise<void>
+  removeContent(serverId: string, profileId: string, type: ContentType, fileName: string): Promise<void>
+  updateContent(serverId: string, profileId: string, type: ContentType, fileName: string, versionId: string): Promise<void>
+  openContentFolder(serverId: string, profileId: string, type: ContentType): void
   packMods(serverId: string, profileId: string): PackMod[]
   setPackModEnabled(serverId: string, profileId: string, path: string[], enabled: boolean): void
   screenshots(serverId: string, profileId: string): Promise<{ name: string; url: string }[]>
   latestLog(serverId: string, profileId: string): Promise<string | null>
   openGameFolder(serverId: string, profileId: string, sub?: string): void
+
+  // Modrinth
+  categories(type: ContentType): Promise<string[]>
+  search(o: { query: string; type: ContentType; categories: string[]; sort: string; offset: number }): Promise<{ hits: SearchHit[]; total: number; pageSize: number }>
+  project(idOrSlug: string): Promise<ProjectDetails>
+  install(projectId: string): Promise<void>
 
   // Configurações
   launcherSettings(): LauncherSettings

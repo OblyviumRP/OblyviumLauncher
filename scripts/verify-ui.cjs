@@ -156,20 +156,24 @@ app.whenReady().then(async () => {
         await noOverflow('início')
         await shot('02-inicio')
 
-        // Launcher exclusivo: sem Descobrir, Modpacks nem criação de perfil.
+        // Mods do Modrinth sim; modpacks e criação de perfil não.
         const nav = await run(`[...document.querySelectorAll('nav a')].map(a => a.textContent.trim()).join('|')`)
-        assert.doesNotMatch(nav, /Descobrir|Modpacks/, 'menu sem Descobrir e Modpacks: ' + nav)
-        for(const hash of ['#/descobrir', '#/modpacks', '#/servidores', '#/descobrir/abc']){
+        assert.match(nav, /Descobrir/, 'menu com Descobrir: ' + nav)
+        assert.doesNotMatch(nav, /Modpacks/, 'menu sem Modpacks: ' + nav)
+        for(const hash of ['#/modpacks', '#/servidores']){
             await go(hash)
             assert.equal(await run('location.hash'), '#/', hash + ' volta ao Início')
         }
 
-        // Perfil: só os mods opcionais da staff, capturas, logs e configurações.
+        // Perfil: conteúdo do Modrinth, mods opcionais da staff, capturas, logs e configurações.
         await go('#/perfil')
         const tabs = await run(`[...document.querySelectorAll('[role=tab]')].map(t => t.textContent.trim()).join('|')`)
-        assert.doesNotMatch(tabs, /Conteúdo/, 'sem aba de conteúdo: ' + tabs)
+        assert.match(tabs, /Conteúdo/, 'aba de conteúdo: ' + tabs)
         assert.match(tabs, /Mods do servidor/)
-        assert.doesNotMatch(await text(), /Duplicar|Novo perfil|Adicionar/, 'sem duplicar, criar ou adicionar')
+        assert.match(await text(), /Nada instalado neste perfil/, 'conteúdo vazio')
+        assert.doesNotMatch(await text(), /Duplicar|Novo perfil/, 'sem duplicar nem criar perfil')
+        await shot('03-perfil-conteudo')
+        await click('[role=tab]', 'Mods do servidor')
         assert.match(await text(), /Mod opcional/)
         assert.match(await text(), /obrigatório/)
         await click('[role=switch][aria-label="Mod opcional"]')
@@ -239,7 +243,14 @@ app.whenReady().then(async () => {
             console.log('Aviso: sem gerenciador de janelas, maximizar não foi testado.')
         }
 
+        // Descrição dos projetos do Modrinth: Markdown vira HTML sem nada executável.
+        const body = await run(`require(${JSON.stringify(root + '/app/assets/js/richtext')}).render('# Oi\\n\\n<script>alert(1)</script><a href="javascript:x">l</a>\\n\\n[ok](https://modrinth.com)')`)
+        assert.match(body, /<h1>Oi<\/h1>/)
+        assert.match(body, /href="https:\/\/modrinth\.com\/"/)
+        assert.doesNotMatch(body, /script|javascript/)
+
         for(const [hash, expected, name] of [
+            ['#/descobrir', /Descobrir/, '07-descobrir'],
             ['#/skins', /conta Microsoft/, '08-skins-offline'],
             ['#/downloads', /Downloads/, '09-downloads'],
             ['#/console', /Nenhum jogo aberto/, '10-console']
@@ -257,6 +268,9 @@ app.whenReady().then(async () => {
         assert.equal(await config('C.getSelectedServer()'), 'qa-vanilla')
         await go('#/perfil')
         assert.doesNotMatch(await run(`[...document.querySelectorAll('[role=tab]')].map(t => t.textContent).join('|')`), /Mods do servidor/, 'sem aba de mods')
+        // Servidor sem loader: Descobrir não oferece mods.
+        await go('#/descobrir?tipo=mod')
+        assert.match(await text(), /Servidor sem mods/)
 
         // Sidebar recolhida continua navegável.
         await go('#/')
