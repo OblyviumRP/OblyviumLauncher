@@ -937,7 +937,7 @@ exports.setLauncherOnPlay = function(value){
         return
     }
     config.settings.game.launcherOnPlay = value
-    // A interface antiga só conhece esconder ou não.
+    // Opção antiga, mantida em sincronia para quem volta a uma versão anterior.
     config.settings.game.hideLauncherWhilePlaying = value === 'tray'
 }
 

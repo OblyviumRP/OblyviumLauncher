@@ -9,19 +9,12 @@ compression: 'maximum'
 
 files:
   - '!{dist,.gitignore,.vscode,docs,dev-app-update.yml,.nvmrc,eslint.config.mjs}'
-  - '!scripts/verify-visual.cjs'
-  - '!app/.forja-qa.html'
-  - '!scripts/verify-mods.cjs'
   - '!scripts/publish-update.cjs'
-  - '!scripts/verify-notifications.cjs'
-  - '!app/.notifications-qa.html'
   - '!test/**'
-  - '!app/.mods-qa.html'
   # Only the built interface ships (ui/dist); its sources and tooling stay out.
-  - '!ui/{src,node_modules,public}/**'
+  - '!ui/{src,node_modules,public,scripts}/**'
   - '!ui/*.{json,ts,md,html}'
   - '!ui/.gitignore'
-  - '!scripts/preview-ui.cjs'
   - '!scripts/verify-ui.cjs'
 
 extraResources:

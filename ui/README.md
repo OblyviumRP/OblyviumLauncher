@@ -1,6 +1,6 @@
 # Nova interface do Oblyvium Launcher
 
-Interface do launcher em React. O `index.js` abre `ui/dist/index.html` quando ele existe; sem o build, ou com `OBLYVIUM_LEGACY_UI=1`, abre a interface antiga (`app/app.ejs`).
+Interface do launcher em React. O `index.js` abre `ui/dist/index.html`; sem o build, avisa para rodar `npm run ui:build`. A interface antiga (EJS e jQuery) foi removida na versão 3.
 
 A janela é a mesma de antes: `nodeIntegration`, sem `contextIsolation` e com o mesmo preload (`app/assets/js/preloader.js`). Por isso a interface chama os módulos do launcher direto, sem IPC novo.
 
@@ -28,7 +28,7 @@ src/backend/mock.ts      implementação simulada, usada no navegador
 src/store/launcher.ts    estado da tela (zustand) em cima do Backend
 ```
 
-Lógica que antes vivia presa ao DOM do `landing.js`, `uibinder.js` e `mods.js` foi separada em módulos sem DOM, com testes em `test/`:
+A lógica do launcher que não depende de tela fica em módulos sem DOM, com testes em `test/`:
 
 | Módulo | O que faz |
 |---|---|
@@ -36,8 +36,6 @@ Lógica que antes vivia presa ao DOM do `landing.js`, `uibinder.js` e `mods.js` 
 | `app/assets/js/core/distrosync.js` | mods opcionais do pacote por perfil e configuração de Java por perfil |
 | `app/assets/js/core/news.js` | RSS da distribuição em texto puro (sem HTML) |
 | `app/assets/js/core/skins.js` | skin e capa pela API de serviços do Minecraft e a biblioteca local de skins |
-
-A interface antiga continua usando o código dela; os módulos novos não mudam o comportamento dela.
 
 ## Idiomas
 

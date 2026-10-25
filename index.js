@@ -2,9 +2,8 @@ const remoteMain = require('@electron/remote/main')
 remoteMain.initialize()
 
 // Requirements
-const { app, BrowserWindow, ipcMain, Menu, shell, Tray } = require('electron')
+const { app, BrowserWindow, dialog, ipcMain, Menu, shell, Tray } = require('electron')
 const autoUpdater                       = require('electron-updater').autoUpdater
-const ejse                              = require('ejs-electron')
 const fs                                = require('fs')
 const isDev                             = require('./app/assets/js/isdev')
 const path                              = require('path')
@@ -287,20 +286,16 @@ ipcMain.on(MSFT_OPCODE.OPEN_LOGOUT, (ipcEvent, uuid, isLastAccount) => {
 // be closed automatically when the JavaScript object is garbage collected.
 let win
 
-/**
- * The page the window loads: the new interface (ui/dist, built with
- * `npm run ui:build`) when present, else the classic EJS interface.
- * OBLYVIUM_LEGACY_UI=1 forces the classic one.
- */
-function rendererEntry() {
-    const newUi = path.join(__dirname, 'ui', 'dist', 'index.html')
-    if(process.env.OBLYVIUM_LEGACY_UI !== '1' && fs.existsSync(newUi)) {
-        return newUi
-    }
-    return path.join(__dirname, 'app', 'app.ejs')
-}
+// The interface, built from ui/ with `npm run ui:build` (dist does it first).
+const RENDERER_ENTRY = path.join(__dirname, 'ui', 'dist', 'index.html')
 
 function createWindow() {
+
+    if(!fs.existsSync(RENDERER_ENTRY)) {
+        dialog.showErrorBox('Oblyvium Launcher', 'A interface não foi compilada. Rode "npm run ui:build" e abra de novo.')
+        app.quit()
+        return
+    }
 
     win = new BrowserWindow({
         width: 1100,
@@ -334,13 +329,7 @@ function createWindow() {
         win.webContents.send(WINDOW_OPCODE.FULLSCREEN_CHANGED, false)
     })
 
-    const data = {
-        bkid: Math.floor((Math.random() * fs.readdirSync(path.join(__dirname, 'app', 'assets', 'images', 'backgrounds')).length)),
-        lang: (str, placeHolders) => LangLoader.queryEJS(str, placeHolders)
-    }
-    Object.entries(data).forEach(([key, val]) => ejse.data(key, val))
-
-    const appUrl = pathToFileURL(rendererEntry()).toString()
+    const appUrl = pathToFileURL(RENDERER_ENTRY).toString()
     NavigationGuard.attach(win.webContents, () => appUrl, url => shell.openExternal(url))
     win.loadURL(appUrl)
 

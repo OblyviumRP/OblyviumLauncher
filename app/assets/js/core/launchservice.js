@@ -1,7 +1,7 @@
 /**
  * The launch pipeline without any DOM: Java check, file verification and
- * download, then the game process. Ported from scripts/landing.js so the new
- * UI (ui/) can drive it through callbacks.
+ * download, then the game process. The interface (ui/) drives it through
+ * callbacks.
  *
  * Renderer only (ConfigManager, ProfileManager and @electron/remote).
  */

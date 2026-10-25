@@ -214,7 +214,7 @@ app.whenReady().then(async () => {
         await click('button[aria-label="Quando o jogo abrir"]')
         await click('[role=option]', 'Minimizar')
         assert.equal(await config('C.getLauncherOnPlay()'), 'minimize', 'opção salva')
-        assert.equal(await config('C.getHideLauncherWhilePlaying()'), false, 'interface antiga não esconde')
+        assert.equal(await config('C.getHideLauncherWhilePlaying()'), false, 'opção antiga em sincronia')
         await shot('06-configuracoes')
 
         for(const [hash, expected, name] of [
