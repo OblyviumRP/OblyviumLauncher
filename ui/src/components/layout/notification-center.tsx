@@ -1,20 +1,20 @@
-import { Bell, BellOff, CheckCheck } from 'lucide-react'
+import { Bell, BellOff, CheckCheck, ExternalLink } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useNavigate } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import type { Notification } from '@/data/types'
+import { backend } from '@/backend'
 import { cn } from '@/lib/utils'
-import { useLauncher } from '@/store/launcher'
+import { useLauncher, type Notice } from '@/store/launcher'
 
-const toneDot: Record<Notification['tone'], string> = {
+const toneDot: Record<Notice['tone'], string> = {
   primary: 'bg-primary',
   success: 'bg-success-fg',
   warning: 'bg-warning-fg',
   danger: 'bg-danger-fg',
 }
 
-const toneLabel: Record<Notification['tone'], string> = { primary: 'Aviso', success: 'Concluído', warning: 'Atenção', danger: 'Erro' }
+const toneLabel: Record<Notice['tone'], string> = { primary: 'Aviso', success: 'Concluído', warning: 'Atenção', danger: 'Erro' }
 
 function ago(at: number) {
   const m = Math.round((Date.now() - at) / 60000)
@@ -69,7 +69,7 @@ export function NotificationCenter() {
           {items.length === 0 ? (
             <div className="flex flex-col items-center gap-2 px-4 py-8 text-center text-muted-foreground">
               <BellOff className="size-5" />
-              <span className="text-sm">Nada por aqui. Downloads, atualizações e erros aparecem nesta lista.</span>
+              <span className="text-sm">Nada por aqui. Avisos da staff, atualizações e erros aparecem nesta lista.</span>
             </div>
           ) : (
             <AnimatePresence initial={false}>
@@ -81,14 +81,20 @@ export function NotificationCenter() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, height: 0 }}
                   type="button"
-                  onClick={() => n.href && navigate(n.href)}
+                  onClick={() => (n.href ? navigate(n.href) : n.link && backend().openExternal(n.link.url))}
                   className={cn('flex w-full cursor-pointer gap-3 rounded-sm px-2 py-2 text-left hover:bg-border-2', !n.read && 'bg-primary-soft/60')}
                 >
                   <span className={cn('mt-1.5 size-2 shrink-0 rounded-full', toneDot[n.tone])} aria-hidden />
                   <span className="sr-only">{toneLabel[n.tone]}:</span>
                   <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                     <span className="text-sm font-medium">{n.title}</span>
-                    <span className="text-xs text-muted-foreground">{n.body}</span>
+                    {n.image && <img src={n.image} alt="" className="my-1 max-h-28 w-full rounded-sm object-cover" />}
+                    {n.body && <span className="whitespace-pre-line text-xs text-muted-foreground">{n.body}</span>}
+                    {n.link && (
+                      <span className="flex items-center gap-1 text-xs text-primary-light">
+                        {n.link.label} <ExternalLink className="size-3" />
+                      </span>
+                    )}
                     <span className="font-mono text-2xs text-muted-2">{ago(n.at)}</span>
                   </span>
                 </motion.button>

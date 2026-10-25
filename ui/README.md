@@ -1,65 +1,69 @@
 # Nova interface do Oblyvium Launcher
 
-Protótipo funcional da próxima interface, em React. Fica separado do launcher atual (`app/`, EJS + jQuery): nada aqui é carregado pelo `index.js` ainda, e o build do instalador ignora esta pasta.
+Interface do launcher em React. O `index.js` abre `ui/dist/index.html` quando ele existe; sem o build, ou com `OBLYVIUM_LEGACY_UI=1`, abre a interface antiga (`app/app.ejs`).
 
-Todos os dados são simulados (`src/data/mock.ts`). Login, downloads, instalação e execução do jogo são simulações em `src/store/launcher.ts`, prontas para serem trocadas por IPC.
+A janela é a mesma de antes: `nodeIntegration`, sem `contextIsolation` e com o mesmo preload (`app/assets/js/preloader.js`). Por isso a interface chama os módulos do launcher direto, sem IPC novo.
 
 ## Como rodar
 
 ```bash
 npm run ui:install     # uma vez: dependências de ui/
-npm run ui:dev         # navegador, com recarga instantânea (http://localhost:5173)
 npm run ui:build       # gera ui/dist
-npm run ui:electron    # abre ui/dist numa janela do Electron, 1100 × 700, sem moldura
+npm start              # launcher com a nova interface
+npm run ui:dev         # navegador com dados simulados (http://localhost:5173)
+npm run ui:verify      # abre ui/dist no Electron com uma distribuição falsa e percorre as telas
 ```
 
-Dentro de `ui/`: `npm run typecheck` e `npm run build`.
+No Linux sem tela: `xvfb-run -a npm run ui:verify` (como root, `npx electron --no-sandbox scripts/verify-ui.cjs`). As capturas ficam em `$TMPDIR/oblyvium-ui-qa`.
 
-## Bibliotecas
+`npm run dist` roda `ui:build` antes do `electron-builder`. O instalador leva só `ui/dist`; o código-fonte e o `node_modules` de `ui/` ficam de fora (`electron-builder.yml`). O CI instala e compila a interface nos dois jobs.
 
-| Biblioteca | Para quê |
+## Como a interface fala com o launcher
+
+```
+src/backend/types.ts     contrato (Backend) entre a interface e o launcher
+src/backend/electron.ts  implementação real: require dos módulos de app/assets/js
+src/backend/mock.ts      implementação simulada, usada no navegador
+src/store/launcher.ts    estado da tela (zustand) em cima do Backend
+```
+
+Lógica que antes vivia presa ao DOM do `landing.js`, `uibinder.js` e `mods.js` foi separada em módulos sem DOM, com testes em `test/`:
+
+| Módulo | O que faz |
 |---|---|
-| React 19 + Vite + TypeScript | base |
-| Tailwind CSS 4 | estilos, com os tokens Forja em `src/index.css` (mesmos nomes de `app/assets/css/forja.css` e `DESIGN.md`) |
-| Radix UI (`radix-ui`) | primitivos acessíveis: diálogo, menu, popover, select, abas, switch, slider, tooltip, checkbox |
-| Motion | transição entre telas, indicador deslizante do menu e das abas, cartões, progresso, botão Jogar |
-| Sonner | toasts |
-| Zustand | estado global e persistência das preferências (`localStorage`) |
-| React Router (HashRouter) | rotas que funcionam com `file://` no Electron |
-| Lucide | ícones |
+| `app/assets/js/core/launchservice.js` | Java (validar, procurar, baixar), verificar e baixar arquivos, bloquear conteúdo, abrir o jogo, logs, Discord |
+| `app/assets/js/core/distrosync.js` | mods opcionais do pacote por perfil e configuração de Java por perfil |
+| `app/assets/js/core/news.js` | RSS da distribuição em texto puro (sem HTML) |
+| `app/assets/js/core/skins.js` | skin e capa pela API de serviços do Minecraft e a biblioteca local de skins |
 
-Os componentes em `src/components/ui/` seguem a API do shadcn com o visual Forja: raio máximo de 8px, controles de 32px (44px em tela de toque), foco violeta claro.
+A interface antiga continua usando o código dela; os módulos novos não mudam o comportamento dela.
 
 ## Telas
 
 | Rota | Tela |
 |---|---|
-| `/boas-vindas` | primeiro acesso em 3 etapas (conta, ajustes, por onde começar) |
-| `/` | Início em grade bento: o cenário do topo troca com a instância escolhida |
-| `/biblioteca` | instâncias com filtro, busca, ordenação e "Nova instância" |
-| `/instancia/:id` | conteúdo (mods, resource packs, shaders, mundos), capturas, logs e configurações da instância |
-| `/descobrir`, `/descobrir/:id` | busca de modpacks com filtros e página de instalação |
-| `/skins` | skins do personagem atual com prévia 3D (arrastar gira), skins salvas, padrão e capa |
-| `/downloads` | fila com pausar, retomar, cancelar, tentar de novo e limite de banda |
-| `/console` | saída do jogo ao vivo, filtro por nível e aviso de falha com causa provável |
-| `/configuracoes` | Geral, Java e memória, Jogo, Aparência, Downloads e rede, Avançado, Atualizações, Sobre |
+| `/boas-vindas` | login Microsoft ou offline e escolha do servidor no primeiro acesso; `?adicionar=1` só adiciona conta |
+| `/` | servidor selecionado (arte da distribuição ou cenário gerado), perfil, Jogar, jogadores online, downloads, notícias do RSS |
+| `/servidores` | servidores da distribuição e perfis do servidor selecionado (criar, selecionar) |
+| `/perfil` | conteúdo do perfil (mods, resource packs, shaders, com atualizações do Modrinth), mods opcionais do servidor, capturas, `latest.log`, Java, memória, janela, renomear, duplicar, verificar arquivos, excluir |
+| `/descobrir`, `/descobrir/:id` | busca no Modrinth filtrada pela versão e loader do servidor, sem bloqueados nem mods do pacote; instala no perfil selecionado |
+| `/skins` | skin e capa da conta Microsoft com prévia 3D a partir da textura, biblioteca local de skins |
+| `/downloads` | tarefas da sessão: arquivos do jogo, Java, instalações do Modrinth, atualização do launcher |
+| `/console` | saída do jogo ao vivo, filtro por nível, aviso de falha com o crash report |
+| `/configuracoes` | Geral, Contas, Java e jogo (leva às configurações do perfil), Sobre e atualizações com as notas do changelog |
 
 Comportamentos globais:
 
 - **Menu lateral recolhível:** 240px ↔ 56px pelo botão do topo ou pela tecla `[`. Recolhido, cada ícone mostra uma tooltip. O estado fica salvo.
-- **Troca de conta:** pelo perfil no rodapé do menu, com a lista de contas, "Adicionar conta", "Trocar skin" e "Sair".
-- **Notificações:** os toasts aparecem no canto. O sino da barra de título guarda o histórico, com o contador de não lidas.
-- **Jogo aberto:** enquanto um jogo está aberto, a barra de título mostra o estado e leva ao console.
-- **Animações:** "Reduzir animações" em Configurações e `prefers-reduced-motion` desligam as animações.
+- **Perfis no menu:** os perfis do servidor selecionado ficam no menu lateral para trocar rápido.
+- **Troca de conta:** pelo botão da conta no rodapé do menu.
+- **Notificações:** o feed `notifications.json` da staff (a cada 5 minutos), atualização do launcher, conteúdo bloqueado e falhas do jogo vão para o sino da barra de título.
+- **Jogo aberto:** a barra de título mostra o estado e leva ao console. Trocar servidor, perfil ou conta fica bloqueado até o jogo fechar.
 
 ## Arte
 
-Não há capturas nem arte oficial nesta pasta. Os cenários são pixel art gerada por código (`src/components/shared/pixel-scene.tsx`), uma paleta por instância. As telas que mostram o cenário grande trazem o aviso "Arte gerada, não é uma captura do servidor". Os quadrados coloridos de mods e skins também são marcadores.
+Quando o servidor tem `background` na distribuição, o Início e o perfil usam essa imagem. Sem ela, entra a pixel art gerada por código (`src/components/shared/pixel-scene.tsx`), com o aviso "Arte gerada, não é uma captura do servidor".
 
-`app/assets/images/backgrounds/0.jpg` não foi usada: é um fundo herdado do Helios com a marca de outro projeto.
+## Segurança
 
-## Próximos passos para ligar ao launcher
-
-1. Expor no preload, via `contextBridge`, as funções que hoje ficam em `app/assets/js` (`authmanager`, `distromanager`, `processbuilder`, `configmanager`) e trocar as ações do store por essas chamadas.
-2. Trocar os dados simulados pela distribuição, pelo RSS e pelas APIs do Modrinth e do CurseForge.
-3. Carregar `ui/dist/index.html` no `index.js` atrás de uma opção e remover `ui/**` da lista de exclusão do `electron-builder.yml`. O build deve copiar só `ui/dist`, sem `ui/node_modules`.
+O build coloca uma Content-Security-Policy no `index.html` (`vite.config.ts`): só scripts locais; imagens remotas por HTTPS e das texturas da Mojang; `fetch` só para a API de skins. A descrição de projetos do Modrinth passa pelo `richtext.js` antes de entrar na página, e os links abrem no navegador.

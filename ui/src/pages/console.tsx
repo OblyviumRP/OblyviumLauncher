@@ -1,19 +1,21 @@
-import { Copy, Play, Search, Share2, Skull, Square, SquareTerminal } from 'lucide-react'
+import { Copy, FileWarning, Play, Search, Square, SquareTerminal } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router'
 import { toast } from 'sonner'
+import { backend, type LogLine } from '@/backend'
 import { EmptyState, Page } from '@/components/shared/page'
-import { InstanceIcon } from '@/components/shared/pixel-scene'
+import { ProfileIcon } from '@/components/shared/profile-icon'
+import { ServerIcon } from '@/components/shared/server-art'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Progress } from '@/components/ui/progress'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
-import { useLauncher, useSelectedInstance, type LogLine } from '@/store/launcher'
+import { useLauncher, useServer } from '@/store/launcher'
 
 const levelColor: Record<LogLine['level'], string> = { INFO: 'text-primary-light', WARN: 'text-warning-fg', ERROR: 'text-danger-fg', DEBUG: 'text-muted-2' }
+const MAX_SHOWN = 2000
 
 function useElapsed(start: number | null) {
   const [now, setNow] = useState(Date.now())
@@ -30,36 +32,37 @@ function useElapsed(start: number | null) {
 export function ConsolePage() {
   const launch = useLauncher((s) => s.launch)
   const logs = useLauncher((s) => s.logs)
-  const stop = useLauncher((s) => s.stopLaunch)
-  const start = useLauncher((s) => s.startLaunch)
-  const crash = useLauncher((s) => s.simulateCrash)
-  const inst = useLauncher((s) => s.instances.find((i) => i.id === s.launch.instanceId))
-  const selected = useSelectedInstance()
+  const stop = useLauncher((s) => s.stopGame)
+  const start = useLauncher((s) => s.launchGame)
+  const confirm = useLauncher((s) => s.confirm)
+  const server = useLauncher((s) => s.servers.find((x) => x.id === s.launch.serverId)) ?? null
+  const profile = useLauncher((s) => s.profiles.find((p) => p.id === s.launch.profileId)) ?? null
+  const selected = useServer()
   const [level, setLevel] = useState('all')
   const [q, setQ] = useState('')
   const [follow, setFollow] = useState(true)
-  const end = useRef<HTMLDivElement>(null)
-  const elapsed = useElapsed(launch.startedAt)
+  const box = useRef<HTMLDivElement>(null)
+  const elapsed = useElapsed(launch.state === 'running' ? launch.startedAt : null)
 
-  const shown = useMemo(
-    () => logs.filter((l) => (level === 'all' || l.level === level) && l.msg.toLowerCase().includes(q.toLowerCase())),
-    [logs, level, q],
-  )
+  const filtered = useMemo(() => logs.filter((l) => (level === 'all' || l.level === level) && (!q || l.msg.toLowerCase().includes(q.toLowerCase()))), [logs, level, q])
+  const shown = filtered.slice(-MAX_SHOWN)
 
   useEffect(() => {
-    if (follow) end.current?.scrollIntoView({ block: 'end' })
+    if (follow && box.current) box.current.scrollTop = box.current.scrollHeight
   }, [shown.length, follow])
 
-  if (launch.state === 'idle' || !inst)
+  if (!server || (launch.state === 'idle' && logs.length === 0))
     return (
       <Page className="max-w-3xl">
         <EmptyState
           icon={<SquareTerminal />}
           title="Nenhum jogo aberto"
           action={
-            <Button onClick={() => start(selected.id)}>
-              <Play className="fill-current" /> Jogar {selected.name}
-            </Button>
+            selected && (
+              <Button onClick={start}>
+                <Play className="fill-current" /> Jogar {selected.name}
+              </Button>
+            )
           }
         >
           Quando o Minecraft estiver rodando, a saída do jogo aparece aqui em tempo real.
@@ -69,43 +72,58 @@ export function ConsolePage() {
 
   const status =
     launch.state === 'preparing'
-      ? { text: `Preparando · ${Math.round(launch.progress)}%`, dot: 'bg-primary animate-pulse' }
+      ? { text: `${launch.status}${launch.progress != null ? ` · ${Math.round(launch.progress)}%` : ''}`, dot: 'bg-primary animate-pulse' }
       : launch.state === 'running'
         ? { text: 'Em execução', dot: 'bg-success-fg' }
-        : { text: 'Encerrado com erro', dot: 'bg-danger-fg' }
+        : launch.state === 'crashed'
+          ? { text: `Encerrado com erro (código ${launch.code ?? '?'})`, dot: 'bg-danger-fg' }
+          : { text: 'Encerrado', dot: 'bg-muted-2' }
+
+  const forceStop = async () => {
+    const ok = await confirm({ title: 'Forçar encerramento?', body: 'O Minecraft fecha na hora, sem salvar o que estiver aberto.', confirm: 'Encerrar', tone: 'danger' })
+    if (ok) stop()
+  }
 
   return (
     <div className="mx-auto flex h-full w-full max-w-[1400px] flex-col gap-3 px-6 py-5">
       <header className="flex flex-wrap items-center gap-4 rounded-lg border border-border bg-card p-3">
-        <InstanceIcon scene={inst.scene} name={inst.name} className="size-11" />
+        <ServerIcon server={server} className="size-11" />
         <div className="flex min-w-48 flex-1 flex-col gap-0.5">
-          <span className="text-base font-semibold">{inst.name}</span>
+          <span className="flex items-center gap-2 text-base font-semibold">
+            {server.name}
+            {profile && (
+              <span className="flex items-center gap-1 text-xs font-normal text-muted-foreground">
+                <ProfileIcon name={profile.icon} className="size-3.5" /> {profile.name}
+              </span>
+            )}
+          </span>
           <span className="flex items-center gap-2 text-xs text-muted-foreground">
             <span className={cn('size-2 rounded-full', status.dot)} aria-hidden />
             {status.text}
           </span>
         </div>
         <dl className="flex flex-wrap gap-5 font-mono text-2xs text-muted-foreground">
-          <div><dt className="inline">RAM </dt><dd className="inline text-foreground">{launch.state === 'running' ? `5,1 / ${inst.memoryGb} GB` : '—'}</dd></div>
-          <div><dt className="inline">Sessão </dt><dd className="inline text-foreground">{elapsed}</dd></div>
+          <div>
+            <dt className="inline">Linhas </dt>
+            <dd className="inline text-foreground">{logs.length.toLocaleString('pt-BR')}</dd>
+          </div>
+          <div>
+            <dt className="inline">Sessão </dt>
+            <dd className="inline text-foreground">{elapsed}</dd>
+          </div>
         </dl>
-        {launch.state === 'running' && (
-          <Button variant="ghost" size="sm" onClick={crash} className="text-muted-foreground">
-            <Skull /> Simular falha
+        {launch.state === 'running' ? (
+          <Button variant="destructive" onClick={forceStop}>
+            <Square className="fill-current" /> Forçar encerramento
           </Button>
-        )}
-        {launch.state === 'crashed' ? (
-          <Button onClick={() => start(inst.id)}>
+        ) : launch.state !== 'preparing' ? (
+          <Button onClick={start}>
             <Play className="fill-current" /> Jogar de novo
           </Button>
-        ) : (
-          <Button variant="destructive" onClick={stop}>
-            <Square className="fill-current" /> {launch.state === 'preparing' ? 'Cancelar' : 'Forçar encerramento'}
-          </Button>
-        )}
+        ) : null}
       </header>
 
-      {launch.state === 'preparing' && <Progress value={launch.progress} label="Preparando o jogo" />}
+      {launch.state === 'preparing' && launch.progress != null && <Progress value={launch.progress} label="Preparando o jogo" />}
 
       <div className="flex flex-wrap items-center gap-2">
         <Tabs value={level} onValueChange={setLevel} variant="pill">
@@ -125,26 +143,28 @@ export function ConsolePage() {
         <label className="flex items-center gap-2 text-xs text-muted-foreground">
           <Checkbox checked={follow} onCheckedChange={(v) => setFollow(v === true)} /> Rolagem automática
         </label>
-        <Button variant="secondary" onClick={() => toast.success('Log copiado')}>
+        <Button
+          variant="secondary"
+          disabled={logs.length === 0}
+          onClick={() => {
+            void navigator.clipboard.writeText(filtered.map((l) => l.msg).join('\n'))
+            toast.success('Log copiado')
+          }}
+        >
           <Copy /> Copiar
-        </Button>
-        <Button variant="soft" onClick={() => toast('Enviado para mclo.gs', { description: 'Link copiado.' })}>
-          <Share2 /> Compartilhar
         </Button>
       </div>
 
-      <div role="log" aria-label="Saída do jogo" className="min-h-72 flex-1 overflow-auto rounded-lg border border-border bg-sidebar p-3 font-mono text-xs leading-relaxed">
-        <AnimatePresence initial={false}>
-          {shown.map((l, i) => (
-            <motion.div key={`${i}-${l.msg}`} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} className="flex gap-3 whitespace-pre">
-              <span className="text-muted-2">{l.t}</span>
-              <span className={cn('w-12', levelColor[l.level])}>{l.level}</span>
-              <span className="text-muted-foreground">{l.msg}</span>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-        {launch.state === 'preparing' && <span className="text-muted-2">Verificando arquivos e bibliotecas…</span>}
-        <div ref={end} />
+      <div ref={box} role="log" aria-label="Saída do jogo" className="min-h-72 flex-1 overflow-auto rounded-lg border border-border bg-sidebar p-3 font-mono text-xs leading-relaxed">
+        {filtered.length > MAX_SHOWN && <div className="pb-2 text-muted-2">… {(filtered.length - MAX_SHOWN).toLocaleString('pt-BR')} linhas anteriores ocultas. Use Copiar para pegar tudo.</div>}
+        {shown.map((l, i) => (
+          <div key={i} className="flex gap-3 whitespace-pre">
+            <span className="text-muted-2">{l.t}</span>
+            <span className={cn('w-12 shrink-0', levelColor[l.level])}>{l.level}</span>
+            <span className={cn(l.level === 'ERROR' ? 'text-danger-fg' : l.level === 'WARN' ? 'text-warning-fg' : 'text-muted-foreground')}>{l.msg}</span>
+          </div>
+        ))}
+        {launch.state === 'preparing' && <span className="text-muted-2">{launch.status}</span>}
       </div>
 
       <AnimatePresence>
@@ -157,13 +177,16 @@ export function ConsolePage() {
             className="flex flex-wrap items-center gap-3 rounded-lg border border-danger-line bg-danger-soft p-3"
           >
             <div className="flex min-w-60 flex-1 flex-col gap-0.5">
-              <span className="text-sm font-semibold text-danger-fg">O jogo fechou inesperadamente (código 1)</span>
-              <span className="text-xs text-foreground">Causa provável: o mod “flywheel” está desatualizado para Create 6.0.6.</span>
+              <span className="text-sm font-semibold text-danger-fg">O jogo fechou inesperadamente (código {launch.code ?? '?'})</span>
+              <span className="text-xs text-foreground">
+                Filtre por Erros para ver a causa. Se pedir ajuda à staff, envie o crash report e o log copiado.
+              </span>
             </div>
-            <Button variant="secondary">Ver crash report</Button>
-            <Button asChild>
-              <Link to={`/instancia/${inst.id}`}>Atualizar mod</Link>
-            </Button>
+            {launch.crashReport && (
+              <Button variant="secondary" onClick={() => backend().showFile(launch.crashReport!)}>
+                <FileWarning /> Abrir crash report
+              </Button>
+            )}
           </motion.section>
         )}
       </AnimatePresence>

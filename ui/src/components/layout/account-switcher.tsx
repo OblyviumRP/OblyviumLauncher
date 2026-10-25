@@ -1,7 +1,8 @@
 import { Check, ChevronsUpDown, LogOut, Shirt, UserPlus } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
-import { Badge } from '@/components/ui/badge'
+import { backend } from '@/backend'
+import { Avatar } from '@/components/shared/avatar'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,46 +12,52 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Tooltip } from '@/components/ui/tooltip'
-import { defaultSkins, savedSkins } from '@/data/mock'
 import { cn } from '@/lib/utils'
-import { useActiveAccount, useLauncher } from '@/store/launcher'
+import { isBusy, useAccount, useLauncher } from '@/store/launcher'
 
-const allSkins = [...savedSkins, ...defaultSkins]
+const kindLabel = { microsoft: 'Microsoft', offline: 'Offline', mojang: 'Mojang' } as const
 
-export function SkinHead({ skinId, className }: { skinId?: string; className?: string }) {
-  const skin = allSkins.find((s) => s.id === skinId) ?? defaultSkins[0]
-  // Rosto 4×4 simplificado a partir das cores da skin.
-  const grid = [skin.hair, skin.hair, skin.hair, skin.hair, skin.skin, '#fff', '#fff', skin.skin, skin.skin, skin.skin, skin.skin, skin.skin, skin.skin, skin.shirt, skin.shirt, skin.skin]
-  return (
-    <span className={cn('grid shrink-0 grid-cols-4 overflow-hidden rounded-sm', className)} aria-hidden>
-      {grid.map((c, i) => (
-        <span key={i} style={{ background: c }} />
-      ))}
-    </span>
-  )
+export async function logoutAccount(id: string) {
+  const s = useLauncher.getState()
+  const acc = s.accounts.find((a) => a.id === id)
+  if (!acc) return
+  if (isBusy(s.launch.state) && id === s.accountId) {
+    toast.warning('Jogo aberto', { description: 'Saia da conta depois de fechar o jogo.' })
+    return
+  }
+  const ok = await s.confirm({ title: `Sair de ${acc.name}?`, body: 'A conta sai deste launcher. Você pode entrar de novo quando quiser.', confirm: 'Sair', tone: 'danger' })
+  if (!ok) return
+  try {
+    if (await backend().logout(id)) {
+      s.refreshAccounts()
+      toast(`Você saiu de ${acc.name}`)
+    }
+  } catch (err) {
+    s.showError(err, 'Não foi possível sair da conta')
+  }
 }
 
 export function AccountSwitcher({ collapsed }: { collapsed: boolean }) {
   const navigate = useNavigate()
   const accounts = useLauncher((s) => s.accounts)
-  const skinByAccount = useLauncher((s) => s.skinByAccount)
-  const setActive = useLauncher((s) => s.setActiveAccount)
-  const active = useActiveAccount()
+  const select = useLauncher((s) => s.selectAccount)
+  const locked = useLauncher((s) => isBusy(s.launch.state))
+  const active = useAccount()
 
   const trigger = (
     <DropdownMenuTrigger
-      aria-label={`Conta ${active.name}. Trocar conta`}
+      aria-label={active ? `Conta ${active.name}. Trocar conta` : 'Entrar em uma conta'}
       className={cn(
         'flex w-full cursor-pointer items-center gap-2.5 rounded-md border border-border bg-card text-left transition-colors hover:bg-accent data-[state=open]:border-primary-line data-[state=open]:bg-primary-soft',
         collapsed ? 'justify-center p-1.5' : 'p-2',
       )}
     >
-      <SkinHead skinId={skinByAccount[active.id]} className="size-8" />
+      <Avatar name={active?.name ?? ''} className="size-8" />
       {!collapsed && (
         <>
           <span className="flex min-w-0 flex-1 flex-col">
-            <span className="truncate text-sm font-semibold">{active.name}</span>
-            <span className="truncate text-2xs text-muted-foreground">{active.kind === 'microsoft' ? 'Microsoft' : 'Offline'} · trocar conta</span>
+            <span className="truncate text-sm font-semibold">{active?.name ?? 'Sem conta'}</span>
+            <span className="truncate text-2xs text-muted-foreground">{active ? `${kindLabel[active.kind]} · trocar conta` : 'Entrar'}</span>
           </span>
           <ChevronsUpDown className="size-4 text-muted-foreground" />
         </>
@@ -60,30 +67,31 @@ export function AccountSwitcher({ collapsed }: { collapsed: boolean }) {
 
   return (
     <DropdownMenu>
-      {collapsed ? <Tooltip content={`${active.name} · trocar conta`}>{trigger}</Tooltip> : trigger}
+      {collapsed ? <Tooltip content={active ? `${active.name} · trocar conta` : 'Entrar'}>{trigger}</Tooltip> : trigger}
       <DropdownMenuContent side={collapsed ? 'right' : 'top'} align={collapsed ? 'end' : 'start'} className="w-64">
         <DropdownMenuLabel>Contas</DropdownMenuLabel>
         {accounts.map((a) => (
-          <DropdownMenuItem key={a.id} onSelect={() => setActive(a.id)} className="py-2">
-            <SkinHead skinId={skinByAccount[a.id]} className="size-7" />
+          <DropdownMenuItem key={a.id} disabled={locked && a.id !== active?.id} onSelect={() => a.id !== active?.id && select(a.id)} className="py-2">
+            <Avatar name={a.name} className="size-7" />
             <span className="flex min-w-0 flex-1 flex-col">
               <span className="truncate font-medium">{a.name}</span>
-              <span className="text-2xs text-muted-foreground">{a.kind === 'microsoft' ? 'Microsoft' : 'Offline'}</span>
+              <span className="text-2xs text-muted-foreground">{kindLabel[a.kind]}</span>
             </span>
-            {a.expired && <Badge tone="warning">expirada</Badge>}
-            {a.id === active.id && <Check className="text-success-fg" aria-label="Conta ativa" />}
+            {a.id === active?.id && <Check className="text-success-fg" aria-label="Conta ativa" />}
           </DropdownMenuItem>
         ))}
         <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={() => navigate('/boas-vindas')}>
+        <DropdownMenuItem onSelect={() => navigate('/boas-vindas?adicionar=1')}>
           <UserPlus /> Adicionar conta
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => navigate('/skins')}>
           <Shirt /> Trocar skin
         </DropdownMenuItem>
-        <DropdownMenuItem tone="danger" onSelect={() => toast(`Você saiu de ${active.name}`, { description: 'Simulação: nenhuma conta foi removida.' })}>
-          <LogOut /> Sair desta conta
-        </DropdownMenuItem>
+        {active && (
+          <DropdownMenuItem tone="danger" onSelect={() => logoutAccount(active.id)}>
+            <LogOut /> Sair desta conta
+          </DropdownMenuItem>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   )

@@ -1,5 +1,5 @@
 import { memo, useMemo } from 'react'
-import type { SceneKey } from '@/data/types'
+import type { SceneKey } from '@/backend'
 import { cn } from '@/lib/utils'
 
 // Cenário noturno em pixel art gerado por código: substitui capturas que não temos.

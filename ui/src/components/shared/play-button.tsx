@@ -1,32 +1,39 @@
 import { Loader2, Play, Square } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
-import type { Instance } from '@/data/types'
 import { cn } from '@/lib/utils'
-import { useLauncher } from '@/store/launcher'
+import { useLauncher, useServer } from '@/store/launcher'
 
-/** Botão Jogar com três estados animados: pronto → preparando (progresso no próprio botão) → jogando. */
-export function PlayButton({ instance, size = 'lg', className }: { instance: Instance; size?: 'lg' | 'md'; className?: string }) {
+/** Botão Jogar do servidor e perfil selecionados: pronto → preparando (progresso no botão) → jogando. */
+export function PlayButton({ size = 'lg', className }: { size?: 'lg' | 'md'; className?: string }) {
   const launch = useLauncher((s) => s.launch)
-  const start = useLauncher((s) => s.startLaunch)
-  const stop = useLauncher((s) => s.stopLaunch)
-  const mine = launch.instanceId === instance.id
-  const busyOther = !mine && (launch.state === 'preparing' || launch.state === 'running')
-  const state = mine ? launch.state : 'idle'
+  const start = useLauncher((s) => s.launchGame)
+  const stop = useLauncher((s) => s.stopGame)
+  const confirm = useLauncher((s) => s.confirm)
+  const server = useServer()
+  const state = launch.state
+  const name = server?.name ?? 'o jogo'
 
-  const label = state === 'preparing' ? `${Math.round(launch.progress)}%` : state === 'running' ? 'Encerrar' : 'Jogar'
-  const onClick = () => (state === 'idle' || state === 'crashed' ? start(instance.id) : stop())
+  const pct = launch.progress != null ? `${Math.round(launch.progress)}%` : null
+  const label = state === 'preparing' ? (pct ?? 'Abrindo') : state === 'running' ? 'Encerrar' : 'Jogar'
+  const onClick = async () => {
+    if (state === 'idle' || state === 'crashed') return start()
+    if (state === 'running') {
+      const ok = await confirm({ title: 'Encerrar o jogo?', body: 'O Minecraft fecha na hora, sem salvar o que estiver aberto. Prefira sair pelo menu do jogo.', confirm: 'Encerrar', tone: 'danger' })
+      if (ok) stop()
+    }
+  }
 
   return (
     <motion.button
       type="button"
       onClick={onClick}
-      disabled={busyOther}
-      whileHover={{ scale: busyOther ? 1 : 1.02 }}
+      disabled={state === 'preparing' || !server}
+      whileHover={{ scale: state === 'preparing' ? 1 : 1.02 }}
       whileTap={{ scale: 0.97 }}
-      aria-label={state === 'preparing' ? `Preparando ${instance.name}, ${Math.round(launch.progress)}%. Cancelar` : `${label} ${instance.name}`}
-      title={busyOther ? 'Outra instância já está aberta' : undefined}
+      aria-label={state === 'preparing' ? `Preparando ${name}${pct ? `, ${pct}` : ''}` : `${label} ${name}`}
+      title={state === 'preparing' ? launch.status : undefined}
       className={cn(
-        'relative isolate inline-flex cursor-pointer items-center justify-center gap-2.5 overflow-hidden rounded-md font-semibold uppercase tracking-[0.12em] text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50',
+        'relative isolate inline-flex cursor-pointer items-center justify-center gap-2.5 overflow-hidden rounded-md font-semibold uppercase tracking-[0.12em] text-white transition-colors disabled:cursor-progress',
         size === 'lg' ? 'h-12 min-w-44 px-7 text-base' : 'h-9 min-w-28 px-4 text-sm',
         state === 'running' ? 'border border-danger-line bg-danger-soft text-danger-fg' : 'bg-primary-fill hover:bg-primary-hover',
         className,
@@ -37,8 +44,8 @@ export function PlayButton({ instance, size = 'lg', className }: { instance: Ins
           aria-hidden
           className="absolute inset-y-0 left-0 -z-10 bg-primary-hover"
           initial={{ width: 0 }}
-          animate={{ width: `${launch.progress}%` }}
-          transition={{ ease: 'linear', duration: 0.4 }}
+          animate={{ width: `${launch.progress ?? 100}%`, opacity: launch.progress == null ? [0.4, 0.8, 0.4] : 1 }}
+          transition={launch.progress == null ? { opacity: { repeat: Infinity, duration: 1.4 } } : { ease: 'linear', duration: 0.4 }}
         />
       )}
       <AnimatePresence mode="popLayout" initial={false}>
