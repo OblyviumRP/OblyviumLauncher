@@ -1,10 +1,10 @@
-import { ArrowLeft, Copy, FolderOpen, Image, Package, Pencil, RefreshCw, Trash2, Wrench } from 'lucide-react'
-import { motion } from 'motion/react'
+import { ArrowLeft, Copy, FolderOpen, Image, Package, Pencil, Plus, RefreshCw, Search, Trash2, Wrench } from 'lucide-react'
+import { AnimatePresence, motion } from 'motion/react'
 import { Dialog as DialogPrimitive } from 'radix-ui'
 import { useState } from 'react'
 import { Link, Navigate, useSearchParams } from 'react-router'
 import { toast } from 'sonner'
-import { backend, type PackMod, type ProfileInfo } from '@/backend'
+import { backend, type ContentFile, type ContentType, type PackMod, type ProfileInfo } from '@/backend'
 import { Card, EmptyState } from '@/components/shared/page'
 import { PlayButton } from '@/components/shared/play-button'
 import { ProfileIcon, profileIcons, profileLabel } from '@/components/shared/profile-icon'
@@ -16,14 +16,188 @@ import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Tooltip } from '@/components/ui/tooltip'
-import { t } from '@/i18n'
+import { t, tn } from '@/i18n'
 import { useAsync } from '@/lib/use-async'
 import { cn } from '@/lib/utils'
 import { isBusy, useLauncher, useProfile, useServer } from '@/store/launcher'
 
-// O launcher é exclusivo do Oblyvium: o jogador não instala mods, resource packs nem
-// shaders por aqui, e não cria perfis. Do servidor, só liga ou desliga o que a staff
-// marcou como opcional.
+// O launcher é exclusivo do Oblyvium: não cria perfis nem instala modpacks. O jogador
+// pode adicionar mods, resource packs e shaders do Modrinth ao perfil (o que a staff
+// bloquear é desligado antes de abrir o jogo) e ligar ou desligar os mods opcionais do servidor.
+
+const kinds: { id: ContentType; label: string }[] = [
+  { id: 'mod', label: 'Mods' },
+  { id: 'resourcepack', label: 'Resource packs' },
+  { id: 'shader', label: 'Shaders' },
+]
+
+function ContentIcon({ file }: { file: ContentFile }) {
+  const [failed, setFailed] = useState(false)
+  if (file.iconUrl && !failed) return <img src={file.iconUrl} alt="" onError={() => setFailed(true)} className="size-8 shrink-0 rounded-md bg-surface-2 object-cover" />
+  return (
+    <span className="grid size-8 shrink-0 place-items-center rounded-md bg-surface-2 text-muted-2" aria-hidden>
+      <Package className="size-4" />
+    </span>
+  )
+}
+
+function ContentTable({ serverId, profileId, type, loaderless }: { serverId: string; profileId: string; type: ContentType; loaderless: boolean }) {
+  const rev = useLauncher((s) => s.contentRev)
+  const showError = useLauncher((s) => s.showError)
+  const confirm = useLauncher((s) => s.confirm)
+  const locked = useLauncher((s) => isBusy(s.launch.state))
+  const { data, loading, reload } = useAsync(() => backend().listContent(serverId, profileId, type), [serverId, profileId, type, rev])
+  const [q, setQ] = useState('')
+  const [working, setWorking] = useState<string | null>(null)
+  const items = data ?? []
+  const shown = items.filter((i) => i.title.toLowerCase().includes(q.toLowerCase()) || i.fileName.toLowerCase().includes(q.toLowerCase()))
+  const updates = items.filter((i) => i.update)
+
+  const run = async (key: string, fn: () => Promise<void>, ok?: string) => {
+    setWorking(key)
+    try {
+      await fn()
+      if (ok) toast.success(ok)
+    } catch (err) {
+      showError(err)
+    } finally {
+      setWorking(null)
+      reload()
+    }
+  }
+
+  const updateAll = () =>
+    run('*', async () => {
+      for (const f of updates) await backend().updateContent(serverId, profileId, type, f.fileName, f.update!.id)
+    }, tn(updates.length, '{n} item atualizado', '{n} itens atualizados'))
+
+  const remove = async (f: ContentFile) => {
+    const ok = await confirm({ title: t('Remover {name}?', { name: f.title }), body: t('O arquivo vai para a lixeira do sistema.'), confirm: t('Remover'), tone: 'danger' })
+    if (ok) run(f.fileName, () => backend().removeContent(serverId, profileId, type, f.fileName), t('{name} removido', { name: f.title }))
+  }
+
+  if (type === 'mod' && loaderless) {
+    return (
+      <EmptyState icon={<Package />} title={t('Servidor sem mods')}>
+        {t('Este servidor roda Minecraft sem loader, então não aceita mods. Resource packs e shaders continuam disponíveis.')}
+      </EmptyState>
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="relative">
+          <span className="sr-only">{t('Filtrar')}</span>
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-2" />
+          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('Filtrar…')} className="w-60 pl-8" />
+        </label>
+        <span className="font-mono text-2xs text-muted-2">
+          {t('{on} de {n} ativos', { on: items.filter((i) => i.enabled).length, n: items.length })}
+        </span>
+        <div className="flex-1" />
+        <Tooltip content={t('Abrir pasta')} side="top">
+          <Button variant="secondary" size="icon" aria-label={t('Abrir pasta')} onClick={() => backend().openContentFolder(serverId, profileId, type)}>
+            <FolderOpen />
+          </Button>
+        </Tooltip>
+        {updates.length > 0 && (
+          <Button variant="secondary" onClick={updateAll} disabled={working != null || locked} className="border-warning-line text-warning-fg">
+            <RefreshCw className={cn(working === '*' && 'animate-spin')} /> {t('Atualizar tudo ({n})', { n: updates.length })}
+          </Button>
+        )}
+        <Button asChild>
+          <Link to={`/descobrir?tipo=${type}`}>
+            <Plus /> {t('Adicionar')}
+          </Link>
+        </Button>
+      </div>
+      <Card className="overflow-x-auto">
+        <table className="w-full min-w-[600px] text-sm">
+          <thead className="bg-surface-2 font-mono text-2xs uppercase tracking-wider text-muted-2">
+            <tr>
+              <th className="w-14 px-3 py-2 text-left font-medium">{type === 'shader' ? t('Em uso') : t('Ativo')}</th>
+              <th className="px-3 py-2 text-left font-medium">{t('Nome')}</th>
+              <th className="px-3 py-2 text-left font-medium">{t('Versão')}</th>
+              <th className="w-24 px-3 py-2 text-right font-medium">{t('Ações')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <AnimatePresence initial={false}>
+              {shown.map((f) => (
+                <motion.tr key={f.fileName} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, x: 24 }} className={cn('border-t border-border', !f.enabled && 'opacity-60')}>
+                  <td className="px-3 py-2">
+                    <Switch
+                      checked={f.enabled}
+                      disabled={working != null || locked}
+                      aria-label={type === 'shader' ? t('Usar {name}', { name: f.title }) : t('Ativar {name}', { name: f.title })}
+                      onCheckedChange={(v) => run(f.fileName, () => backend().setContentEnabled(serverId, profileId, type, f.fileName, v))}
+                    />
+                  </td>
+                  <td className="px-3 py-2">
+                    <div className="flex items-center gap-2.5">
+                      <ContentIcon file={f} />
+                      <div className="flex min-w-0 flex-col">
+                        {f.projectId ? (
+                          <Link to={`/descobrir/${f.projectId}`} className="truncate font-medium hover:underline">
+                            {f.title}
+                          </Link>
+                        ) : (
+                          <span className="truncate font-medium">{f.title}</span>
+                        )}
+                        <span className="truncate font-mono text-2xs text-muted-2">{f.fileName}</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-3 py-2 font-mono text-xs">
+                    {f.version ?? '—'}
+                    {f.update && <span className="ml-2 text-warning-fg">→ {f.update.number}</span>}
+                  </td>
+                  <td className="px-3 py-2">
+                    <div className="flex justify-end gap-1">
+                      {f.update && (
+                        <Tooltip content={t('Atualizar para {v}', { v: f.update.number })} side="top">
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            disabled={working != null || locked}
+                            aria-label={t('Atualizar {name}', { name: f.title })}
+                            onClick={() => run(f.fileName, () => backend().updateContent(serverId, profileId, type, f.fileName, f.update!.id), t('{name} atualizado', { name: f.title }))}
+                          >
+                            <RefreshCw className={cn(working === f.fileName && 'animate-spin')} />
+                          </Button>
+                        </Tooltip>
+                      )}
+                      <Tooltip content={t('Remover')} side="top">
+                        <Button variant="ghost" size="icon-sm" disabled={working != null || locked} aria-label={t('Remover {name}', { name: f.title })} className="text-danger-fg" onClick={() => remove(f)}>
+                          <Trash2 />
+                        </Button>
+                      </Tooltip>
+                    </div>
+                  </td>
+                </motion.tr>
+              ))}
+            </AnimatePresence>
+          </tbody>
+        </table>
+        {loading && items.length === 0 ? (
+          <div className="flex flex-col gap-2 p-3" aria-label={t('Carregando')}>
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="h-10 animate-pulse rounded-md bg-surface-2" />
+            ))}
+          </div>
+        ) : (
+          shown.length === 0 && (
+            <p className="px-4 py-8 text-center text-sm text-muted-foreground">
+              {items.length === 0 ? t('Nada instalado neste perfil ainda. Use Adicionar para procurar no Modrinth.') : t('Nada encontrado.')}
+            </p>
+          )
+        )}
+      </Card>
+      {type === 'mod' && <p className="text-xs text-muted-foreground">{t('Mods que a staff bloquear são desativados sozinhos antes de abrir o jogo.')}</p>}
+    </div>
+  )
+}
 
 function PackModRow({ mod, depth, parentOn, onToggle, locked }: { mod: PackMod; depth: number; parentOn: boolean; onToggle: (m: PackMod, v: boolean) => void; locked: boolean }) {
   const on = mod.enabled && parentOn
@@ -307,7 +481,7 @@ function ProfileManage({ serverId, profile }: { serverId: string; profile: Profi
   return (
     <Card className="flex flex-col gap-4 p-4">
       <h3 className="text-sm font-semibold">{t('Perfil')}</h3>
-      <p className="text-xs text-muted-foreground">{t('O perfil guarda os mundos, capturas e configurações do jogo. Os arquivos do servidor são conferidos sempre que você joga.')}</p>
+      <p className="text-xs text-muted-foreground">{t('O perfil guarda os mundos, mods extras, resource packs, shaders e configurações do jogo. Os arquivos do servidor são conferidos sempre que você joga.')}</p>
       <div className="flex flex-wrap gap-2">
         <Button variant="secondary" onClick={() => setEditing(true)} disabled={locked}>
           <Pencil /> {t('Renomear')}
@@ -343,10 +517,12 @@ export function ProfilePage() {
   const server = useServer()
   const profile = useProfile()
   const [params, setParams] = useSearchParams()
+  const [kind, setKind] = useState<ContentType>((params.get('tipo') as ContentType) ?? 'mod')
 
   if (!server || !profile) return <Navigate to="/" replace />
   const hasPack = server.packModCount > 0
-  const tab = params.get('aba') ?? (hasPack ? 'pacote' : 'capturas')
+  const tab = params.get('aba') ?? 'conteudo'
+  const loaderless = server.loader === 'Vanilla'
 
   return (
     <div className="flex flex-col">
@@ -386,6 +562,7 @@ export function ProfilePage() {
 
         <Tabs value={tab} onValueChange={(v) => setParams({ aba: v }, { replace: true })}>
           <TabsList aria-label={t('Seções do perfil')}>
+            <TabsTrigger value="conteudo">{t('Conteúdo')}</TabsTrigger>
             {hasPack && (
               <TabsTrigger value="pacote">
                 {t('Mods do servidor')} <span className="font-mono text-2xs opacity-70">{server.packModCount}</span>
@@ -395,6 +572,19 @@ export function ProfilePage() {
             <TabsTrigger value="logs">{t('Logs')}</TabsTrigger>
             <TabsTrigger value="config">{t('Configurações')}</TabsTrigger>
           </TabsList>
+          <TabsContent value="conteudo" className="flex flex-col gap-3 pt-4">
+            <Tabs value={kind} onValueChange={(v) => setKind(v as ContentType)} variant="pill">
+              <TabsList aria-label={t('Tipo de conteúdo')}>
+                {kinds.map((k) => (
+                  <TabsTrigger key={k.id} value={k.id}>
+                    {t(k.label)}
+
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+            <ContentTable key={`${profile.id}-${kind}`} serverId={server.id} profileId={profile.id} type={kind} loaderless={loaderless} />
+          </TabsContent>
           {hasPack && (
             <TabsContent value="pacote" className="pt-4">
               <PackMods key={profile.id} serverId={server.id} profileId={profile.id} />
