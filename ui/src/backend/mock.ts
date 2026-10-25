@@ -159,7 +159,7 @@ function key(serverId: string, profileId: string) {
 export function createMockBackend(): Backend {
   return {
     kind: 'mock',
-    appVersion: '2.4.0',
+    appVersion: '3.0.0',
     isDev: true,
 
     async boot() {
