@@ -45,11 +45,11 @@ Mensagens que vêm do launcher (status do `en_US.toml` e erros das skins) passam
 
 ## Configuração do jogo
 
-Memória máxima, tamanho da janela e tela cheia do jogo valem para todos os modpacks e perfis (Configurações → Jogo). `app/assets/js/core/gamesettings.js` copia esses valores para a configuração de cada modpack e perfil, que é o que o `ProcessBuilder` lê. A memória respeita o mínimo de cada modpack. O Java continua por modpack, porque cada versão do Minecraft pede o seu.
+Memória máxima, tamanho da janela e tela cheia do jogo valem para todos os servidores e perfis (Configurações → Jogo). `app/assets/js/core/gamesettings.js` copia esses valores para a configuração de cada servidor e perfil, que é o que o `ProcessBuilder` lê. A memória respeita o mínimo de cada servidor. O Java continua por servidor, porque cada versão do Minecraft pede o seu.
 
-## Tela cheia do launcher
+## Janela do launcher
 
-A janela tem tamanho fixo (1100 × 700). F11, o botão da barra de título ou Configurações → Geral → "Launcher em tela cheia" (que também vale para as próximas aberturas) liberam o limite enquanto durar a tela cheia (`WINDOW_OPCODE` em `index.js`).
+Funciona como uma janela comum do Windows: abre com 1100 × 700 (o tamanho mínimo), pode ser redimensionada, e maximiza e restaura pelo botão da barra de título, pelo duplo clique na barra ou pelo Aero Snap. Se fechar maximizada, abre maximizada (`settings.launcher.maximized`). Os botões chamam `WINDOW_OPCODE` em `index.js`. Não há tela cheia; a antiga opção `settings.launcher.fullscreen` é ignorada.
 
 ## Telas
 
@@ -58,12 +58,12 @@ O launcher é exclusivo do Oblyvium: o jogador não instala mods, resource packs
 | Rota | Tela |
 |---|---|
 | `/boas-vindas` | login Microsoft ou offline e escolha do servidor no primeiro acesso; `?adicionar=1` só adiciona conta |
-| `/` | arte do servidor com transição em pixels, nome, Jogar, ficha do servidor (jogadores, tempo de resposta, endereço, versão, renderizador Vulkan/OpenGL, pacote), notícias e outros servidores para trocar |
+| `/` | arte do servidor com transição em pixels, nome, Jogar, ficha do servidor (jogadores, tempo de resposta, endereço, versão, renderizador Vulkan/OpenGL, pacote), notícias em destaque (a mais recente com resumo) e lista compacta dos outros servidores |
 | `/perfil` | mods do servidor (só os opcionais da staff podem ser desligados), capturas, `latest.log`, Java do servidor, renomear, verificar arquivos e excluir perfis antigos |
 | `/skins` | skin e capa da conta Microsoft com prévia 3D a partir da textura, biblioteca local de skins |
 | `/downloads` | tarefas da sessão: arquivos do jogo, Java, atualização do launcher |
 | `/console` | saída do jogo ao vivo, filtro por nível, rolagem automática que pausa ao rolar para cima, aviso de falha com o crash report |
-| `/configuracoes` | Geral (idioma, tela cheia, o que fazer ao abrir o jogo), Jogo (memória e janela globais), Contas, Sobre e atualizações |
+| `/configuracoes` | Geral (idioma, o que fazer ao abrir o jogo), Jogo (memória e janela globais), Contas, Sobre e atualizações |
 
 Endereços antigos (`/descobrir`, `/modpacks`, `/servidores`) voltam ao Início.
 
