@@ -77,6 +77,9 @@ export function DiscoverPage() {
   const server = useServer()
   const profile = useProfile()
   const rev = useLauncher((s) => s.contentRev)
+  const servers = useLauncher((s) => s.servers)
+  const profiles = useLauncher((s) => s.profiles)
+  const selectServer = useLauncher((s) => s.selectServer)
   const [params, setParams] = useSearchParams()
   const type = ((params.get('tipo') as ContentType) || 'mod') as ContentType
   const [q, setQ] = useState('')
@@ -105,12 +108,22 @@ export function DiscoverPage() {
         title={t('Descobrir')}
         description={
           server && profile ? (
-            <span className="flex flex-wrap items-center gap-1.5">
-              {t('Do Modrinth, só o que é compatível com {name} ({loader} {mc}). Instala no perfil', { name: server.name, loader: server.loader === 'Vanilla' ? 'Vanilla' : server.loader, mc: server.mcVersion })}
-              <span className="inline-flex items-center gap-1 font-medium text-foreground">
-                <ProfileIcon name={profile.icon} className="size-3.5 text-primary-light" />
-                {profileLabel(profile)}
-              </span>
+            // A busca e a instalação valem para o modpack oficial escolhido aqui (o mesmo do Início).
+            <span className="flex flex-wrap items-center gap-2">
+              {t('Do Modrinth, só o que é compatível com o modpack oficial. Instalar em')}
+              <Select
+                aria-label={t('Modpack oficial')}
+                value={server.id}
+                onValueChange={selectServer}
+                className="h-8 min-w-56 text-foreground"
+                options={servers.map((s) => ({ value: s.id, label: `${s.name} · ${s.loader === 'Vanilla' ? 'Vanilla' : s.loader} ${s.mcVersion}` }))}
+              />
+              {profiles.length > 1 && (
+                <span className="inline-flex items-center gap-1 font-medium text-foreground">
+                  <ProfileIcon name={profile.icon} className="size-3.5 text-primary-light" />
+                  {profileLabel(profile)}
+                </span>
+              )}
             </span>
           ) : undefined
         }
