@@ -44,7 +44,7 @@ function Row({ title, description, children, htmlFor }: { title: string; descrip
   )
 }
 
-type BoolKey = 'discordPresence' | 'allowPrerelease' | 'autoConnect' | 'launcherFullscreen'
+type BoolKey = 'discordPresence' | 'allowPrerelease' | 'autoConnect'
 
 // Rótulos em português; traduzidos na hora de mostrar.
 const onPlayOptions: { value: LauncherSettings['launcherOnPlay']; label: string; hint: string }[] = [
@@ -265,7 +265,6 @@ export function SettingsPage() {
             <Row title={t('Idioma')} description={t('O launcher reinicia a tela ao trocar.')}>
               <Select aria-label={t('Idioma')} value={lang} onValueChange={(v) => changeLang(v as Lang)} options={LANGS.map((l) => ({ value: l.id, label: l.label }))} />
             </Row>
-            <SwitchRow k="launcherFullscreen" title={t('Launcher em tela cheia')} description={t('Abre o launcher ocupando a tela toda. F11 liga e desliga a qualquer momento.')} settings={settings} onChange={bump} />
             <Row title={t('Quando o jogo abrir')} description={t(onPlayOptions.find((o) => o.value === settings.launcherOnPlay)!.hint)}>
               <Select
                 aria-label={t('Quando o jogo abrir')}

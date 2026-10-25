@@ -85,7 +85,6 @@ const settings: LauncherSettings = {
   allowPrerelease: false,
   autoConnect: true,
   launcherOnPlay: 'tray',
-  launcherFullscreen: false,
   dataDirectory: '~/.oblyviumlauncher',
 }
 const game: GameSettings = { maxRamGB: 6, ramMinGB: 3, ramMaxGB: 12, ramRecommendedGB: 6, systemRamGB: 16, width: 1280, height: 720, fullscreen: false }
@@ -124,6 +123,8 @@ let skin: SkinProfile = { skin: null, capes: [{ id: 'c1', alias: 'Migrator', url
 const library: LibrarySkin[] = []
 
 let running: { stop: () => void } | null = null
+let maximized = false
+const maximizedListeners: ((maximized: boolean) => void)[] = []
 
 function key(serverId: string, profileId: string) {
   return profileId === 'padrao' ? serverId : `${serverId}@${profileId}`
@@ -324,12 +325,12 @@ export function createMockBackend(): Backend {
     openExternal(url) {
       window.open(url, '_blank', 'noopener')
     },
-    setWindowFullscreen(on) {
-      if (on) void document.documentElement.requestFullscreen?.().catch(() => {})
-      else if (document.fullscreenElement) void document.exitFullscreen()
+    toggleMaximize() {
+      maximized = !maximized
+      maximizedListeners.forEach((cb) => cb(maximized))
     },
-    onWindowFullscreen(cb) {
-      document.addEventListener('fullscreenchange', () => cb(document.fullscreenElement != null))
+    onWindowMaximized(cb) {
+      maximizedListeners.push(cb)
     },
     showFile() {},
     windowMinimize() {},

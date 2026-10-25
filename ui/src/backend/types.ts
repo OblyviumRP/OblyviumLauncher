@@ -63,7 +63,6 @@ export type LauncherSettings = {
   autoConnect: boolean
   /** O que o launcher faz quando o jogo abre. */
   launcherOnPlay: 'tray' | 'minimize' | 'keep'
-  launcherFullscreen: boolean
   dataDirectory: string
 }
 
@@ -205,8 +204,9 @@ export interface Backend {
   changelog(): Promise<ChangelogRelease | null>
   openExternal(url: string): void
   showFile(path: string): void
-  setWindowFullscreen(on: boolean): void
-  onWindowFullscreen(cb: (on: boolean) => void): void
+  /** Maximiza ou restaura a janela, como o botão do Windows. */
+  toggleMaximize(): void
+  onWindowMaximized(cb: (maximized: boolean) => void): void
   windowMinimize(): void
   windowClose(): void
 }

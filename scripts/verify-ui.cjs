@@ -73,10 +73,17 @@ const errors = []
 ipcMain.on('distributionIndexDone', () => {})
 ipcMain.on('autoUpdateAction', () => {})
 ipcMain.handle('TRASH_ITEM', async () => ({ result: false }))
+// Mesmas ligações de janela do index.js (maximizar e restaurar).
+let mainWindow = null
+ipcMain.on('WINDOW_TOGGLE_MAXIMIZE', () => mainWindow.isMaximized() ? mainWindow.unmaximize() : mainWindow.maximize())
+ipcMain.on('WINDOW_MAXIMIZE', () => mainWindow.maximize())
 
 app.whenReady().then(async () => {
     const win = new BrowserWindow({ width: 1100, height: 700, frame: false, show: true, webPreferences: { nodeIntegration: true, contextIsolation: false, backgroundThrottling: false, preload } })
     remoteMain.enable(win.webContents)
+    mainWindow = win
+    win.on('maximize', () => win.webContents.send('WINDOW_MAXIMIZED_CHANGED', true))
+    win.on('unmaximize', () => win.webContents.send('WINDOW_MAXIMIZED_CHANGED', false))
     win.webContents.on('console-message', event => {
         if(event.level === 'error'){
             console.error('Renderer:', event.message)
@@ -216,6 +223,21 @@ app.whenReady().then(async () => {
         assert.equal(await config('C.getLauncherOnPlay()'), 'minimize', 'opção salva')
         assert.equal(await config('C.getHideLauncherWhilePlaying()'), false, 'opção antiga em sincronia')
         await shot('06-configuracoes')
+
+        // Janela: botão da barra de título maximiza e restaura (sem tela cheia) e o estado fica salvo.
+        // Sem gerenciador de janelas (xvfb puro) o sistema ignora o maximizar; aí o passo é pulado.
+        await click('button[aria-label="Maximizar"]')
+        await pause(800)
+        if(win.isMaximized()){
+            assert.equal(win.isFullScreen(), false, 'maximizar não é tela cheia')
+            assert.equal(await config('C.getLauncherMaximized()'), true, 'estado maximizado salvo')
+            await click('button[aria-label="Restaurar"]')
+            await pause(800)
+            assert.equal(win.isMaximized(), false, 'restaurou')
+            assert.equal(await config('C.getLauncherMaximized()'), false, 'estado restaurado salvo')
+        } else {
+            console.log('Aviso: sem gerenciador de janelas, maximizar não foi testado.')
+        }
 
         for(const [hash, expected, name] of [
             ['#/skins', /conta Microsoft/, '08-skins-offline'],

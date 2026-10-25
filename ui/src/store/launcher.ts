@@ -56,7 +56,7 @@ type State = {
   notifications: Notice[]
   update: Update
   ask: Ask | null
-  windowFullscreen: boolean
+  windowMaximized: boolean
 
   toggleSidebar: () => void
   start: () => Promise<void>
@@ -116,7 +116,7 @@ export const useLauncher = create<State>()(
       notifications: [],
       update: { state: 'idle' },
       ask: null,
-      windowFullscreen: false,
+      windowMaximized: false,
 
       toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
 
@@ -137,8 +137,7 @@ export const useLauncher = create<State>()(
         get().refreshAccounts()
         set({ boot: { phase: 'ready', firstLaunch: res.firstLaunch } })
 
-        b.onWindowFullscreen((on) => set({ windowFullscreen: on }))
-        if (b.launcherSettings().launcherFullscreen) set({ windowFullscreen: true })
+        b.onWindowMaximized((maximized) => set({ windowMaximized: maximized }))
         b.onUpdate((e) => {
 
           if (e.kind === 'checking') set({ update: { state: 'checking' } })
