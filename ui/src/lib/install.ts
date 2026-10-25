@@ -1,45 +1,44 @@
-import type { DiscoverItem } from '@/data/types'
-import { useShallow } from 'zustand/react/shallow'
+import { toast } from 'sonner'
+import { create } from 'zustand'
+import { backend, UserError } from '@/backend'
 import { useLauncher } from '@/store/launcher'
 
-/** Coloca um modpack na fila; ao terminar ele vira instância da biblioteca. */
-export function installModpack(item: DiscoverItem, version?: string) {
-  const { enqueue, instances, downloads } = useLauncher.getState()
-  const id = `mp-${item.id}`
-  if (instances.some((i) => i.id === id) || downloads.some((d) => d.id === id && d.status !== 'done')) return false
-  enqueue({
-    id,
-    name: version ? `${item.name} ${version}` : item.name,
-    detail: `Modpack · ${item.mods} mods · ${item.loader} ${item.mcVersion}`,
-    sizeMb: item.sizeMb,
-    scene: item.scene,
-    onDone: 'install-instance',
-    payload: {
-      id,
-      name: item.name,
-      loader: item.loader,
-      loaderVersion: 'estável',
-      mcVersion: item.mcVersion,
-      source: item.source,
-      kind: 'modpack',
-      description: item.description,
-      mods: item.mods,
-      sizeMb: item.sizeMb * 2.2,
-      playtimeH: 0,
-      lastPlayed: 'nunca',
-      scene: item.scene,
-      memoryGb: item.mods > 200 ? 8 : 6,
-    },
-  })
-  return true
+// Instalações do Modrinth em andamento e as concluídas nesta sessão (por perfil).
+const useInstalls = create<{ running: Record<string, true>; done: Record<string, true> }>(() => ({ running: {}, done: {} }))
+
+function key(projectId: string) {
+  const s = useLauncher.getState()
+  return `${s.serverId}|${s.profileId}|${projectId}`
 }
 
-export function useInstallState(itemId: string) {
-  return useLauncher(useShallow((s) => {
-    const id = `mp-${itemId}`
-    if (s.instances.some((i) => i.id === id)) return { state: 'installed' as const, progress: 100 }
-    const d = s.downloads.find((x) => x.id === id && x.status !== 'done')
-    if (d) return { state: 'installing' as const, progress: d.progress }
-    return { state: 'none' as const, progress: 0 }
-  }))
+export async function installProject(projectId: string, title: string) {
+  const k = key(projectId)
+  if (useInstalls.getState().running[k]) return
+  const store = useLauncher.getState()
+  const profile = store.profiles.find((p) => p.id === store.profileId)
+  useInstalls.setState((s) => ({ running: { ...s.running, [k]: true } }))
+  const taskId = store.addTask({ title, detail: `Instalando no perfil ${profile?.name ?? ''}`, progress: null, kind: 'content' })
+  try {
+    await backend().install(projectId)
+    useInstalls.setState((s) => ({ done: { ...s.done, [k]: true } }))
+    store.patchTask(taskId, { status: 'done', progress: 100, detail: `Instalado no perfil ${profile?.name ?? ''}`, finishedAt: Date.now() })
+    store.bumpContent()
+    toast.success(`${title} instalado`, { description: `No perfil ${profile?.name ?? ''}. Dependências entram junto.` })
+  } catch (err) {
+    store.patchTask(taskId, { status: 'error', detail: err instanceof UserError ? err.message : 'Falhou', finishedAt: Date.now() })
+    store.showError(err, 'Não foi possível instalar')
+  } finally {
+    useInstalls.setState((s) => {
+      const running = { ...s.running }
+      delete running[k]
+      return { running }
+    })
+  }
+}
+
+export function useInstallState(projectId: string, installedFromApi: boolean) {
+  const k = useLauncher((s) => `${s.serverId}|${s.profileId}|${projectId}`)
+  const running = useInstalls((s) => Boolean(s.running[k]))
+  const done = useInstalls((s) => Boolean(s.done[k]))
+  return running ? 'installing' : installedFromApi || done ? 'installed' : 'none'
 }

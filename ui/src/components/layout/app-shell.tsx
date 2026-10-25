@@ -2,26 +2,22 @@ import { AnimatePresence, MotionConfig, motion } from 'motion/react'
 import { useEffect } from 'react'
 import { Outlet, useLocation } from 'react-router'
 import { Toaster } from 'sonner'
+import { AskDialog } from '@/components/shared/ask-dialog'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { useLauncher } from '@/store/launcher'
 import { Sidebar } from './sidebar'
 import { TitleBar } from './title-bar'
 
-export function useSimulationClock() {
-  const tick = useLauncher((s) => s.tick)
-  useEffect(() => {
-    const id = window.setInterval(tick, 400)
-    return () => window.clearInterval(id)
-  }, [tick])
-}
-
 export function Providers({ children }: { children: React.ReactNode }) {
-  const reduce = useLauncher((s) => s.settings.reduceMotion)
-  useSimulationClock()
+  const start = useLauncher((s) => s.start)
+  useEffect(() => {
+    void start()
+  }, [start])
   return (
-    <MotionConfig reducedMotion={reduce ? 'always' : 'user'}>
+    <MotionConfig reducedMotion="user">
       <TooltipProvider delayDuration={150} skipDelayDuration={0}>
         {children}
+        <AskDialog />
         <Toaster
           theme="dark"
           position="bottom-right"

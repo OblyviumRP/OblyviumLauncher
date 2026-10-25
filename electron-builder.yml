@@ -17,8 +17,12 @@ files:
   - '!app/.notifications-qa.html'
   - '!test/**'
   - '!app/.mods-qa.html'
-  - '!ui/**'
+  # Only the built interface ships (ui/dist); its sources and tooling stay out.
+  - '!ui/{src,node_modules,public}/**'
+  - '!ui/*.{json,ts,md,html}'
+  - '!ui/.gitignore'
   - '!scripts/preview-ui.cjs'
+  - '!scripts/verify-ui.cjs'
 
 extraResources:
   - 'libraries'

@@ -5,7 +5,7 @@ export type NavItem = { to: string; label: string; icon: LucideIcon; match?: str
 // Fonte única da navegação: sidebar e títulos derivam daqui.
 export const mainNav: NavItem[] = [
   { to: '/', label: 'Início', icon: House },
-  { to: '/biblioteca', label: 'Biblioteca', icon: LayoutGrid, match: ['/instancia'] },
+  { to: '/servidores', label: 'Servidores', icon: LayoutGrid, match: ['/perfil'] },
   { to: '/descobrir', label: 'Descobrir', icon: Compass },
   { to: '/skins', label: 'Skins', icon: Shirt },
   { to: '/downloads', label: 'Downloads', icon: Download },

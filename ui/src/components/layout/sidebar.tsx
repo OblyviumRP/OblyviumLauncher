@@ -1,15 +1,15 @@
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
-import { useShallow } from 'zustand/react/shallow'
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect } from 'react'
 import { Link, useLocation } from 'react-router'
-import { InstanceIcon } from '@/components/shared/pixel-scene'
+import { ProfileIcon } from '@/components/shared/profile-icon'
+import { ServerIcon } from '@/components/shared/server-art'
 import { OblyviumMark } from '@/components/shared/oblyvium-mark'
 import { Kbd } from '@/components/ui/kbd'
 import { Tooltip } from '@/components/ui/tooltip'
 import { footerNav, isActive, mainNav, type NavItem } from '@/config/navigation'
 import { cn } from '@/lib/utils'
-import { useLauncher } from '@/store/launcher'
+import { isBusy, useLauncher, useServer } from '@/store/launcher'
 import { AccountSwitcher } from './account-switcher'
 
 const fade = { initial: { opacity: 0, x: -4 }, animate: { opacity: 1, x: 0 }, exit: { opacity: 0, x: -4 }, transition: { duration: 0.12 } }
@@ -58,9 +58,13 @@ function NavLinkItem({ item, collapsed, badge }: { item: NavItem; collapsed: boo
 export function Sidebar() {
   const collapsed = useLauncher((s) => s.sidebarCollapsed)
   const toggle = useLauncher((s) => s.toggleSidebar)
-  const pinned = useLauncher(useShallow((s) => s.instances.filter((i) => i.pinned)))
-  const activeDownloads = useLauncher((s) => s.downloads.filter((d) => d.status === 'active' || d.status === 'queued' || d.status === 'paused').length)
-  const running = useLauncher((s) => (s.launch.state === 'running' ? s.launch.instanceId : null))
+  const server = useServer()
+  const profiles = useLauncher((s) => s.profiles)
+  const profileId = useLauncher((s) => s.profileId)
+  const selectProfile = useLauncher((s) => s.selectProfile)
+  const activeTasks = useLauncher((s) => s.tasks.filter((t) => t.status === 'active').length)
+  const launch = useLauncher((s) => s.launch)
+  const locked = isBusy(launch.state)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -111,43 +115,57 @@ export function Sidebar() {
 
       <div className="flex flex-col gap-0.5">
         {mainNav.map((item) => (
-          <NavLinkItem key={item.to} item={item} collapsed={collapsed} badge={item.to === '/downloads' ? activeDownloads : undefined} />
+          <NavLinkItem key={item.to} item={item} collapsed={collapsed} badge={item.to === '/downloads' ? activeTasks : undefined} />
         ))}
       </div>
 
-      <div className="flex flex-col gap-0.5">
-        {collapsed ? (
-          <span className="mx-2 mb-1 h-px bg-border" />
-        ) : (
-          <span className="whitespace-nowrap px-2.5 pb-1 font-mono text-2xs uppercase tracking-wider text-muted-2">Fixadas</span>
-        )}
-        {pinned.map((i) => {
-          const link = (
-            <Link
-              key={i.id}
-              to={`/instancia/${i.id}`}
-              aria-label={collapsed ? i.name : undefined}
-              className={cn('flex h-9 items-center gap-2.5 rounded-sm text-sm text-foreground transition-colors hover:bg-accent', collapsed ? 'justify-center' : 'px-2')}
-            >
-              <span className="relative">
-                <InstanceIcon scene={i.scene} name={i.name} className="size-6" />
-                {(i.server || running === i.id) && (
-                  <span className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-2 border-sidebar bg-success-fg" aria-hidden />
-                )}
-              </span>
-              {!collapsed && <span className="truncate">{i.name}</span>}
-              {!collapsed && running === i.id && <span className="ml-auto font-mono text-2xs text-success-fg">jogando</span>}
-            </Link>
-          )
-          return collapsed ? (
-            <Tooltip key={i.id} content={`${i.name}${running === i.id ? ' · jogando' : i.server ? ' · servidor online' : ''}`}>
-              {link}
-            </Tooltip>
+      {server && (
+        <div className="flex min-h-0 flex-col gap-0.5">
+          {collapsed ? (
+            <span className="mx-2 mb-1 h-px bg-border" />
           ) : (
-            link
-          )
-        })}
-      </div>
+            <span className="flex items-center gap-2 whitespace-nowrap px-2.5 pb-1 font-mono text-2xs uppercase tracking-wider text-muted-2">
+              <ServerIcon server={server} className="size-4" />
+              <span className="truncate">Perfis · {server.name}</span>
+            </span>
+          )}
+          <div className="flex flex-col gap-0.5 overflow-y-auto">
+            {profiles.map((p) => {
+              const on = p.id === profileId
+              const playing = on && launch.state === 'running'
+              const btn = (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => selectProfile(p.id)}
+                  disabled={locked && !on}
+                  aria-pressed={on}
+                  aria-label={collapsed ? `Perfil ${p.name}` : undefined}
+                  className={cn(
+                    'flex h-9 shrink-0 cursor-pointer items-center gap-2.5 rounded-sm text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50',
+                    collapsed ? 'justify-center' : 'px-2.5',
+                    on ? 'bg-accent text-foreground' : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+                  )}
+                >
+                  <span className="relative">
+                    <ProfileIcon name={p.icon} className={cn('size-[18px]', on && 'text-primary-light')} />
+                    {playing && <span className="absolute -bottom-1 -right-1 size-2.5 rounded-full border-2 border-sidebar bg-success-fg" aria-hidden />}
+                  </span>
+                  {!collapsed && <span className="truncate">{p.name}</span>}
+                  {!collapsed && playing && <span className="ml-auto font-mono text-2xs text-success-fg">jogando</span>}
+                </button>
+              )
+              return collapsed ? (
+                <Tooltip key={p.id} content={`${p.name}${on ? ' · selecionado' : ''}`}>
+                  {btn}
+                </Tooltip>
+              ) : (
+                btn
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="flex-1" />
 
