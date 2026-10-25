@@ -6,9 +6,11 @@ import { toast } from 'sonner'
 import { backend } from '@/backend'
 import { OblyviumMark } from '@/components/shared/oblyvium-mark'
 import { PixelScene } from '@/components/shared/pixel-scene'
-import { ServerIcon } from '@/components/shared/server-art'
+import { artNotice, ServerIcon } from '@/components/shared/server-art'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { LANGS, t, type Lang } from '@/i18n'
+import { useLang } from '@/i18n/store'
 import { cn } from '@/lib/utils'
 import { useLauncher } from '@/store/launcher'
 
@@ -41,7 +43,7 @@ export function OnboardingPage() {
 
   const done = (accName: string) => {
     refreshAccounts()
-    toast.success(`Bem-vindo, ${accName}`)
+    toast.success(t('Bem-vindo, {name}', { name: accName }))
     if (adding || servers.length <= 1) navigate('/', { replace: true })
     else setStep('servidor')
   }
@@ -52,7 +54,7 @@ export function OnboardingPage() {
       const acc = await backend().loginMicrosoft()
       if (acc) done(acc.name)
     } catch (err) {
-      showError(err, 'Não foi possível entrar com a Microsoft')
+      showError(err, t('Não foi possível entrar com a Microsoft'))
     } finally {
       setBusy(false)
     }
@@ -66,13 +68,15 @@ export function OnboardingPage() {
       const acc = await backend().loginOffline(name)
       done(acc.name)
     } catch (err) {
-      showError(err, 'Não foi possível criar a conta')
+      showError(err, t('Não foi possível criar a conta'))
     } finally {
       setBusy(false)
     }
   }
 
-  const steps = adding ? ['Conta'] : ['Conta', 'Servidor']
+  const steps = adding ? [t('Conta')] : [t('Conta'), t('Servidor')]
+  const lang = useLang((s) => s.lang)
+  const changeLang = useLang((s) => s.change)
   const index = step === 'servidor' ? 1 : 0
 
   return (
@@ -86,7 +90,7 @@ export function OnboardingPage() {
         initial={{ opacity: 0, y: 16, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ type: 'spring', stiffness: 220, damping: 24 }}
-        aria-label={adding ? 'Adicionar conta' : 'Primeiro acesso'}
+        aria-label={adding ? t('Adicionar conta') : t('Primeiro acesso')}
         className="flex w-full max-w-md flex-col gap-6 overflow-hidden rounded-lg border border-border-2 bg-card p-7 shadow-dialog"
       >
         <div className="flex flex-col items-center gap-3 text-center">
@@ -94,10 +98,26 @@ export function OnboardingPage() {
             <OblyviumMark className="size-14 text-primary-light" />
           </motion.span>
           <span className="font-minecraft text-sm tracking-wide">OBLYVIUM</span>
+          {!adding && (
+            <div role="radiogroup" aria-label={t('Idioma')} className="flex gap-1">
+              {LANGS.map((l) => (
+                <button
+                  key={l.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={lang === l.id}
+                  onClick={() => changeLang(l.id as Lang)}
+                  className={cn('cursor-pointer rounded-sm px-2 py-0.5 text-2xs transition-colors', lang === l.id ? 'bg-primary-soft text-primary-fg' : 'text-muted-foreground hover:text-foreground')}
+                >
+                  {l.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {steps.length > 1 && (
-          <ol aria-label="Etapas" className="grid grid-cols-2 gap-2">
+          <ol aria-label={t('Etapas')} className="grid grid-cols-2 gap-2">
             {steps.map((s, i) => (
               <li key={s} className={cn('flex flex-col gap-1.5 text-xs', i === index ? 'text-foreground' : 'text-muted-foreground')} aria-current={i === index ? 'step' : undefined}>
                 <span className="h-1 overflow-hidden rounded-full bg-accent">
@@ -120,45 +140,45 @@ export function OnboardingPage() {
           >
             {step === 'conta' && (
               <>
-                <h1 className="text-lg font-semibold">{adding ? 'Adicionar conta' : 'Entre na sua conta'}</h1>
-                <p className="text-sm text-muted-foreground">Use a conta Microsoft que tem o Minecraft: Java Edition. A senha é digitada na janela da Microsoft, nunca aqui.</p>
+                <h1 className="text-lg font-semibold">{adding ? t('Adicionar conta') : t('Entre na sua conta')}</h1>
+                <p className="text-sm text-muted-foreground">{t('Use a conta Microsoft que tem o Minecraft: Java Edition. A senha é digitada na janela da Microsoft, nunca aqui.')}</p>
                 <Button size="xl" onClick={microsoft} disabled={busy}>
-                  {busy ? <Loader2 className="animate-spin" /> : <MicrosoftLogo />} {busy ? 'Aguardando a Microsoft…' : 'Entrar com Microsoft'}
+                  {busy ? <Loader2 className="animate-spin" /> : <MicrosoftLogo />} {busy ? t('Aguardando a Microsoft…') : t('Entrar com Microsoft')}
                 </Button>
                 <Button size="lg" variant="secondary" onClick={() => setStep('offline')} disabled={busy}>
-                  Jogar offline
+                  {t('Jogar offline')}
                 </Button>
                 {adding && hasAccount && (
                   <Button variant="ghost" onClick={() => navigate(-1)}>
-                    Cancelar
+                    {t('Cancelar')}
                   </Button>
                 )}
               </>
             )}
             {step === 'offline' && (
               <form onSubmit={offline} className="flex flex-col gap-3">
-                <h1 className="text-lg font-semibold">Conta offline</h1>
-                <p className="text-sm text-muted-foreground">Sem login da Microsoft. Funciona só em servidores que aceitam contas offline, e não dá para trocar a skin.</p>
+                <h1 className="text-lg font-semibold">{t('Conta offline')}</h1>
+                <p className="text-sm text-muted-foreground">{t('Sem login da Microsoft. Funciona só em servidores que aceitam contas offline, e não dá para trocar a skin.')}</p>
                 <label className="flex flex-col gap-1.5 text-sm">
-                  Nome no jogo
+                  {t('Nome no jogo')}
                   <Input value={name} onChange={(e) => setName(e.target.value)} autoFocus maxLength={16} placeholder="Steve" aria-invalid={name !== '' && !nameOk} />
-                  <span className={cn('text-xs', name !== '' && !nameOk ? 'text-danger-fg' : 'text-muted-foreground')}>De 3 a 16 letras, números ou _.</span>
+                  <span className={cn('text-xs', name !== '' && !nameOk ? 'text-danger-fg' : 'text-muted-foreground')}>{t('De 3 a 16 letras, números ou _.')}</span>
                 </label>
                 <div className="flex gap-2">
                   <Button type="button" size="lg" variant="secondary" onClick={() => setStep('conta')}>
-                    <ArrowLeft /> Voltar
+                    <ArrowLeft /> {t('Voltar')}
                   </Button>
                   <Button type="submit" size="lg" className="flex-1" disabled={!nameOk || busy}>
-                    {busy && <Loader2 className="animate-spin" />} Entrar
+                    {busy && <Loader2 className="animate-spin" />} {t('Entrar')}
                   </Button>
                 </div>
               </form>
             )}
             {step === 'servidor' && (
               <>
-                <h1 className="text-lg font-semibold">Onde você quer jogar?</h1>
-                <p className="text-sm text-muted-foreground">Dá para trocar a qualquer momento em Servidores.</p>
-                <div role="radiogroup" aria-label="Servidor" className="flex flex-col gap-2">
+                <h1 className="text-lg font-semibold">{t('Onde você quer jogar?')}</h1>
+                <p className="text-sm text-muted-foreground">{t('Dá para trocar a qualquer momento no Início.')}</p>
+                <div role="radiogroup" aria-label={t('Servidor')} className="flex flex-col gap-2">
                   {servers.map((sv) => (
                     <button
                       key={sv.id}
@@ -175,21 +195,22 @@ export function OnboardingPage() {
                       <span className="flex min-w-0 flex-col">
                         <span className="text-sm font-semibold">{sv.name}</span>
                         <span className="truncate text-xs text-muted-foreground">
-                          {sv.main ? 'Servidor principal · ' : ''}Minecraft {sv.mcVersion}
+                          {sv.main ? `${t('Servidor principal')} · ` : ''}Minecraft {sv.mcVersion} · {sv.group}
                         </span>
                       </span>
                     </button>
                   ))}
                 </div>
                 <Button size="lg" onClick={() => navigate('/', { replace: true })}>
-                  Começar
+                  {t('Começar')}
                 </Button>
               </>
             )}
           </motion.div>
         </AnimatePresence>
       </motion.section>
-      <span className="absolute bottom-3 text-2xs text-muted-foreground">Arte gerada, não é uma captura do servidor</span>
+      <span className="absolute bottom-3 text-2xs text-muted-foreground">{artNotice()}</span>
+
     </div>
   )
 }

@@ -1,7 +1,7 @@
 /**
  * The launch pipeline without any DOM: Java check, file verification and
- * download, then the game process. Ported from scripts/landing.js so the new
- * UI (ui/) can drive it through callbacks.
+ * download, then the game process. The interface (ui/) drives it through
+ * callbacks.
  *
  * Renderer only (ConfigManager, ProfileManager and @electron/remote).
  */
@@ -383,8 +383,11 @@ async function launch(handlers){
                 h.onLog({ stream, line })
                 if(!started && stream === 'stdout' && GAME_LAUNCH_REGEX.test(line.trim())){
                     started = true
-                    if(ConfigManager.getHideLauncherWhilePlaying()){
+                    const onPlay = ConfigManager.getLauncherOnPlay()
+                    if(onPlay === 'tray'){
                         ipcRenderer.send(GAME_OPCODE.HIDE_LAUNCHER)
+                    } else if(onPlay === 'minimize'){
+                        ipcRenderer.send(GAME_OPCODE.MINIMIZE_LAUNCHER)
                     }
                     const wait = Math.max(0, MIN_LINGER - (Date.now() - startedAt))
                     setTimeout(() => {

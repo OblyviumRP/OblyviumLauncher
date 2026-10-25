@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { ServerInfo } from '@/backend'
+import { t } from '@/i18n'
 import { cn } from '@/lib/utils'
 import { InstanceIcon, PixelScene } from './pixel-scene'
 
@@ -15,6 +16,11 @@ export function ServerArt({ server, className, twinkle, cols, rows }: { server: 
 export function hasRealArt(server: ServerInfo) {
   return Boolean(server.background)
 }
+
+export function artNotice() {
+  return t('Arte gerada, não é uma captura do servidor')
+}
+
 
 export function ServerIcon({ server, className }: { server: ServerInfo; className?: string }) {
   const [failed, setFailed] = useState(false)

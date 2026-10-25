@@ -2,7 +2,9 @@ import { AnimatePresence, MotionConfig, motion } from 'motion/react'
 import { useEffect } from 'react'
 import { Outlet, useLocation } from 'react-router'
 import { Toaster } from 'sonner'
+import { backend } from '@/backend'
 import { AskDialog } from '@/components/shared/ask-dialog'
+
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { useLauncher } from '@/store/launcher'
 import { Sidebar } from './sidebar'
@@ -13,6 +15,16 @@ export function Providers({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     void start()
   }, [start])
+  // F11 liga e desliga a tela cheia da janela do launcher.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'F11') return
+      e.preventDefault()
+      backend().setWindowFullscreen(!useLauncher.getState().windowFullscreen)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
   return (
     <MotionConfig reducedMotion="user">
       <TooltipProvider delayDuration={150} skipDelayDuration={0}>

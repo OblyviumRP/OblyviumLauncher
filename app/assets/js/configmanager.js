@@ -84,12 +84,18 @@ const DEFAULT_CONFIG = {
             resHeight: 720,
             fullscreen: false,
             autoConnectServer: false,
-            hideLauncherWhilePlaying: true
+            hideLauncherWhilePlaying: true,
+            // 'tray', 'minimize' ou 'keep' (nova interface). null: segue hideLauncherWhilePlaying.
+            launcherOnPlay: null,
+            // Memória máxima em GB para todos os modpacks (nova interface). null: cada modpack usa o próprio padrão.
+            maxRAM: null
         },
         launcher: {
             allowPrerelease: false,
             discordPresence: true,
-            dataDirectory: dataPath
+            dataDirectory: dataPath,
+            language: null,
+            fullscreen: false
         }
     },
     newsCache: {
@@ -904,6 +910,79 @@ exports.getProfileFullscreen = function(key){
  */
 exports.setProfileFullscreen = function(key, fullscreen){
     gameConfigFor(key).fullscreen = fullscreen
+}
+
+const LAUNCHER_ON_PLAY = ['tray', 'minimize', 'keep']
+
+/**
+ * O que a janela do launcher faz quando o jogo abre: 'tray' (esconde na
+ * bandeja), 'minimize' ou 'keep' (fica aberta). Sem escolha, segue a opção
+ * antiga hideLauncherWhilePlaying.
+ *
+ * @returns {'tray' | 'minimize' | 'keep'}
+ */
+exports.getLauncherOnPlay = function(){
+    const value = config.settings.game.launcherOnPlay
+    if(LAUNCHER_ON_PLAY.includes(value)){
+        return value
+    }
+    return exports.getHideLauncherWhilePlaying() ? 'tray' : 'keep'
+}
+
+/**
+ * @param {'tray' | 'minimize' | 'keep'} value
+ */
+exports.setLauncherOnPlay = function(value){
+    if(!LAUNCHER_ON_PLAY.includes(value)){
+        return
+    }
+    config.settings.game.launcherOnPlay = value
+    // Opção antiga, mantida em sincronia para quem volta a uma versão anterior.
+    config.settings.game.hideLauncherWhilePlaying = value === 'tray'
+}
+
+/**
+ * Memória máxima global em GB, ou null quando cada modpack usa o próprio padrão.
+ *
+ * @returns {number | null}
+ */
+exports.getGlobalMaxRAM = function(){
+    const value = config.settings.game.maxRAM
+    return typeof value === 'number' && value > 0 ? value : null
+}
+
+/**
+ * @param {number | null} gb
+ */
+exports.setGlobalMaxRAM = function(gb){
+    config.settings.game.maxRAM = gb
+}
+
+/** Todas as chaves com configuração de Java (servidor ou servidor@perfil). */
+exports.getJavaConfigKeys = function(){
+    return Object.keys(config.javaConfig)
+}
+
+/**
+ * Idioma escolhido na nova interface ('pt-BR', 'en', 'es'), ou null para seguir o sistema.
+ *
+ * @returns {string | null}
+ */
+exports.getLanguage = function(){
+    return config.settings.launcher.language ?? null
+}
+
+exports.setLanguage = function(language){
+    config.settings.launcher.language = language
+}
+
+/** Se a janela do launcher abre em tela cheia. */
+exports.getLauncherFullscreen = function(){
+    return config.settings.launcher.fullscreen === true
+}
+
+exports.setLauncherFullscreen = function(fullscreen){
+    config.settings.launcher.fullscreen = fullscreen === true
 }
 
 /**

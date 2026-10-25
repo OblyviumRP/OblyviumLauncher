@@ -28,10 +28,6 @@ exports.queryJS = function(id, placeHolders){
     return exports.query(`js.${id}`, placeHolders)
 }
 
-exports.queryEJS = function(id, placeHolders){
-    return exports.query(`ejs.${id}`, placeHolders)
-}
-
 exports.setupLanguage = function(){
     // Load Language Files
     exports.loadLanguage('en_US')
