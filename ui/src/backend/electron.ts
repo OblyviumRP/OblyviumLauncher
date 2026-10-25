@@ -213,7 +213,7 @@ export function createElectronBackend(): Backend {
       }
       distro = await DistroAPI.getDistribution()
       sync(distro)
-      if (ConfigManager.getLauncherFullscreen()) ipcRenderer.send(WINDOW_OPCODE.SET_FULLSCREEN, true)
+      if (ConfigManager.getLauncherMaximized()) ipcRenderer.send(WINDOW_OPCODE.MAXIMIZE)
       if (!isDev) ipcRenderer.send('autoUpdateAction', 'initAutoUpdater', ConfigManager.getAllowPrerelease())
       LaunchService.updateLauncherPresence()
       return { ok: true, firstLaunch: ConfigManager.isFirstLaunch() || Object.keys(ConfigManager.getAuthAccounts()).length === 0 }
@@ -401,7 +401,6 @@ export function createElectronBackend(): Backend {
         allowPrerelease: ConfigManager.getAllowPrerelease(),
         autoConnect: ConfigManager.getAutoConnect(),
         launcherOnPlay: ConfigManager.getLauncherOnPlay(),
-        launcherFullscreen: ConfigManager.getLauncherFullscreen(),
         dataDirectory: ConfigManager.getDataDirectory(),
       }
     },
@@ -416,9 +415,6 @@ export function createElectronBackend(): Backend {
         ConfigManager.setAutoConnect(value)
       } else if (key === 'launcherOnPlay') {
         ConfigManager.setLauncherOnPlay(value)
-      } else if (key === 'launcherFullscreen') {
-        ConfigManager.setLauncherFullscreen(value)
-        ipcRenderer.send(WINDOW_OPCODE.SET_FULLSCREEN, Boolean(value))
       }
       ConfigManager.save()
     },
@@ -686,11 +682,17 @@ export function createElectronBackend(): Backend {
         // Endereço inválido: ignora.
       }
     },
-    setWindowFullscreen(on) {
-      ipcRenderer.send(WINDOW_OPCODE.SET_FULLSCREEN, on)
+    toggleMaximize() {
+      ipcRenderer.send(WINDOW_OPCODE.TOGGLE_MAXIMIZE)
     },
-    onWindowFullscreen(cb) {
-      ipcRenderer.on(WINDOW_OPCODE.FULLSCREEN_CHANGED, (_e: unknown, on: boolean) => cb(on))
+    onWindowMaximized(cb) {
+      cb(remote.getCurrentWindow().isMaximized())
+      ipcRenderer.on(WINDOW_OPCODE.MAXIMIZED_CHANGED, (_e: unknown, maximized: boolean) => {
+        // Lembra o estado para a próxima vez que o launcher abrir.
+        ConfigManager.setLauncherMaximized(maximized)
+        ConfigManager.save()
+        cb(maximized)
+      })
     },
     showFile(file) {
       shell.showItemInFolder(file)
