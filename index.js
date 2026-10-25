@@ -258,6 +258,19 @@ ipcMain.on(MSFT_OPCODE.OPEN_LOGOUT, (ipcEvent, uuid, isLastAccount) => {
 // be closed automatically when the JavaScript object is garbage collected.
 let win
 
+/**
+ * The page the window loads: the new interface (ui/dist, built with
+ * `npm run ui:build`) when present, else the classic EJS interface.
+ * OBLYVIUM_LEGACY_UI=1 forces the classic one.
+ */
+function rendererEntry() {
+    const newUi = path.join(__dirname, 'ui', 'dist', 'index.html')
+    if(process.env.OBLYVIUM_LEGACY_UI !== '1' && fs.existsSync(newUi)) {
+        return newUi
+    }
+    return path.join(__dirname, 'app', 'app.ejs')
+}
+
 function createWindow() {
 
     win = new BrowserWindow({
@@ -288,7 +301,7 @@ function createWindow() {
     }
     Object.entries(data).forEach(([key, val]) => ejse.data(key, val))
 
-    const appUrl = pathToFileURL(path.join(__dirname, 'app', 'app.ejs')).toString()
+    const appUrl = pathToFileURL(rendererEntry()).toString()
     NavigationGuard.attach(win.webContents, () => appUrl, url => shell.openExternal(url))
     win.loadURL(appUrl)
 

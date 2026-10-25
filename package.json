@@ -14,12 +14,18 @@
     "verify:mods": "electron scripts/verify-mods.cjs",
     "verify:notifications": "electron scripts/verify-notifications.cjs",
     "test": "node --test \"test/*.test.js\"",
-    "dist": "electron-builder build",
+    "dist": "npm run ui:build && electron-builder build",
     "dist:win": "npm run dist -- -w",
     "dist:mac": "npm run dist -- -m",
     "dist:linux": "npm run dist -- -l",
     "lint": "eslint .",
-    "lint-fix": "eslint --fix ."
+    "lint-fix": "eslint --fix .",
+    "ui:install": "npm --prefix ui install",
+    "ui:ci": "npm --prefix ui ci",
+    "ui:verify": "npm run ui:build && electron scripts/verify-ui.cjs",
+    "ui:dev": "npm --prefix ui run dev",
+    "ui:build": "npm --prefix ui run build",
+    "ui:electron": "electron scripts/preview-ui.cjs"
   },
   "engines": {
     "node": "22.x.x"

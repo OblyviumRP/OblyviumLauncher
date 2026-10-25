@@ -1,0 +1,15 @@
+import type { SVGProps } from 'react'
+
+/** Marca oficial (cinco traços), transcrita de app/assets/images/oblyvium-mark.svg. Usa currentColor. */
+export function OblyviumMark(props: SVGProps<SVGSVGElement>) {
+  const side = 'M 523 286 C 369 349 240 471 240 625 C 240 760 330 822 433 885 C 486 918 527 953 552 984 L 552 878 C 552 787 511 733 449 698 C 391 666 364 625 364 560 C 364 462 433 361 523 286 Z'
+  return (
+    <svg viewBox="126 122 1002 1002" fill="currentColor" aria-hidden {...props}>
+      <path d={side} />
+      <path transform="translate(1254 0) scale(-1 1)" d={side} />
+      <path fillRule="evenodd" d="M 627 132 C 615 181 591 228 567 261 L 567 374 C 567 514 548 576 441 624 C 544 636 613 560 627 438 C 641 560 710 636 813 624 C 706 576 687 514 687 374 L 687 261 C 663 228 639 181 627 132 Z" />
+      <path d="M 601 792 C 600 860 594 926 585 985 C 605 1028 620 1075 627 1114 C 634 1075 649 1028 669 985 C 660 926 654 860 653 792 C 646 794 637 795 627 795 C 617 795 608 794 601 792 Z" />
+      <path d="M 627 530 C 613 586 577 622 510 644 C 577 664 614 705 627 758 C 640 705 677 664 744 644 C 677 622 641 586 627 530 Z" />
+    </svg>
+  )
+}
