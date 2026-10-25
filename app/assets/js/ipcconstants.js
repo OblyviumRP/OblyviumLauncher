@@ -33,8 +33,9 @@ exports.GAME_OPCODE = {
     SHOW_LAUNCHER: 'GAME_SHOW_LAUNCHER'
 }
 
-// Tela cheia da janela do launcher (a janela normal tem tamanho fixo).
+// Maximizar e restaurar a janela do launcher, como em qualquer janela do Windows.
 exports.WINDOW_OPCODE = {
-    SET_FULLSCREEN: 'WINDOW_SET_FULLSCREEN',
-    FULLSCREEN_CHANGED: 'WINDOW_FULLSCREEN_CHANGED'
+    TOGGLE_MAXIMIZE: 'WINDOW_TOGGLE_MAXIMIZE',
+    MAXIMIZE: 'WINDOW_MAXIMIZE',
+    MAXIMIZED_CHANGED: 'WINDOW_MAXIMIZED_CHANGED'
 }
