@@ -111,29 +111,58 @@ function Panel({ title, icon, action, children, className }: { title: string; ic
   )
 }
 
-function NewsPanel() {
+function NewsLink({ link, children, className }: { link: string | null; children: React.ReactNode; className?: string }) {
+  if (!link) return <span className={className}>{children}</span>
+  return (
+    <button type="button" onClick={() => backend().openExternal(link)} className={cn('cursor-pointer text-left hover:underline', className)}>
+      {children}
+    </button>
+  )
+}
+
+/** Notícias em destaque: a mais recente grande, as seguintes em lista ao lado. */
+function NewsPanel({ className }: { className?: string }) {
   const { data, loading } = useAsync(() => backend().news(), [])
   const items = data ?? []
+  const [first, ...rest] = items
   return (
-    <Panel title={t('Notícias')} icon={<Newspaper />}>
+    <Panel title={t('Notícias')} icon={<Newspaper />} className={className}>
       {loading ? (
-        <div className="h-14 animate-pulse rounded-md bg-surface-2" />
-      ) : items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{data == null ? t('Não foi possível carregar as notícias agora.') : t('Nenhuma notícia publicada.')}</p>
+        <div className="grid flex-1 gap-4 sm:grid-cols-[1.5fr_1fr]">
+          <div className="h-28 animate-pulse rounded-md bg-surface-2" />
+          <div className="h-28 animate-pulse rounded-md bg-surface-2" />
+        </div>
+      ) : !first ? (
+        <p className="flex flex-1 items-center text-sm text-muted-foreground">{data == null ? t('Não foi possível carregar as notícias agora.') : t('Nenhuma notícia publicada.')}</p>
       ) : (
-        <div className="flex flex-col divide-y divide-border">
-          {items.slice(0, 2).map((n, i) => (
-            <article key={i} className="flex flex-col gap-0.5 py-2 first:pt-0 last:pb-0">
-              <span className="font-mono text-2xs text-muted-2">{formatDate(n.date)}</span>
-              {n.link ? (
-                <button type="button" onClick={() => backend().openExternal(n.link!)} className="flex cursor-pointer items-center gap-1.5 text-left text-sm font-medium hover:underline">
-                  <span className="line-clamp-1">{n.title}</span> <ExternalLink className="size-3 shrink-0 text-muted-2" />
-                </button>
-              ) : (
-                <h3 className="line-clamp-1 text-sm font-medium">{n.title}</h3>
-              )}
-            </article>
-          ))}
+        <div className="grid flex-1 gap-4 sm:grid-cols-[1.5fr_1fr]">
+          <article className="flex min-w-0 flex-col gap-2">
+            <span className="font-mono text-2xs uppercase tracking-wider text-primary-light">
+              {formatDate(first.date)}
+              {first.author ? ` · ${first.author}` : ''}
+            </span>
+            <NewsLink link={first.link} className="text-lg font-semibold leading-snug">
+              {first.title}
+            </NewsLink>
+            {first.summary && <p className="line-clamp-3 text-sm leading-relaxed text-muted-foreground">{first.summary}</p>}
+            {first.link && (
+              <button type="button" onClick={() => backend().openExternal(first.link!)} className="mt-auto flex w-fit cursor-pointer items-center gap-1.5 pt-1 text-xs font-medium text-primary-light hover:underline">
+                {t('Ler notícia')} <ExternalLink className="size-3" />
+              </button>
+            )}
+          </article>
+          {rest.length > 0 && (
+            <ul className="flex min-w-0 flex-col divide-y divide-border border-border sm:border-l sm:pl-4">
+              {rest.slice(0, 3).map((n, i) => (
+                <li key={i} className="flex flex-col gap-0.5 py-2 first:pt-0 last:pb-0">
+                  <span className="font-mono text-2xs text-muted-2">{formatDate(n.date)}</span>
+                  <NewsLink link={n.link} className="line-clamp-2 text-sm font-medium">
+                    {n.title}
+                  </NewsLink>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
     </Panel>
@@ -226,8 +255,9 @@ export function HomePage() {
           <ServerSheet key={server.id} server={server} />
         </div>
 
+        {/* Notícias em destaque (duas colunas); outros servidores numa lista compacta ao lado. */}
         <div className="grid gap-3 md:grid-cols-3">
-          <NewsPanel />
+          <NewsPanel className="md:col-span-2" />
 
           <Panel
             title={tasks.length ? t('Downloads') : t('Outros servidores')}
@@ -239,7 +269,6 @@ export function HomePage() {
                 </Link>
               )
             }
-            className="md:col-span-2"
           >
             {tasks.length > 0 ? (
               tasks.slice(0, 2).map((task) => (
@@ -254,30 +283,28 @@ export function HomePage() {
             ) : others.length === 0 ? (
               <p className="text-sm text-muted-foreground">{t('Nada baixando agora. Os arquivos do servidor são conferidos sempre que você joga.')}</p>
             ) : (
-              <div className="grid gap-2 sm:grid-cols-3">
-                {others.slice(0, 3).map((s) => (
-                  <motion.button
-                    key={s.id}
-                    type="button"
-                    whileHover={{ y: -2 }}
-                    disabled={locked}
-                    onClick={() => selectServer(s.id)}
-                    aria-label={t('Jogar em {name}', { name: s.name })}
-                    className="group relative flex h-20 cursor-pointer flex-col justify-end overflow-hidden rounded-md border border-border text-left disabled:cursor-not-allowed"
-                  >
-                    <ServerArt server={s} cols={48} rows={27} className="absolute inset-0 size-full transition-transform duration-500 group-hover:scale-105" />
-                    <span className="relative flex items-center gap-2 bg-overlay px-2.5 py-1.5">
-                      <ServerIcon server={s} className="size-5" />
-                      <span className="min-w-0">
+              <ul className="-mx-1.5 flex flex-col gap-0.5">
+                {others.slice(0, 4).map((s) => (
+                  <li key={s.id}>
+                    <button
+                      type="button"
+                      disabled={locked}
+                      onClick={() => selectServer(s.id)}
+                      aria-label={t('Jogar em {name}', { name: s.name })}
+                      className="group flex w-full cursor-pointer items-center gap-2.5 rounded-sm px-1.5 py-1.5 text-left transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <ServerIcon server={s} className="size-7" />
+                      <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-medium">{s.name}</span>
                         <span className="block font-mono text-2xs text-muted-foreground">
                           {s.mcVersion} · {s.group}
                         </span>
                       </span>
-                    </span>
-                  </motion.button>
+                      <ArrowRight className="size-3.5 text-muted-2 transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />
+                    </button>
+                  </li>
                 ))}
-              </div>
+              </ul>
             )}
           </Panel>
         </div>
