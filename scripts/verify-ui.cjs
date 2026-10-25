@@ -155,6 +155,13 @@ app.whenReady().then(async () => {
         assert.equal(await run(`document.querySelectorAll('main [role=radiogroup]').length`), 0, 'sem seletor de perfis')
         await noOverflow('início')
         await shot('02-inicio')
+        // Atalho do modpack oficial para o Descobrir, com o seletor de modpack.
+        await click('main a', 'Adicionar mods')
+        assert.equal(await run('location.hash'), '#/descobrir?tipo=mod')
+        assert.ok(await run(`!!document.querySelector('[aria-label="Modpack oficial"]')`), 'seletor do modpack oficial')
+        assert.match(await text(), /Servidor principal · Forge 1\.20\.1/)
+        await shot('02b-descobrir-modpack')
+        await go('#/')
 
         // Mods do Modrinth sim; modpacks e criação de perfil não.
         const nav = await run(`[...document.querySelectorAll('nav a')].map(a => a.textContent.trim()).join('|')`)
