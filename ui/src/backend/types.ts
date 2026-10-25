@@ -1,3 +1,5 @@
+import { t } from '@/i18n'
+
 // Contrato entre a interface e o launcher. A implementação Electron chama os
 // módulos de app/assets/js; a simulada (mock.ts) serve para desenvolver no navegador.
 
@@ -16,6 +18,8 @@ export type ServerInfo = {
   main: boolean
   scene: SceneKey
   packModCount: number
+  /** Grupo do modpack na lista (Vulkan ou OpenGL), como no launcher antigo. */
+  group: 'Vulkan' | 'OpenGL'
 }
 
 export type ProfileInfo = { id: string; name: string; icon: string; created: string | null; isDefault: boolean }
@@ -46,14 +50,19 @@ export type PackMod = {
   children: PackMod[]
 }
 
+/** Java é por modpack e perfil: cada versão do Minecraft pede o seu. */
 export type ProfileSettings = {
+  javaPath: string | null
+  javaSupported: string
+}
+
+/** Memória e janela do jogo valem para todos os modpacks e perfis. */
+export type GameSettings = {
   maxRamGB: number
   ramMinGB: number
   ramMaxGB: number
   ramRecommendedGB: number
   systemRamGB: number
-  javaPath: string | null
-  javaSupported: string
   width: number
   height: number
   fullscreen: boolean
@@ -64,6 +73,7 @@ export type LauncherSettings = {
   allowPrerelease: boolean
   autoConnect: boolean
   hideLauncherWhilePlaying: boolean
+  launcherFullscreen: boolean
   dataDirectory: string
 }
 
@@ -145,11 +155,12 @@ export type UpdateEvent =
 
 export type ChangelogRelease = { version: string; title: string; blocks: ({ type: 'p'; text: string } | { type: 'ul'; items: string[] })[]; publishedAt: string }
 
+/** Erro para mostrar ao jogador. Título e mensagem são escritos em português e traduzidos aqui. */
 export class UserError extends Error {
   title: string
-  constructor(title: string, message: string) {
-    super(message)
-    this.title = title
+  constructor(title: string, message: string, vars?: Record<string, string | number>) {
+    super(t(message, vars))
+    this.title = t(title, vars)
   }
 }
 
@@ -215,7 +226,11 @@ export interface Backend {
   launcherSettings(): LauncherSettings
   setLauncherSetting<K extends keyof LauncherSettings>(key: K, value: LauncherSettings[K]): void
   profileSettings(serverId: string, profileId: string): ProfileSettings
-  setProfileSetting(serverId: string, profileId: string, key: 'maxRamGB' | 'width' | 'height' | 'fullscreen' | 'javaPath', value: number | boolean | string | null): void
+  setProfileSetting(serverId: string, profileId: string, key: 'javaPath', value: string | null): void
+  gameSettings(): GameSettings
+  setGameSetting(key: 'maxRamGB' | 'width' | 'height' | 'fullscreen', value: number | boolean): void
+  language(): string | null
+  setLanguage(lang: string): void
   detectJava(serverId: string, profileId: string): Promise<string | null>
   chooseJava(serverId: string, profileId: string): Promise<string | null>
   openDataFolder(): void
@@ -245,6 +260,8 @@ export interface Backend {
   changelog(): Promise<ChangelogRelease | null>
   openExternal(url: string): void
   showFile(path: string): void
+  setWindowFullscreen(on: boolean): void
+  onWindowFullscreen(cb: (on: boolean) => void): void
   windowMinimize(): void
   windowClose(): void
 }

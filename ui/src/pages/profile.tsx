@@ -7,16 +7,16 @@ import { toast } from 'sonner'
 import { backend, type ContentFile, type ContentType, type PackMod, type ProfileInfo } from '@/backend'
 import { Card, EmptyState } from '@/components/shared/page'
 import { PlayButton } from '@/components/shared/play-button'
-import { ProfileIcon, profileIcons } from '@/components/shared/profile-icon'
-import { hasRealArt, ServerArt } from '@/components/shared/server-art'
+import { ProfileIcon, profileIcons, profileLabel } from '@/components/shared/profile-icon'
+import { artNotice, hasRealArt, ServerArt } from '@/components/shared/server-art'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { DialogContent } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Slider } from '@/components/ui/slider'
 import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Tooltip } from '@/components/ui/tooltip'
+import { t, tn } from '@/i18n'
 import { useAsync } from '@/lib/use-async'
 import { cn } from '@/lib/utils'
 import { isBusy, useLauncher, useProfile, useServer } from '@/store/launcher'
@@ -65,17 +65,17 @@ function ContentTable({ serverId, profileId, type, loaderless }: { serverId: str
   const updateAll = () =>
     run('*', async () => {
       for (const f of updates) await backend().updateContent(serverId, profileId, type, f.fileName, f.update!.id)
-    }, `${updates.length} ${updates.length === 1 ? 'item atualizado' : 'itens atualizados'}`)
+    }, tn(updates.length, '{n} item atualizado', '{n} itens atualizados'))
 
   const remove = async (f: ContentFile) => {
-    const ok = await confirm({ title: `Remover ${f.title}?`, body: 'O arquivo vai para a lixeira do sistema.', confirm: 'Remover', tone: 'danger' })
-    if (ok) run(f.fileName, () => backend().removeContent(serverId, profileId, type, f.fileName), `${f.title} removido`)
+    const ok = await confirm({ title: t('Remover {name}?', { name: f.title }), body: t('O arquivo vai para a lixeira do sistema.'), confirm: t('Remover'), tone: 'danger' })
+    if (ok) run(f.fileName, () => backend().removeContent(serverId, profileId, type, f.fileName), t('{name} removido', { name: f.title }))
   }
 
   if (type === 'mod' && loaderless) {
     return (
-      <EmptyState icon={<Package />} title="Servidor sem mods">
-        Este servidor roda Minecraft sem loader, então não aceita mods. Resource packs e shaders continuam disponíveis.
+      <EmptyState icon={<Package />} title={t('Modpack sem mods')}>
+        {t('Este modpack roda Minecraft sem loader, então não aceita mods. Resource packs e shaders continuam disponíveis.')}
       </EmptyState>
     )
   }
@@ -84,27 +84,27 @@ function ContentTable({ serverId, profileId, type, loaderless }: { serverId: str
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
         <label className="relative">
-          <span className="sr-only">Filtrar</span>
+          <span className="sr-only">{t('Filtrar')}</span>
           <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-2" />
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filtrar…" className="w-60 pl-8" />
+          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('Filtrar…')} className="w-60 pl-8" />
         </label>
         <span className="font-mono text-2xs text-muted-2">
-          {items.filter((i) => i.enabled).length} de {items.length} ativos
+          {t('{on} de {n} ativos', { on: items.filter((i) => i.enabled).length, n: items.length })}
         </span>
         <div className="flex-1" />
-        <Tooltip content="Abrir pasta" side="top">
-          <Button variant="secondary" size="icon" aria-label="Abrir pasta" onClick={() => backend().openContentFolder(serverId, profileId, type)}>
+        <Tooltip content={t('Abrir pasta')} side="top">
+          <Button variant="secondary" size="icon" aria-label={t('Abrir pasta')} onClick={() => backend().openContentFolder(serverId, profileId, type)}>
             <FolderOpen />
           </Button>
         </Tooltip>
         {updates.length > 0 && (
           <Button variant="secondary" onClick={updateAll} disabled={working != null || locked} className="border-warning-line text-warning-fg">
-            <RefreshCw className={cn(working === '*' && 'animate-spin')} /> Atualizar tudo ({updates.length})
+            <RefreshCw className={cn(working === '*' && 'animate-spin')} /> {t('Atualizar tudo ({n})', { n: updates.length })}
           </Button>
         )}
         <Button asChild>
           <Link to={`/descobrir?tipo=${type}`}>
-            <Plus /> Adicionar
+            <Plus /> {t('Adicionar')}
           </Link>
         </Button>
       </div>
@@ -112,10 +112,10 @@ function ContentTable({ serverId, profileId, type, loaderless }: { serverId: str
         <table className="w-full min-w-[600px] text-sm">
           <thead className="bg-surface-2 font-mono text-2xs uppercase tracking-wider text-muted-2">
             <tr>
-              <th className="w-14 px-3 py-2 text-left font-medium">{type === 'shader' ? 'Em uso' : 'Ativo'}</th>
-              <th className="px-3 py-2 text-left font-medium">Nome</th>
-              <th className="px-3 py-2 text-left font-medium">Versão</th>
-              <th className="w-24 px-3 py-2 text-right font-medium">Ações</th>
+              <th className="w-14 px-3 py-2 text-left font-medium">{type === 'shader' ? t('Em uso') : t('Ativo')}</th>
+              <th className="px-3 py-2 text-left font-medium">{t('Nome')}</th>
+              <th className="px-3 py-2 text-left font-medium">{t('Versão')}</th>
+              <th className="w-24 px-3 py-2 text-right font-medium">{t('Ações')}</th>
             </tr>
           </thead>
           <tbody>
@@ -126,7 +126,7 @@ function ContentTable({ serverId, profileId, type, loaderless }: { serverId: str
                     <Switch
                       checked={f.enabled}
                       disabled={working != null || locked}
-                      aria-label={`${type === 'shader' ? 'Usar' : 'Ativar'} ${f.title}`}
+                      aria-label={type === 'shader' ? t('Usar {name}', { name: f.title }) : t('Ativar {name}', { name: f.title })}
                       onCheckedChange={(v) => run(f.fileName, () => backend().setContentEnabled(serverId, profileId, type, f.fileName, v))}
                     />
                   </td>
@@ -152,20 +152,20 @@ function ContentTable({ serverId, profileId, type, loaderless }: { serverId: str
                   <td className="px-3 py-2">
                     <div className="flex justify-end gap-1">
                       {f.update && (
-                        <Tooltip content={`Atualizar para ${f.update.number}`} side="top">
+                        <Tooltip content={t('Atualizar para {v}', { v: f.update.number })} side="top">
                           <Button
                             variant="ghost"
                             size="icon-sm"
                             disabled={working != null || locked}
-                            aria-label={`Atualizar ${f.title}`}
-                            onClick={() => run(f.fileName, () => backend().updateContent(serverId, profileId, type, f.fileName, f.update!.id), `${f.title} atualizado`)}
+                            aria-label={t('Atualizar {name}', { name: f.title })}
+                            onClick={() => run(f.fileName, () => backend().updateContent(serverId, profileId, type, f.fileName, f.update!.id), t('{name} atualizado', { name: f.title }))}
                           >
                             <RefreshCw className={cn(working === f.fileName && 'animate-spin')} />
                           </Button>
                         </Tooltip>
                       )}
-                      <Tooltip content="Remover" side="top">
-                        <Button variant="ghost" size="icon-sm" disabled={working != null || locked} aria-label={`Remover ${f.title}`} className="text-danger-fg" onClick={() => remove(f)}>
+                      <Tooltip content={t('Remover')} side="top">
+                        <Button variant="ghost" size="icon-sm" disabled={working != null || locked} aria-label={t('Remover {name}', { name: f.title })} className="text-danger-fg" onClick={() => remove(f)}>
                           <Trash2 />
                         </Button>
                       </Tooltip>
@@ -177,7 +177,7 @@ function ContentTable({ serverId, profileId, type, loaderless }: { serverId: str
           </tbody>
         </table>
         {loading && items.length === 0 ? (
-          <div className="flex flex-col gap-2 p-3" aria-label="Carregando">
+          <div className="flex flex-col gap-2 p-3" aria-label={t('Carregando')}>
             {[0, 1, 2].map((i) => (
               <div key={i} className="h-10 animate-pulse rounded-md bg-surface-2" />
             ))}
@@ -185,12 +185,12 @@ function ContentTable({ serverId, profileId, type, loaderless }: { serverId: str
         ) : (
           shown.length === 0 && (
             <p className="px-4 py-8 text-center text-sm text-muted-foreground">
-              {items.length === 0 ? 'Nada instalado neste perfil ainda. Use Adicionar para procurar no Modrinth.' : 'Nada encontrado.'}
+              {items.length === 0 ? t('Nada instalado neste perfil ainda. Use Adicionar para procurar no Modrinth.') : t('Nada encontrado.')}
             </p>
           )
         )}
       </Card>
-      {type === 'mod' && <p className="text-xs text-muted-foreground">Mods que a staff bloquear são desativados sozinhos antes de abrir o jogo.</p>}
+      {type === 'mod' && <p className="text-xs text-muted-foreground">{t('Mods que a staff bloquear são desativados sozinhos antes de abrir o jogo.')}</p>}
     </div>
   )
 }
@@ -204,13 +204,13 @@ function PackModRow({ mod, depth, parentOn, onToggle, locked }: { mod: PackMod; 
           checked={mod.required || mod.enabled}
           disabled={mod.required || !mod.available || !parentOn || locked}
           onCheckedChange={(v) => onToggle(mod, v)}
-          aria-label={`${mod.name}${mod.required ? ' (obrigatório)' : ''}`}
+          aria-label={mod.required ? t('{name} (obrigatório)', { name: mod.name }) : mod.name}
         />
         <span className="flex min-w-0 flex-1 flex-col">
           <span className={cn('truncate text-sm font-medium', !on && !mod.required && 'text-muted-foreground')}>{mod.name}</span>
           <span className="font-mono text-2xs text-muted-2">{mod.version}</span>
         </span>
-        {mod.required ? <Badge>obrigatório</Badge> : !mod.available ? <Badge tone="warning">indisponível</Badge> : <Badge tone="primary">opcional</Badge>}
+        {mod.required ? <Badge>{t('obrigatório')}</Badge> : !mod.available ? <Badge tone="warning">{t('indisponível')}</Badge> : <Badge tone="primary">{t('opcional')}</Badge>}
       </li>
       {mod.children.map((c) => (
         <PackModRow key={c.id} mod={c} depth={depth + 1} parentOn={on || mod.required} onToggle={onToggle} locked={locked} />
@@ -230,12 +230,17 @@ function PackMods({ serverId, profileId }: { serverId: string; profileId: string
     setRev((r) => r + 1)
   }
   if (mods.length === 0) {
-    return <EmptyState icon={<Package />} title="Sem mods no pacote">Este servidor não distribui mods próprios.</EmptyState>
+    return (
+      <EmptyState icon={<Package />} title={t('Sem mods no pacote')}>
+        {t('Este modpack não distribui mods próprios.')}
+      </EmptyState>
+    )
   }
   return (
     <div className="flex flex-col gap-3">
       <p className="text-sm text-muted-foreground">
-        Mods enviados pela staff com o servidor. Os opcionais ({optional(mods)}) podem ser ligados ou desligados neste perfil; a mudança vale na próxima vez que o jogo abrir.
+        {t('Mods enviados pela staff com o modpack. Os opcionais ({n}) podem ser ligados ou desligados neste perfil; a mudança vale na próxima vez que o jogo abrir.', { n: optional(mods) })}
+
       </p>
       <Card>
         <ul>
@@ -255,14 +260,14 @@ function Screenshots({ serverId, profileId }: { serverId: string; profileId: str
     return (
       <EmptyState
         icon={<Image />}
-        title="Nenhuma captura ainda"
+        title={t('Nenhuma captura ainda')}
         action={
           <Button variant="secondary" onClick={() => backend().openGameFolder(serverId, profileId, 'screenshots')}>
-            <FolderOpen /> Abrir pasta
+            <FolderOpen /> {t('Abrir pasta')}
           </Button>
         }
       >
-        Aperte F2 dentro do jogo para tirar uma captura de tela.
+        {t('Aperte F2 dentro do jogo para tirar uma captura de tela.')}
       </EmptyState>
     )
   }
@@ -270,7 +275,7 @@ function Screenshots({ serverId, profileId }: { serverId: string; profileId: str
     <div className="flex flex-col gap-3">
       <div className="flex justify-end">
         <Button variant="secondary" onClick={() => backend().openGameFolder(serverId, profileId, 'screenshots')}>
-          <FolderOpen /> Abrir pasta
+          <FolderOpen /> {t('Abrir pasta')}
         </Button>
       </div>
       <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-3">
@@ -297,23 +302,23 @@ function Logs({ serverId, profileId }: { serverId: string; profileId: string }) 
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="font-mono text-xs text-muted-foreground">logs/latest.log · últimas 400 linhas</span>
+        <span className="font-mono text-xs text-muted-foreground">{t('logs/latest.log · últimas 400 linhas')}</span>
         <div className="flex-1" />
         <Button variant="secondary" onClick={reload}>
-          <RefreshCw className={cn(loading && 'animate-spin')} /> Recarregar
+          <RefreshCw className={cn(loading && 'animate-spin')} /> {t('Recarregar')}
         </Button>
         <Button
           variant="secondary"
           disabled={!data}
           onClick={() => {
             void navigator.clipboard.writeText(data ?? '')
-            toast.success('Log copiado')
+            toast.success(t('Log copiado'))
           }}
         >
-          <Copy /> Copiar
+          <Copy /> {t('Copiar')}
         </Button>
         <Button variant="secondary" onClick={() => backend().openGameFolder(serverId, profileId, 'logs')}>
-          <FolderOpen /> Abrir pasta
+          <FolderOpen /> {t('Abrir pasta')}
         </Button>
       </div>
       <pre className="max-h-[60vh] overflow-auto rounded-lg border border-border bg-sidebar p-4 font-mono text-xs leading-relaxed text-muted-foreground">
@@ -324,29 +329,23 @@ function Logs({ serverId, profileId }: { serverId: string; profileId: string }) 
               </span>
             ))
           : loading
-            ? 'Carregando…'
-            : 'Nenhum log ainda. Ele aparece depois que o jogo abrir uma vez com este perfil.'}
+            ? t('Carregando…')
+            : t('Nenhum log ainda. Ele aparece depois que o jogo abrir uma vez com este perfil.')}
+
       </pre>
     </div>
   )
 }
 
-function ProfileSettingsCard({ serverId, profileId }: { serverId: string; profileId: string }) {
+function JavaCard({ serverId, profileId }: { serverId: string; profileId: string }) {
   const [rev, setRev] = useState(0)
   const showError = useLauncher((s) => s.showError)
-  void rev
+  void rev // muda a cada troca para reler do backend
   const ps = backend().profileSettings(serverId, profileId)
-  const [ram, setRam] = useState(ps.maxRamGB)
-  const [w, setW] = useState(String(ps.width))
-  const [h, setH] = useState(String(ps.height))
-  const set = (key: Parameters<ReturnType<typeof backend>['setProfileSetting']>[2], value: number | boolean | string | null) => {
-    backend().setProfileSetting(serverId, profileId, key, value)
-    setRev((r) => r + 1)
-  }
   const java = async (fn: () => Promise<string | null>, none: string) => {
     try {
       const p = await fn()
-      if (p) toast.success('Java configurado', { description: p })
+      if (p) toast.success(t('Java configurado'), { description: p })
       else if (none) toast(none)
       setRev((r) => r + 1)
     } catch (err) {
@@ -355,59 +354,43 @@ function ProfileSettingsCard({ serverId, profileId }: { serverId: string; profil
   }
 
   return (
-    <Card className="flex flex-col gap-5 p-4">
+    <Card className="flex flex-col gap-4 p-4">
       <div className="flex flex-col gap-1">
-        <h3 className="text-sm font-semibold">Java e memória</h3>
-        <p className="text-xs text-muted-foreground">Valem só para este perfil.</p>
-      </div>
-      <div className="flex flex-col gap-2">
-        <div className="flex justify-between text-sm">
-          <span>Memória máxima</span>
-          <span className="font-mono text-primary-fg">{ram.toLocaleString('pt-BR')} GB</span>
-        </div>
-        <Slider value={[ram]} min={ps.ramMinGB} max={ps.ramMaxGB} step={0.5} onValueChange={([v]) => setRam(v)} onValueCommit={([v]) => set('maxRamGB', v)} aria-label="Memória máxima" />
-        <div className="flex justify-between font-mono text-2xs text-muted-2">
-          <span>mín. {ps.ramMinGB} GB</span>
-          <span>recomendado {ps.ramRecommendedGB} GB · PC {ps.systemRamGB} GB</span>
-        </div>
+        <h3 className="text-sm font-semibold">Java</h3>
+        <p className="text-xs text-muted-foreground">{t('Cada versão do Minecraft pede um Java diferente, então ele fica por modpack. No automático o launcher escolhe ou baixa sozinho.')}</p>
       </div>
       <div className="flex flex-col gap-1.5 text-sm">
-        <span>Java</span>
         <span className="truncate rounded-sm border border-input bg-input-fill px-2.5 py-1.5 font-mono text-xs text-muted-foreground" title={ps.javaPath ?? undefined}>
-          {ps.javaPath ?? 'Automático: escolhido ou baixado ao jogar'}
+          {ps.javaPath ?? t('Automático: escolhido ou baixado ao jogar')}
         </span>
-        <span className="font-mono text-2xs text-muted-2">Versões aceitas: {ps.javaSupported || '—'}</span>
+        <span className="font-mono text-2xs text-muted-2">{t('Versões aceitas: {v}', { v: ps.javaSupported || '—' })}</span>
         <div className="flex flex-wrap gap-2 pt-1">
-          <Button variant="secondary" size="sm" onClick={() => java(() => backend().detectJava(serverId, profileId), 'Nenhum Java compatível encontrado. Ele será baixado ao jogar.')}>
-            Detectar
+          <Button variant="secondary" size="sm" onClick={() => java(() => backend().detectJava(serverId, profileId), t('Nenhum Java compatível encontrado. Ele será baixado ao jogar.'))}>
+            {t('Detectar')}
           </Button>
           <Button variant="secondary" size="sm" onClick={() => java(() => backend().chooseJava(serverId, profileId), '')}>
-            Escolher arquivo…
+            {t('Escolher arquivo…')}
           </Button>
           {ps.javaPath && (
-            <Button variant="ghost" size="sm" onClick={() => set('javaPath', null)}>
-              Usar automático
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                backend().setProfileSetting(serverId, profileId, 'javaPath', null)
+                setRev((r) => r + 1)
+              }}
+            >
+              {t('Usar automático')}
             </Button>
           )}
         </div>
       </div>
-      <div className="flex flex-col gap-2">
-        <h3 className="text-sm font-semibold">Janela do jogo</h3>
-        <div className="flex flex-wrap items-end gap-2">
-          <label className="flex flex-col gap-1 text-xs text-muted-foreground">
-            Largura
-            <Input inputMode="numeric" value={w} onChange={(e) => setW(e.target.value.replace(/\D/g, ''))} onBlur={() => set('width', Number(w))} className="w-24 font-mono" disabled={ps.fullscreen} />
-          </label>
-          <span className="pb-2 text-muted-2">×</span>
-          <label className="flex flex-col gap-1 text-xs text-muted-foreground">
-            Altura
-            <Input inputMode="numeric" value={h} onChange={(e) => setH(e.target.value.replace(/\D/g, ''))} onBlur={() => set('height', Number(h))} className="w-24 font-mono" disabled={ps.fullscreen} />
-          </label>
-          <label className="ml-auto flex items-center gap-2 pb-1.5 text-sm">
-            Tela cheia <Switch checked={ps.fullscreen} onCheckedChange={(v) => set('fullscreen', v)} />
-          </label>
-        </div>
-      </div>
+      <p className="border-t border-border pt-3 text-xs text-muted-foreground">
+        {t('Memória e tamanho da janela valem para todos os modpacks.')}{' '}
+        <Link to="/configuracoes?aba=jogo" className="text-primary-light hover:underline">
+          {t('Abrir configurações do jogo')}
+        </Link>
+      </p>
     </Card>
   )
 }
@@ -443,20 +426,20 @@ export function ProfileEditor({ serverId, profile, onDone }: { serverId: string;
   return (
     <form onSubmit={save} className="flex flex-col gap-4">
       <label className="flex flex-col gap-1.5 text-sm">
-        Nome
-        <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={32} autoFocus placeholder="Ex.: Shaders, PvP, Construção" aria-invalid={!!error} />
-        {error && <span className="text-xs text-danger-fg">{error}</span>}
+        {t('Nome')}
+        <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={32} autoFocus placeholder={t('Ex.: Shaders, PvP, Construção')} aria-invalid={!!error} />
+        {error && <span className="text-xs text-danger-fg">{t(error)}</span>}
       </label>
       <fieldset className="flex flex-col gap-1.5 text-sm">
-        <legend className="pb-1.5">Ícone</legend>
+        <legend className="pb-1.5">{t('Ícone')}</legend>
         <div role="radiogroup" className="flex flex-wrap gap-1.5">
           {icons.map(([key, v]) => (
-            <Tooltip key={key} content={v.label} side="top">
+            <Tooltip key={key} content={t(v.label)} side="top">
               <button
                 type="button"
                 role="radio"
                 aria-checked={icon === key}
-                aria-label={v.label}
+                aria-label={t(v.label)}
                 onClick={() => setIcon(key)}
                 className={cn('grid size-9 cursor-pointer place-items-center rounded-md border transition-colors', icon === key ? 'border-primary bg-primary-soft text-primary-light' : 'border-border bg-surface-2 text-muted-foreground hover:bg-accent')}
               >
@@ -468,23 +451,23 @@ export function ProfileEditor({ serverId, profile, onDone }: { serverId: string;
       </fieldset>
       {!profile && (
         <fieldset className="flex flex-col gap-1.5 text-sm">
-          <legend className="pb-1.5">Copiar configurações de</legend>
+          <legend className="pb-1.5">{t('Copiar configurações de')}</legend>
           <div className="flex flex-wrap gap-1.5">
-            {[{ id: null, name: 'Nenhum' } as { id: string | null; name: string }, ...profiles].map((p) => (
+            {[{ id: null, name: t('Nenhum'), isDefault: false } as { id: string | null; name: string; isDefault: boolean }, ...profiles].map((p) => (
               <Button key={p.id ?? 'none'} type="button" size="sm" variant={copyFrom === p.id ? 'soft' : 'secondary'} onClick={() => setCopyFrom(p.id)} aria-pressed={copyFrom === p.id}>
-                {p.name}
+                {profileLabel(p)}
               </Button>
             ))}
           </div>
-          <span className="text-xs text-muted-foreground">Copia options.txt, teclas e configs. Mods e mundos não vêm junto.</span>
+          <span className="text-xs text-muted-foreground">{t('Copia options.txt, teclas e configs. Mods e mundos não vêm junto.')}</span>
         </fieldset>
       )}
       <div className="flex justify-end gap-2">
         <Button type="button" variant="secondary" onClick={() => onDone(null)}>
-          Cancelar
+          {t('Cancelar')}
         </Button>
         <Button type="submit" disabled={!name.trim() || !!error || busy}>
-          {profile ? 'Salvar' : 'Criar perfil'}
+          {profile ? t('Salvar') : t('Criar perfil')}
         </Button>
       </div>
     </form>
@@ -504,16 +487,16 @@ function ProfileManage({ serverId, profile }: { serverId: string; profile: Profi
     try {
       const p = await backend().duplicateProfile(serverId, profile.id)
       refreshProfiles()
-      toast.success(`${p.name} criado`)
+      toast.success(t('{name} criado', { name: p.name }))
     } catch (err) {
       showError(err)
     }
   }
   const remove = async () => {
     const ok = await confirm({
-      title: `Excluir o perfil ${profile.name}?`,
-      body: 'A pasta do perfil (mundos, mods, capturas e configs) vai para a lixeira do sistema.',
-      confirm: 'Excluir',
+      title: t('Excluir o perfil {name}?', { name: profile.name }),
+      body: t('A pasta do perfil (mundos, mods, capturas e configs) vai para a lixeira do sistema.'),
+      confirm: t('Excluir'),
       tone: 'danger',
     })
     if (!ok) return
@@ -521,7 +504,7 @@ function ProfileManage({ serverId, profile }: { serverId: string; profile: Profi
       await backend().removeProfile(serverId, profile.id)
       refreshProfiles()
       selectProfile(useLauncher.getState().profileId)
-      toast(`${profile.name} excluído`)
+      toast(t('{name} excluído', { name: profile.name }))
     } catch (err) {
       showError(err)
     }
@@ -529,29 +512,29 @@ function ProfileManage({ serverId, profile }: { serverId: string; profile: Profi
 
   return (
     <Card className="flex flex-col gap-4 p-4">
-      <h3 className="text-sm font-semibold">Perfil</h3>
+      <h3 className="text-sm font-semibold">{t('Perfil')}</h3>
       <p className="text-xs text-muted-foreground">
-        Cada perfil tem a própria pasta: mundos, mods extras, resource packs, shaders e configurações. Os arquivos do servidor são os mesmos para todos.
+        {t('Cada perfil tem a própria pasta: mundos, mods extras, resource packs, shaders e configurações. Os arquivos do modpack são os mesmos para todos.')}
       </p>
       <div className="flex flex-wrap gap-2">
         <Button variant="secondary" onClick={() => setEditing(true)} disabled={locked}>
-          <Pencil /> Renomear
+          <Pencil /> {t('Renomear')}
         </Button>
         <Button variant="secondary" onClick={duplicate} disabled={locked}>
-          <Copy /> Duplicar
+          <Copy /> {t('Duplicar')}
         </Button>
         <Button variant="secondary" onClick={verify} disabled={locked}>
-          <Wrench /> Verificar arquivos
+          <Wrench /> {t('Verificar arquivos')}
         </Button>
         {!profile.isDefault && (
           <Button variant="destructive" onClick={remove} disabled={locked}>
-            <Trash2 /> Excluir
+            <Trash2 /> {t('Excluir')}
           </Button>
         )}
       </div>
       <DialogPrimitive.Root open={editing} onOpenChange={setEditing}>
         {editing && (
-          <DialogContent title="Editar perfil">
+          <DialogContent title={t('Editar perfil')}>
             <ProfileEditor
               serverId={serverId}
               profile={profile}
@@ -574,7 +557,8 @@ export function ProfilePage() {
   const tab = params.get('aba') ?? 'conteudo'
   const [kind, setKind] = useState<ContentType>((params.get('tipo') as ContentType) ?? 'mod')
 
-  if (!server || !profile) return <Navigate to="/servidores" replace />
+  if (!server || !profile) return <Navigate to="/modpacks" replace />
+
   const loaderless = server.loader === 'Vanilla'
 
   return (
@@ -583,11 +567,11 @@ export function ProfilePage() {
         <ServerArt server={server} twinkle className="absolute inset-0" />
         <div className="absolute inset-0 bg-[linear-gradient(to_top,var(--background)_5%,transparent)]" aria-hidden />
         <Button variant="secondary" size="sm" asChild className="absolute left-6 top-4 bg-overlay">
-          <Link to="/servidores">
-            <ArrowLeft /> Servidores
+          <Link to="/modpacks">
+            <ArrowLeft /> {t('Modpacks')}
           </Link>
         </Button>
-        {!hasRealArt(server) && <span className="absolute right-6 top-4 rounded-sm bg-overlay px-2 py-1 text-2xs text-muted-foreground">Arte gerada, não é uma captura do servidor</span>}
+        {!hasRealArt(server) && <span className="absolute right-6 top-4 rounded-sm bg-overlay px-2 py-1 text-2xs text-muted-foreground">{artNotice()}</span>}
       </div>
       <div className="mx-auto -mt-14 flex w-full max-w-[1400px] flex-col gap-5 px-6 pb-6">
         <header className="relative flex flex-wrap items-end gap-4">
@@ -596,17 +580,17 @@ export function ProfilePage() {
           </span>
           <div className="flex min-w-0 flex-1 flex-col gap-2">
             <span className="font-mono text-2xs uppercase tracking-wider text-muted-2">{server.name}</span>
-            <h1 className="text-2xl font-bold">{profile.name}</h1>
+            <h1 className="text-2xl font-bold">{profileLabel(profile)}</h1>
             <div className="flex flex-wrap gap-1.5">
               <Badge>{loaderless ? 'Vanilla' : server.loader}</Badge>
               <Badge>Minecraft {server.mcVersion}</Badge>
-              {server.version && <Badge tone="primary">Pacote {server.version}</Badge>}
-              {profile.isDefault && <Badge>Perfil padrão</Badge>}
+              {server.version && <Badge tone="primary">{t('Pacote {v}', { v: server.version })}</Badge>}
+              {profile.isDefault && <Badge>{t('Perfil padrão')}</Badge>}
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Tooltip content="Abrir pasta do perfil" side="top">
-              <Button variant="secondary" size="icon" className="size-12" aria-label="Abrir pasta do perfil" onClick={() => backend().openGameFolder(server.id, profile.id)}>
+            <Tooltip content={t('Abrir pasta do perfil')} side="top">
+              <Button variant="secondary" size="icon" className="size-12" aria-label={t('Abrir pasta do perfil')} onClick={() => backend().openGameFolder(server.id, profile.id)}>
                 <FolderOpen />
               </Button>
             </Tooltip>
@@ -615,21 +599,22 @@ export function ProfilePage() {
         </header>
 
         <Tabs value={tab} onValueChange={(v) => setParams({ aba: v }, { replace: true })}>
-          <TabsList aria-label="Seções do perfil">
-            <TabsTrigger value="conteudo">Conteúdo</TabsTrigger>
+          <TabsList aria-label={t('Seções do perfil')}>
+            <TabsTrigger value="conteudo">{t('Conteúdo')}</TabsTrigger>
             <TabsTrigger value="pacote">
-              Mods do servidor <span className="font-mono text-2xs opacity-70">{server.packModCount}</span>
+              {t('Mods do modpack')} <span className="font-mono text-2xs opacity-70">{server.packModCount}</span>
             </TabsTrigger>
-            <TabsTrigger value="capturas">Capturas</TabsTrigger>
-            <TabsTrigger value="logs">Logs</TabsTrigger>
-            <TabsTrigger value="config">Configurações</TabsTrigger>
+            <TabsTrigger value="capturas">{t('Capturas')}</TabsTrigger>
+            <TabsTrigger value="logs">{t('Logs')}</TabsTrigger>
+            <TabsTrigger value="config">{t('Configurações')}</TabsTrigger>
           </TabsList>
           <TabsContent value="conteudo" className="flex flex-col gap-3 pt-4">
             <Tabs value={kind} onValueChange={(v) => setKind(v as ContentType)} variant="pill">
-              <TabsList aria-label="Tipo de conteúdo">
+              <TabsList aria-label={t('Tipo de conteúdo')}>
                 {kinds.map((k) => (
                   <TabsTrigger key={k.id} value={k.id}>
-                    {k.label}
+                    {t(k.label)}
+
                   </TabsTrigger>
                 ))}
               </TabsList>
@@ -647,7 +632,7 @@ export function ProfilePage() {
           </TabsContent>
           <TabsContent value="config" className="pt-4">
             <div className="grid items-start gap-3 lg:grid-cols-2">
-              <ProfileSettingsCard key={profile.id} serverId={server.id} profileId={profile.id} />
+              <JavaCard key={profile.id} serverId={server.id} profileId={profile.id} />
               <ProfileManage serverId={server.id} profile={profile} />
             </div>
           </TabsContent>

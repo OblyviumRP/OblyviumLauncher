@@ -4,13 +4,14 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { backend, type LogLine } from '@/backend'
 import { EmptyState, Page } from '@/components/shared/page'
-import { ProfileIcon } from '@/components/shared/profile-icon'
+import { ProfileIcon, profileLabel } from '@/components/shared/profile-icon'
 import { ServerIcon } from '@/components/shared/server-art'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Progress } from '@/components/ui/progress'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { locale, t } from '@/i18n'
 import { cn } from '@/lib/utils'
 import { useLauncher, useServer } from '@/store/launcher'
 
@@ -56,16 +57,16 @@ export function ConsolePage() {
       <Page className="max-w-3xl">
         <EmptyState
           icon={<SquareTerminal />}
-          title="Nenhum jogo aberto"
+          title={t('Nenhum jogo aberto')}
           action={
             selected && (
               <Button onClick={start}>
-                <Play className="fill-current" /> Jogar {selected.name}
+                <Play className="fill-current" /> {t('Jogar {name}', { name: selected.name })}
               </Button>
             )
           }
         >
-          Quando o Minecraft estiver rodando, a saída do jogo aparece aqui em tempo real.
+          {t('Quando o Minecraft estiver rodando, a saída do jogo aparece aqui em tempo real.')}
         </EmptyState>
       </Page>
     )
@@ -74,13 +75,13 @@ export function ConsolePage() {
     launch.state === 'preparing'
       ? { text: `${launch.status}${launch.progress != null ? ` · ${Math.round(launch.progress)}%` : ''}`, dot: 'bg-primary animate-pulse' }
       : launch.state === 'running'
-        ? { text: 'Em execução', dot: 'bg-success-fg' }
+        ? { text: t('Em execução'), dot: 'bg-success-fg' }
         : launch.state === 'crashed'
-          ? { text: `Encerrado com erro (código ${launch.code ?? '?'})`, dot: 'bg-danger-fg' }
-          : { text: 'Encerrado', dot: 'bg-muted-2' }
+          ? { text: t('Encerrado com erro (código {code})', { code: launch.code ?? '?' }), dot: 'bg-danger-fg' }
+          : { text: t('Encerrado'), dot: 'bg-muted-2' }
 
   const forceStop = async () => {
-    const ok = await confirm({ title: 'Forçar encerramento?', body: 'O Minecraft fecha na hora, sem salvar o que estiver aberto.', confirm: 'Encerrar', tone: 'danger' })
+    const ok = await confirm({ title: t('Forçar encerramento?'), body: t('O Minecraft fecha na hora, sem salvar o que estiver aberto.'), confirm: t('Encerrar'), tone: 'danger' })
     if (ok) stop()
   }
 
@@ -93,7 +94,7 @@ export function ConsolePage() {
             {server.name}
             {profile && (
               <span className="flex items-center gap-1 text-xs font-normal text-muted-foreground">
-                <ProfileIcon name={profile.icon} className="size-3.5" /> {profile.name}
+                <ProfileIcon name={profile.icon} className="size-3.5" /> {profileLabel(profile)}
               </span>
             )}
           </span>
@@ -104,59 +105,59 @@ export function ConsolePage() {
         </div>
         <dl className="flex flex-wrap gap-5 font-mono text-2xs text-muted-foreground">
           <div>
-            <dt className="inline">Linhas </dt>
-            <dd className="inline text-foreground">{logs.length.toLocaleString('pt-BR')}</dd>
+            <dt className="inline">{t('Linhas')} </dt>
+            <dd className="inline text-foreground">{logs.length.toLocaleString(locale())}</dd>
           </div>
           <div>
-            <dt className="inline">Sessão </dt>
+            <dt className="inline">{t('Sessão')} </dt>
             <dd className="inline text-foreground">{elapsed}</dd>
           </div>
         </dl>
         {launch.state === 'running' ? (
           <Button variant="destructive" onClick={forceStop}>
-            <Square className="fill-current" /> Forçar encerramento
+            <Square className="fill-current" /> {t('Forçar encerramento')}
           </Button>
         ) : launch.state !== 'preparing' ? (
           <Button onClick={start}>
-            <Play className="fill-current" /> Jogar de novo
+            <Play className="fill-current" /> {t('Jogar de novo')}
           </Button>
         ) : null}
       </header>
 
-      {launch.state === 'preparing' && launch.progress != null && <Progress value={launch.progress} label="Preparando o jogo" />}
+      {launch.state === 'preparing' && launch.progress != null && <Progress value={launch.progress} label={t('Preparando o jogo')} />}
 
       <div className="flex flex-wrap items-center gap-2">
         <Tabs value={level} onValueChange={setLevel} variant="pill">
-          <TabsList aria-label="Nível de log">
-            <TabsTrigger value="all">Tudo</TabsTrigger>
+          <TabsList aria-label={t('Nível de log')}>
+            <TabsTrigger value="all">{t('Tudo')}</TabsTrigger>
             <TabsTrigger value="INFO">Info</TabsTrigger>
-            <TabsTrigger value="WARN">Avisos</TabsTrigger>
-            <TabsTrigger value="ERROR">Erros</TabsTrigger>
+            <TabsTrigger value="WARN">{t('Avisos')}</TabsTrigger>
+            <TabsTrigger value="ERROR">{t('Erros')}</TabsTrigger>
           </TabsList>
         </Tabs>
         <label className="relative">
-          <span className="sr-only">Buscar no log</span>
+          <span className="sr-only">{t('Buscar no log')}</span>
           <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-2" />
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar no log…" className="w-56 pl-8" />
+          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('Buscar no log…')} className="w-56 pl-8" />
         </label>
         <div className="flex-1" />
         <label className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Checkbox checked={follow} onCheckedChange={(v) => setFollow(v === true)} /> Rolagem automática
+          <Checkbox checked={follow} onCheckedChange={(v) => setFollow(v === true)} /> {t('Rolagem automática')}
         </label>
         <Button
           variant="secondary"
           disabled={logs.length === 0}
           onClick={() => {
             void navigator.clipboard.writeText(filtered.map((l) => l.msg).join('\n'))
-            toast.success('Log copiado')
+            toast.success(t('Log copiado'))
           }}
         >
-          <Copy /> Copiar
+          <Copy /> {t('Copiar')}
         </Button>
       </div>
 
-      <div ref={box} role="log" aria-label="Saída do jogo" className="min-h-72 flex-1 overflow-auto rounded-lg border border-border bg-sidebar p-3 font-mono text-xs leading-relaxed">
-        {filtered.length > MAX_SHOWN && <div className="pb-2 text-muted-2">… {(filtered.length - MAX_SHOWN).toLocaleString('pt-BR')} linhas anteriores ocultas. Use Copiar para pegar tudo.</div>}
+      <div ref={box} role="log" aria-label={t('Saída do jogo')} className="min-h-72 flex-1 overflow-auto rounded-lg border border-border bg-sidebar p-3 font-mono text-xs leading-relaxed">
+        {filtered.length > MAX_SHOWN && <div className="pb-2 text-muted-2">{t('… {n} linhas anteriores ocultas. Use Copiar para pegar tudo.', { n: (filtered.length - MAX_SHOWN).toLocaleString(locale()) })}</div>}
         {shown.map((l, i) => (
           <div key={i} className="flex gap-3 whitespace-pre">
             <span className="text-muted-2">{l.t}</span>
@@ -177,14 +178,13 @@ export function ConsolePage() {
             className="flex flex-wrap items-center gap-3 rounded-lg border border-danger-line bg-danger-soft p-3"
           >
             <div className="flex min-w-60 flex-1 flex-col gap-0.5">
-              <span className="text-sm font-semibold text-danger-fg">O jogo fechou inesperadamente (código {launch.code ?? '?'})</span>
-              <span className="text-xs text-foreground">
-                Filtre por Erros para ver a causa. Se pedir ajuda à staff, envie o crash report e o log copiado.
-              </span>
+              <span className="text-sm font-semibold text-danger-fg">{t('O jogo fechou inesperadamente (código {code})', { code: launch.code ?? '?' })}</span>
+              <span className="text-xs text-foreground">{t('Filtre por Erros para ver a causa. Se pedir ajuda à staff, envie o crash report e o log copiado.')}</span>
             </div>
             {launch.crashReport && (
               <Button variant="secondary" onClick={() => backend().showFile(launch.crashReport!)}>
-                <FileWarning /> Abrir crash report
+                <FileWarning /> {t('Abrir crash report')}
+
               </Button>
             )}
           </motion.section>

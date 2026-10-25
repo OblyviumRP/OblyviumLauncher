@@ -6,6 +6,7 @@ import {
   type Backend,
   type ContentFile,
   type ContentType,
+  type GameSettings,
   type LaunchHandlers,
   type LauncherSettings,
   type LibrarySkin,
@@ -34,6 +35,22 @@ const servers: ServerInfo[] = [
     main: true,
     scene: 'arcane',
     packModCount: 6,
+    group: 'OpenGL',
+  },
+  {
+    id: 'oblyvium-rp-vulkan',
+    name: 'Oblyvium RP (Vulkan)',
+    description: 'O mesmo modpack com o renderizador Vulkan, para placas de vídeo mais novas.',
+    mcVersion: '1.20.1',
+    version: '3.4.0',
+    loader: 'Forge',
+    icon: null,
+    background: null,
+    address: 'jogar.oblyvium.com.br',
+    main: false,
+    scene: 'tide',
+    packModCount: 7,
+    group: 'Vulkan',
   },
   {
     id: 'oblyvium-eventos',
@@ -48,6 +65,7 @@ const servers: ServerInfo[] = [
     main: false,
     scene: 'ember',
     packModCount: 2,
+    group: 'OpenGL',
   },
 ]
 
@@ -57,8 +75,9 @@ const profiles: Record<string, ProfileInfo[]> = {
     { id: 'a1b2c3d4', name: 'Shaders', icon: 'coroa', created: '2026-09-02T12:00:00Z', isDefault: false },
   ],
   'oblyvium-eventos': [{ id: 'padrao', name: 'Padrão', icon: 'espada', created: null, isDefault: true }],
+  'oblyvium-rp-vulkan': [{ id: 'padrao', name: 'Padrão', icon: 'espada', created: null, isDefault: true }],
 }
-const selectedProfile: Record<string, string> = { 'oblyvium-rp': 'padrao', 'oblyvium-eventos': 'padrao' }
+const selectedProfile: Record<string, string> = { 'oblyvium-rp': 'padrao', 'oblyvium-eventos': 'padrao', 'oblyvium-rp-vulkan': 'padrao' }
 let selectedServer = 'oblyvium-rp'
 
 let accounts: AccountInfo[] = []
@@ -69,23 +88,20 @@ const settings: LauncherSettings = {
   allowPrerelease: false,
   autoConnect: true,
   hideLauncherWhilePlaying: true,
+  launcherFullscreen: false,
   dataDirectory: '~/.oblyviumlauncher',
 }
+const game: GameSettings = { maxRamGB: 6, ramMinGB: 3, ramMaxGB: 12, ramRecommendedGB: 6, systemRamGB: 16, width: 1280, height: 720, fullscreen: false }
 const profileSettings: Record<string, ProfileSettings> = {}
 function ps(key: string): ProfileSettings {
-  profileSettings[key] ??= {
-    maxRamGB: 6,
-    ramMinGB: 3,
-    ramMaxGB: 12,
-    ramRecommendedGB: 6,
-    systemRamGB: 16,
-    javaPath: null,
-    javaSupported: '>=17.x',
-    width: 1280,
-    height: 720,
-    fullscreen: false,
-  }
+  profileSettings[key] ??= { javaPath: null, javaSupported: '>=17.x' }
   return profileSettings[key]
+}
+let lang: string | null = null
+try {
+  lang = localStorage.getItem('oblyvium-lang')
+} catch {
+  // Sem localStorage: segue o idioma do navegador.
 }
 
 const content: Record<string, ContentFile[]> = {}
@@ -346,8 +362,21 @@ export function createMockBackend(): Backend {
       settings[k] = v
     },
     profileSettings: (serverId, profileId) => ({ ...ps(key(serverId, profileId)) }),
-    setProfileSetting(serverId, profileId, k, v) {
-      Object.assign(ps(key(serverId, profileId)), { [k]: v })
+    gameSettings: () => ({ ...game }),
+    setGameSetting(k, v) {
+      Object.assign(game, { [k]: v })
+    },
+    language: () => lang,
+    setLanguage(l) {
+      lang = l
+      try {
+        localStorage.setItem('oblyvium-lang', l)
+      } catch {
+        // Ignora: o idioma vale só nesta sessão.
+      }
+    },
+    setProfileSetting(serverId, profileId, _k, v) {
+      ps(key(serverId, profileId)).javaPath = v
     },
     detectJava: async () => '/usr/lib/jvm/temurin-17/bin/java',
     chooseJava: async () => null,
@@ -402,6 +431,13 @@ export function createMockBackend(): Backend {
     changelog: async () => null,
     openExternal(url) {
       window.open(url, '_blank', 'noopener')
+    },
+    setWindowFullscreen(on) {
+      if (on) void document.documentElement.requestFullscreen?.().catch(() => {})
+      else if (document.fullscreenElement) void document.exitFullscreen()
+    },
+    onWindowFullscreen(cb) {
+      document.addEventListener('fullscreenchange', () => cb(document.fullscreenElement != null))
     },
     showFile() {},
     windowMinimize() {},

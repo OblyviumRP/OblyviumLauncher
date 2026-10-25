@@ -12,6 +12,7 @@ npm run ui:build       # gera ui/dist
 npm start              # launcher com a nova interface
 npm run ui:dev         # navegador com dados simulados (http://localhost:5173)
 npm run ui:verify      # abre ui/dist no Electron com uma distribuição falsa e percorre as telas
+npm --prefix ui run i18n:check   # lista textos sem tradução (também roda no build)
 ```
 
 No Linux sem tela: `xvfb-run -a npm run ui:verify` (como root, `npx electron --no-sandbox scripts/verify-ui.cjs`). As capturas ficam em `$TMPDIR/oblyvium-ui-qa`.
@@ -38,19 +39,33 @@ Lógica que antes vivia presa ao DOM do `landing.js`, `uibinder.js` e `mods.js` 
 
 A interface antiga continua usando o código dela; os módulos novos não mudam o comportamento dela.
 
+## Idiomas
+
+Português (Brasil), inglês e espanhol. O texto em português é a própria chave: `t('Jogar')` vira `Play` em inglês. As traduções ficam em `src/i18n/en.ts` e `src/i18n/es.ts`; categorias do Modrinth em `src/i18n/categories.ts`. O build falha se algum texto passado para `t()` não tiver tradução (`npm run i18n:check`). O idioma escolhido fica no `config.json` do launcher (`settings.launcher.language`); sem escolha, segue o sistema.
+
+Mensagens que vêm do launcher (status do `en_US.toml`, erros do Modrinth e das skins) passam pelo mesmo `t()`. `UserError` traduz título e mensagem sozinho.
+
+## Configuração do jogo
+
+Memória máxima, tamanho da janela e tela cheia do jogo valem para todos os modpacks e perfis (Configurações → Jogo). `app/assets/js/core/gamesettings.js` copia esses valores para a configuração de cada modpack e perfil, que é o que o `ProcessBuilder` lê. A memória respeita o mínimo de cada modpack. O Java continua por modpack, porque cada versão do Minecraft pede o seu.
+
+## Tela cheia do launcher
+
+A janela tem tamanho fixo (1100 × 700). F11, o botão da barra de título ou Configurações → Geral → "Launcher em tela cheia" (que também vale para as próximas aberturas) liberam o limite enquanto durar a tela cheia (`WINDOW_OPCODE` em `index.js`).
+
 ## Telas
 
 | Rota | Tela |
 |---|---|
 | `/boas-vindas` | login Microsoft ou offline e escolha do servidor no primeiro acesso; `?adicionar=1` só adiciona conta |
 | `/` | servidor selecionado (arte da distribuição ou cenário gerado), perfil, Jogar, jogadores online, downloads, notícias do RSS |
-| `/servidores` | servidores da distribuição e perfis do servidor selecionado (criar, selecionar) |
-| `/perfil` | conteúdo do perfil (mods, resource packs, shaders, com atualizações do Modrinth), mods opcionais do servidor, capturas, `latest.log`, Java, memória, janela, renomear, duplicar, verificar arquivos, excluir |
+| `/modpacks` | modpacks da distribuição agrupados em Vulkan e OpenGL (pelo id, como no launcher antigo), com os mods do pacote no card, e os perfis do modpack selecionado |
+| `/perfil` | conteúdo do perfil (mods, resource packs, shaders, com atualizações do Modrinth), mods opcionais do servidor, capturas, `latest.log`, Java do modpack, renomear, duplicar, verificar arquivos, excluir |
 | `/descobrir`, `/descobrir/:id` | busca no Modrinth filtrada pela versão e loader do servidor, sem bloqueados nem mods do pacote; instala no perfil selecionado |
 | `/skins` | skin e capa da conta Microsoft com prévia 3D a partir da textura, biblioteca local de skins |
 | `/downloads` | tarefas da sessão: arquivos do jogo, Java, instalações do Modrinth, atualização do launcher |
 | `/console` | saída do jogo ao vivo, filtro por nível, aviso de falha com o crash report |
-| `/configuracoes` | Geral, Contas, Java e jogo (leva às configurações do perfil), Sobre e atualizações com as notas do changelog |
+| `/configuracoes` | Geral (idioma, tela cheia), Jogo (memória e janela globais), Contas, Sobre e atualizações com as notas do changelog |
 
 Comportamentos globais:
 

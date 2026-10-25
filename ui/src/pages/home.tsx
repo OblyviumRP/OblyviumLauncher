@@ -5,12 +5,13 @@ import { useShallow } from 'zustand/react/shallow'
 import { backend } from '@/backend'
 import { scenes } from '@/components/shared/pixel-scene'
 import { PlayButton } from '@/components/shared/play-button'
-import { ProfileIcon } from '@/components/shared/profile-icon'
-import { hasRealArt, ServerArt, ServerIcon } from '@/components/shared/server-art'
+import { ProfileIcon, profileLabel } from '@/components/shared/profile-icon'
+import { artNotice, hasRealArt, ServerArt, ServerIcon } from '@/components/shared/server-art'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Tooltip } from '@/components/ui/tooltip'
+import { t } from '@/i18n'
 import { useAsync } from '@/lib/use-async'
 import { cn, formatDate } from '@/lib/utils'
 import { isBusy, useLauncher, useProfile, useServer } from '@/store/launcher'
@@ -39,26 +40,27 @@ function TileTitle({ icon, children, action }: { icon: React.ReactNode; children
 function StatusTile({ serverId, address }: { serverId: string; address: string | null }) {
   const { data, loading } = useAsync(() => backend().serverStatus(serverId), [serverId])
   return (
-    <Tile label="Servidor">
-      <TileTitle icon={<Server />}>Servidor</TileTitle>
+    <Tile label={t('Servidor')}>
+      <TileTitle icon={<Server />}>{t('Servidor')}</TileTitle>
       {loading ? (
         <div className="h-16 animate-pulse rounded-md bg-surface-2" />
       ) : data ? (
         <>
           <div className="flex flex-wrap items-baseline gap-x-2">
             <span className="text-3xl font-semibold tabular-nums">{data.online}</span>
-            <span className="text-sm text-muted-foreground">/ {data.max} jogadores</span>
+            <span className="text-sm text-muted-foreground">{t('/ {max} jogadores', { max: data.max })}</span>
           </div>
-          <Progress value={data.max ? (data.online / data.max) * 100 : 0} tone="muted" label="Lotação do servidor" />
+          <Progress value={data.max ? (data.online / data.max) * 100 : 0} tone="muted" label={t('Lotação do servidor')} />
           <span className="flex items-center gap-1.5 font-mono text-2xs text-muted-foreground">
             <span className="size-2 rounded-full bg-success-fg" aria-hidden />
-            online{address ? ` · ${address}` : ''}
+            {t('online')}
+            {address ? ` · ${address}` : ''}
           </span>
         </>
       ) : (
         <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
           <span className="size-2 rounded-full bg-muted-2" aria-hidden />
-          {address ? 'Sem resposta do servidor agora.' : 'Este servidor não tem endereço público.'}
+          {address ? t('Sem resposta do servidor agora.') : t('Este modpack não tem servidor público.')}
         </p>
       )}
     </Tile>
@@ -69,15 +71,15 @@ function NewsTile() {
   const { data, loading } = useAsync(() => backend().news(), [])
   const items = data ?? []
   return (
-    <Tile label="Notícias" className="sm:col-span-2">
-      <TileTitle icon={<Newspaper />}>Notícias</TileTitle>
+    <Tile label={t('Notícias')} className="sm:col-span-2">
+      <TileTitle icon={<Newspaper />}>{t('Notícias')}</TileTitle>
       {loading ? (
         <div className="flex flex-col gap-2">
           <div className="h-12 animate-pulse rounded-md bg-surface-2" />
           <div className="h-12 animate-pulse rounded-md bg-surface-2" />
         </div>
       ) : items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{data == null ? 'Não foi possível carregar as notícias agora.' : 'Nenhuma notícia publicada.'}</p>
+        <p className="text-sm text-muted-foreground">{data == null ? t('Não foi possível carregar as notícias agora.') : t('Nenhuma notícia publicada.')}</p>
       ) : (
         <div className="flex flex-col divide-y divide-border">
           {items.slice(0, 3).map((n, i) => (
@@ -110,10 +112,10 @@ export function HomePage() {
   const selectProfile = useLauncher((s) => s.selectProfile)
   const selectServer = useLauncher((s) => s.selectServer)
   const locked = useLauncher((s) => isBusy(s.launch.state))
-  const tasks = useLauncher(useShallow((s) => s.tasks.filter((t) => t.status === 'active')))
+  const tasks = useLauncher(useShallow((s) => s.tasks.filter((x) => x.status === 'active')))
 
   if (!server || !profile) {
-    return <p className="p-6 text-sm text-muted-foreground">Nenhum servidor disponível na distribuição.</p>
+    return <p className="p-6 text-sm text-muted-foreground">{t('Nenhum modpack disponível na distribuição.')}</p>
   }
   const glow = scenes[server.scene].glow
   const others = servers.filter((s) => s.id !== server.id)
@@ -128,7 +130,7 @@ export function HomePage() {
     >
       <motion.section
         variants={tile}
-        aria-label="Servidor selecionado"
+        aria-label={t('Modpack selecionado')}
         className="relative isolate flex min-h-[380px] flex-col overflow-hidden rounded-lg border border-border sm:col-span-2 lg:col-span-3 lg:row-span-2"
       >
         <AnimatePresence initial={false}>
@@ -156,24 +158,24 @@ export function HomePage() {
               className="flex max-w-[460px] flex-col gap-3 rounded-lg border border-border-2 bg-overlay p-4"
             >
               <div className="flex flex-wrap gap-1.5">
-                {server.main && <Badge tone="primary">Servidor oficial</Badge>}
+                {server.main && <Badge tone="primary">{t('Servidor oficial')}</Badge>}
                 <Badge>{server.loader === 'Vanilla' ? 'Vanilla' : server.loader} {server.mcVersion}</Badge>
-                {server.version && <Badge>Pacote {server.version}</Badge>}
+                {server.version && <Badge>{t('Pacote {v}', { v: server.version })}</Badge>}
               </div>
               <h1 className="font-display text-3xl font-bold leading-tight">{server.name}</h1>
               {server.description && <p className="text-sm text-muted-foreground">{server.description}</p>}
               <span className="flex items-center gap-2 text-xs text-muted-foreground">
                 <ProfileIcon name={profile.icon} className="size-3.5 text-primary-light" />
-                Perfil <span className="font-semibold text-foreground">{profile.name}</span>
+                {t('Perfil')} <span className="font-semibold text-foreground">{profileLabel(profile)}</span>
               </span>
               <div className="flex flex-wrap items-center gap-2 pt-1">
                 <PlayButton />
                 <Button variant="secondary" size="lg" asChild>
-                  <Link to="/perfil">Gerenciar</Link>
+                  <Link to="/perfil">{t('Gerenciar')}</Link>
                 </Button>
-                <Tooltip content="Configurações do perfil" side="top">
+                <Tooltip content={t('Configurações do perfil')} side="top">
                   <Button variant="secondary" size="icon" className="size-10" asChild>
-                    <Link to="/perfil?aba=config" aria-label="Configurações do perfil">
+                    <Link to="/perfil?aba=config" aria-label={t('Configurações do perfil')}>
                       <Settings2 />
                     </Link>
                   </Button>
@@ -184,16 +186,16 @@ export function HomePage() {
 
           <div className="flex flex-wrap items-end justify-between gap-3">
             {profiles.length > 1 ? (
-              <div role="radiogroup" aria-label="Escolher perfil" className="flex flex-wrap gap-1.5 rounded-lg border border-border-2 bg-overlay p-1.5">
+              <div role="radiogroup" aria-label={t('Escolher perfil')} className="flex flex-wrap gap-1.5 rounded-lg border border-border-2 bg-overlay p-1.5">
                 {profiles.map((p) => {
                   const on = p.id === profile.id
                   return (
-                    <Tooltip key={p.id} content={p.name} side="top">
+                    <Tooltip key={p.id} content={profileLabel(p)} side="top">
                       <button
                         type="button"
                         role="radio"
                         aria-checked={on}
-                        aria-label={p.name}
+                        aria-label={profileLabel(p)}
                         disabled={locked && !on}
                         onClick={() => selectProfile(p.id)}
                         className={cn(
@@ -210,27 +212,27 @@ export function HomePage() {
             ) : (
               <span />
             )}
-            {!hasRealArt(server) && <span className="rounded-sm bg-overlay px-2 py-1 text-2xs text-muted-foreground">Arte gerada, não é uma captura do servidor</span>}
+            {!hasRealArt(server) && <span className="rounded-sm bg-overlay px-2 py-1 text-2xs text-muted-foreground">{artNotice()}</span>}
           </div>
         </div>
       </motion.section>
 
       <StatusTile key={server.id} serverId={server.id} address={server.address} />
 
-      <Tile label="Downloads">
-        <TileTitle icon={<Download />} action={<Link to="/downloads" className="text-xs text-primary-light hover:underline">Ver tudo</Link>}>
-          Downloads
+      <Tile label={t('Downloads')}>
+        <TileTitle icon={<Download />} action={<Link to="/downloads" className="text-xs text-primary-light hover:underline">{t('Ver tudo')}</Link>}>
+          {t('Downloads')}
         </TileTitle>
         {tasks.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nada baixando agora. Os arquivos do servidor são conferidos sempre que você joga.</p>
+          <p className="text-sm text-muted-foreground">{t('Nada baixando agora. Os arquivos do modpack são conferidos sempre que você joga.')}</p>
         ) : (
-          tasks.slice(0, 2).map((t) => (
-            <div key={t.id} className="flex flex-col gap-1.5">
+          tasks.slice(0, 2).map((task) => (
+            <div key={task.id} className="flex flex-col gap-1.5">
               <div className="flex justify-between gap-2 text-xs">
-                <span className="truncate">{t.title}</span>
-                <span className="font-mono text-muted-foreground">{t.progress != null ? `${Math.round(t.progress)}%` : '…'}</span>
+                <span className="truncate">{task.title}</span>
+                <span className="font-mono text-muted-foreground">{task.progress != null ? `${Math.round(task.progress)}%` : '…'}</span>
               </div>
-              <Progress value={t.progress ?? 0} label={t.title} />
+              <Progress value={task.progress ?? 0} label={task.title} />
             </div>
           ))
         )}
@@ -239,9 +241,10 @@ export function HomePage() {
       <NewsTile />
 
       {others.length > 0 && (
-        <Tile label="Outros servidores" className="sm:col-span-2">
-          <TileTitle icon={<Server />} action={<Link to="/servidores" className="flex items-center gap-1 text-xs text-primary-light hover:underline">Servidores <ArrowRight className="size-3" /></Link>}>
-            Outros servidores
+        <Tile label={t('Outros modpacks')} className="sm:col-span-2">
+          <TileTitle icon={<Server />} action={<Link to="/modpacks" className="flex items-center gap-1 text-xs text-primary-light hover:underline">{t('Modpacks')} <ArrowRight className="size-3" /></Link>}>
+            {t('Outros modpacks')}
+
           </TileTitle>
           <div className="grid gap-2 sm:grid-cols-3">
             {others.slice(0, 3).map((s) => (
@@ -258,7 +261,7 @@ export function HomePage() {
                   <ServerIcon server={s} className="size-5" />
                   <span className="min-w-0">
                     <span className="block truncate text-sm font-medium">{s.name}</span>
-                    <span className="block font-mono text-2xs text-muted-foreground">Minecraft {s.mcVersion}</span>
+                    <span className="block font-mono text-2xs text-muted-foreground">Minecraft {s.mcVersion} · {s.group}</span>
                   </span>
                 </span>
               </motion.button>

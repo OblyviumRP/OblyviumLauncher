@@ -1,6 +1,7 @@
 import { toast } from 'sonner'
 import { create } from 'zustand'
 import { backend, UserError } from '@/backend'
+import { t } from '@/i18n'
 import { useLauncher } from '@/store/launcher'
 
 // Instalações do Modrinth em andamento e as concluídas nesta sessão (por perfil).
@@ -17,15 +18,16 @@ export async function installProject(projectId: string, title: string) {
   const store = useLauncher.getState()
   const profile = store.profiles.find((p) => p.id === store.profileId)
   useInstalls.setState((s) => ({ running: { ...s.running, [k]: true } }))
-  const taskId = store.addTask({ title, detail: `Instalando no perfil ${profile?.name ?? ''}`, progress: null, kind: 'content' })
+  const taskId = store.addTask({ title, detail: t('Instalando no perfil {name}', { name: profile?.name ?? '' }), progress: null, kind: 'content' })
   try {
     await backend().install(projectId)
     useInstalls.setState((s) => ({ done: { ...s.done, [k]: true } }))
-    store.patchTask(taskId, { status: 'done', progress: 100, detail: `Instalado no perfil ${profile?.name ?? ''}`, finishedAt: Date.now() })
+    store.patchTask(taskId, { status: 'done', progress: 100, detail: t('Instalado no perfil {name}', { name: profile?.name ?? '' }), finishedAt: Date.now() })
     store.bumpContent()
-    toast.success(`${title} instalado`, { description: `No perfil ${profile?.name ?? ''}. Dependências entram junto.` })
+    toast.success(t('{title} instalado', { title }), { description: t('No perfil {name}. Dependências entram junto.', { name: profile?.name ?? '' }) })
   } catch (err) {
-    store.patchTask(taskId, { status: 'error', detail: err instanceof UserError ? err.message : 'Falhou', finishedAt: Date.now() })
+    store.patchTask(taskId, { status: 'error', detail: err instanceof UserError ? err.message : t('Falhou'), finishedAt: Date.now() })
+
     store.showError(err, 'Não foi possível instalar')
   } finally {
     useInstalls.setState((s) => {

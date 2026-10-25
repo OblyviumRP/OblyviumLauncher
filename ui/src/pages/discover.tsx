@@ -4,13 +4,15 @@ import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { backend, type ContentType, type SearchHit } from '@/backend'
 import { EmptyState, Page, PageHeader } from '@/components/shared/page'
-import { ProfileIcon } from '@/components/shared/profile-icon'
+import { ProfileIcon, profileLabel } from '@/components/shared/profile-icon'
+
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { installProject, useInstallState } from '@/lib/install'
+import { categoryLabel, locale, t, tn } from '@/i18n'
 import { useAsync } from '@/lib/use-async'
 import { cn, formatCount, formatDate } from '@/lib/utils'
 import { useLauncher, useProfile, useServer } from '@/store/launcher'
@@ -21,6 +23,7 @@ const types: { id: ContentType; label: string }[] = [
   { id: 'shader', label: 'Shaders' },
 ]
 
+// Rótulos em português; traduzidos na hora de mostrar.
 const sorts = [
   { value: 'relevance', label: 'Relevância' },
   { value: 'downloads', label: 'Downloads' },
@@ -44,19 +47,19 @@ export function InstallButton({ id, title, installed, size }: { id: string; titl
     return (
       <Button variant="secondary" size={size} asChild>
         <Link to="/perfil?aba=conteudo">
-          <Check className="text-success-fg" /> Instalado
+          <Check className="text-success-fg" /> {t('Instalado')}
         </Link>
       </Button>
     )
   if (state === 'installing')
     return (
       <Button variant="soft" size={size} disabled>
-        <Loader2 className="animate-spin" /> Instalando
+        <Loader2 className="animate-spin" /> {t('Instalando')}
       </Button>
     )
   return (
     <Button size={size} onClick={() => installProject(id, title)}>
-      <Download /> Instalar
+      <Download /> {t('Instalar')}
     </Button>
   )
 }
@@ -99,14 +102,14 @@ export function DiscoverPage() {
   return (
     <Page>
       <PageHeader
-        title="Descobrir"
+        title={t('Descobrir')}
         description={
           server && profile ? (
             <span className="flex flex-wrap items-center gap-1.5">
-              Do Modrinth, só o que é compatível com {server.name} ({server.loader === 'Vanilla' ? 'Vanilla' : server.loader} {server.mcVersion}). Instala no perfil
+              {t('Do Modrinth, só o que é compatível com {name} ({loader} {mc}). Instala no perfil', { name: server.name, loader: server.loader === 'Vanilla' ? 'Vanilla' : server.loader, mc: server.mcVersion })}
               <span className="inline-flex items-center gap-1 font-medium text-foreground">
                 <ProfileIcon name={profile.icon} className="size-3.5 text-primary-light" />
-                {profile.name}
+                {profileLabel(profile)}
               </span>
             </span>
           ) : undefined
@@ -120,10 +123,10 @@ export function DiscoverPage() {
             }}
             variant="pill"
           >
-            <TabsList aria-label="Tipo de conteúdo">
-              {types.map((t) => (
-                <TabsTrigger key={t.id} value={t.id}>
-                  {t.label}
+            <TabsList aria-label={t('Tipo de conteúdo')}>
+              {types.map((ty) => (
+                <TabsTrigger key={ty.id} value={ty.id}>
+                  {t(ty.label)}
                 </TabsTrigger>
               ))}
             </TabsList>
@@ -132,17 +135,17 @@ export function DiscoverPage() {
       />
       <div className="flex flex-wrap gap-2">
         <label className="relative min-w-64 flex-1">
-          <span className="sr-only">Buscar</span>
+          <span className="sr-only">{t('Buscar')}</span>
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-2" />
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={`Buscar ${types.find((t) => t.id === type)!.label.toLowerCase()}…`} className="h-10 pl-9 text-base" />
+          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('Buscar {what}…', { what: t(types.find((ty) => ty.id === type)!.label).toLowerCase() })} className="h-10 pl-9 text-base" />
         </label>
-        <Select aria-label="Ordenar" value={sort} onValueChange={setSort} className="h-10" options={sorts} />
+        <Select aria-label={t('Ordenar')} value={sort} onValueChange={setSort} className="h-10" options={sorts.map((o) => ({ value: o.value, label: t(o.label) }))} />
       </div>
 
       <div className="flex flex-wrap items-start gap-5">
-        <aside aria-label="Filtros" className="flex w-52 shrink-0 flex-col gap-5">
+        <aside aria-label={t('Filtros')} className="flex w-52 shrink-0 flex-col gap-5">
           <fieldset>
-            <legend className="mb-2 font-mono text-2xs uppercase tracking-wider text-muted-2">Categorias</legend>
+            <legend className="mb-2 font-mono text-2xs uppercase tracking-wider text-muted-2">{t('Categorias')}</legend>
             <div className="flex flex-wrap gap-1.5">
               {(categories.data ?? []).map((c) => {
                 const on = cats.includes(c)
@@ -157,32 +160,32 @@ export function DiscoverPage() {
                       on ? 'border-primary bg-primary-soft text-foreground' : 'border-border-2 bg-card text-muted-foreground hover:text-foreground',
                     )}
                   >
-                    {c}
+                    {categoryLabel(c)}
                   </button>
                 )
               })}
-              {categories.loading && <span className="text-xs text-muted-2">Carregando…</span>}
+              {categories.loading && <span className="text-xs text-muted-2">{t('Carregando…')}</span>}
             </div>
           </fieldset>
-          <p className="text-xs text-muted-foreground">Projetos que a staff bloqueou e mods que já vêm com o servidor não aparecem aqui.</p>
+          <p className="text-xs text-muted-foreground">{t('Projetos que a staff bloqueou e mods que já vêm com o modpack não aparecem aqui.')}</p>
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col gap-2">
           <span className="text-xs text-muted-foreground" aria-live="polite">
-            {results.loading ? 'Buscando…' : data ? `${data.total.toLocaleString('pt-BR')} ${data.total === 1 ? 'resultado' : 'resultados'}` : ''}
+            {results.loading ? t('Buscando…') : data ? tn(data.total, '{n} resultado', '{n} resultados') : ''}
           </span>
           {type === 'mod' && loaderless ? (
-            <EmptyState icon={<Package />} title="Servidor sem mods">
-              {server?.name} roda Minecraft sem loader. Procure resource packs ou shaders.
+            <EmptyState icon={<Package />} title={t('Modpack sem mods')}>
+              {t('{name} roda Minecraft sem loader. Procure resource packs ou shaders.', { name: server?.name ?? '' })}
             </EmptyState>
           ) : results.error ? (
-            <EmptyState icon={<Search />} title="Busca indisponível" action={<Button variant="secondary" onClick={results.reload}>Tentar de novo</Button>}>
-              Não foi possível falar com o Modrinth. Verifique a conexão.
+            <EmptyState icon={<Search />} title={t('Busca indisponível')} action={<Button variant="secondary" onClick={results.reload}>{t('Tentar de novo')}</Button>}>
+              {t('Não foi possível falar com o Modrinth. Verifique a conexão.')}
             </EmptyState>
           ) : !results.loading && data && data.hits.length === 0 ? (
             <EmptyState
               icon={<Search />}
-              title="Nada encontrado"
+              title={t('Nada encontrado')}
               action={
                 <Button
                   variant="secondary"
@@ -191,11 +194,11 @@ export function DiscoverPage() {
                     setCats([])
                   }}
                 >
-                  Limpar filtros
+                  {t('Limpar filtros')}
                 </Button>
               }
             >
-              Tente outra busca ou menos filtros.
+              {t('Tente outra busca ou menos filtros.')}
             </EmptyState>
           ) : (
             <AnimatePresence mode="popLayout" initial={false}>
@@ -208,7 +211,7 @@ export function DiscoverPage() {
                   exit={{ opacity: 0, scale: 0.98 }}
                   className="flex flex-wrap items-center gap-4 rounded-lg border border-border bg-card p-3 transition-colors hover:border-border-2"
                 >
-                  <Link to={`/descobrir/${r.id}`} aria-label={`Ver ${r.title}`}>
+                  <Link to={`/descobrir/${r.id}`} aria-label={t('Ver {name}', { name: r.title })}>
                     <ProjectIcon url={r.iconUrl} className="size-16" />
                   </Link>
                   <div className="flex min-w-60 flex-1 flex-col gap-1">
@@ -216,20 +219,21 @@ export function DiscoverPage() {
                       <Link to={`/descobrir/${r.id}`} className="text-base font-semibold hover:underline">
                         {r.title}
                       </Link>
-                      <span className="text-xs text-muted-foreground">por {r.author}</span>
+                      <span className="text-xs text-muted-foreground">{t('por {author}', { author: r.author })}</span>
                     </div>
                     <p className="line-clamp-2 text-sm text-muted-foreground">{r.description}</p>
                     <div className="flex flex-wrap gap-1.5">
                       {r.categories.slice(0, 4).map((c) => (
                         <Badge key={c} tone="primary">
-                          {c}
+                          {categoryLabel(c)}
                         </Badge>
                       ))}
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-2">
                     <span className="font-mono text-2xs text-muted-2">
-                      {formatCount(r.downloads)} downloads{r.updated ? ` · ${formatDate(r.updated)}` : ''}
+                      {t('{n} downloads', { n: formatCount(r.downloads) })}
+                      {r.updated ? ` · ${formatDate(r.updated)}` : ''}
                     </span>
                     <InstallButton id={r.id} title={r.title} installed={r.installed} />
                   </div>
@@ -239,14 +243,14 @@ export function DiscoverPage() {
           )}
           {results.loading && !data && [0, 1, 2, 3].map((i) => <div key={i} className="h-24 animate-pulse rounded-lg bg-card" />)}
           {pages > 1 && (
-            <nav aria-label="Páginas" className="flex items-center justify-center gap-2 pt-2">
-              <Button variant="secondary" size="icon" aria-label="Página anterior" disabled={offset === 0 || results.loading} onClick={() => setOffset((o) => Math.max(0, o - data!.pageSize))}>
+            <nav aria-label={t('Páginas')} className="flex items-center justify-center gap-2 pt-2">
+              <Button variant="secondary" size="icon" aria-label={t('Página anterior')} disabled={offset === 0 || results.loading} onClick={() => setOffset((o) => Math.max(0, o - data!.pageSize))}>
                 <ChevronLeft />
               </Button>
               <span className="font-mono text-xs text-muted-foreground">
-                {page} de {pages.toLocaleString('pt-BR')}
+                {t('{page} de {pages}', { page, pages: pages.toLocaleString(locale()) })}
               </span>
-              <Button variant="secondary" size="icon" aria-label="Próxima página" disabled={page >= pages || results.loading} onClick={() => setOffset((o) => o + data!.pageSize)}>
+              <Button variant="secondary" size="icon" aria-label={t('Próxima página')} disabled={page >= pages || results.loading} onClick={() => setOffset((o) => o + data!.pageSize)}>
                 <ChevronRight />
               </Button>
             </nav>
