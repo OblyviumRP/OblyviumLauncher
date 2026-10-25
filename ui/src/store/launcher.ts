@@ -55,6 +55,7 @@ type State = {
   tasks: Task[]
   notifications: Notice[]
   update: Update
+  contentRev: number
   ask: Ask | null
   windowMaximized: boolean
 
@@ -66,6 +67,7 @@ type State = {
   selectServer: (id: string) => void
   selectProfile: (id: string) => void
   selectAccount: (id: string) => Promise<void>
+  bumpContent: () => void
   launchGame: () => Promise<void>
   stopGame: () => void
   verifyFiles: () => Promise<void>
@@ -115,6 +117,7 @@ export const useLauncher = create<State>()(
       tasks: [],
       notifications: [],
       update: { state: 'idle' },
+      contentRev: 0,
       ask: null,
       windowMaximized: false,
 
@@ -222,6 +225,8 @@ export const useLauncher = create<State>()(
         else if (acc) toast(t('Conta trocada para {name}', { name: acc.name }))
       },
 
+      bumpContent: () => set((s) => ({ contentRev: s.contentRev + 1 })),
+
       launchGame: async () => {
         const s = get()
         if (isBusy(s.launch.state)) return
@@ -251,7 +256,7 @@ export const useLauncher = create<State>()(
             onBlocked: (items) => {
               const names = items.map((i) => i.title).join(', ')
               toast.warning(t('Conteúdo bloqueado foi desativado'), { description: names })
-              get().notify({ title: t('Conteúdo bloqueado pela staff'), body: t('Desativado neste perfil: {names}', { names }), tone: 'warning', href: '/perfil' })
+              get().notify({ title: t('Conteúdo bloqueado pela staff'), body: t('Desativado neste perfil: {names}', { names }), tone: 'warning', href: '/perfil?aba=conteudo' })
             },
             onLog: ({ stream, line }) => {
               if (!filesDone) {
