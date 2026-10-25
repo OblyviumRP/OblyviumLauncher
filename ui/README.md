@@ -60,7 +60,7 @@ O launcher é exclusivo do Oblyvium: o jogador não cria perfis nem instala modp
 |---|---|
 | `/boas-vindas` | login Microsoft ou offline e escolha do servidor no primeiro acesso; `?adicionar=1` só adiciona conta |
 | `/` | arte do servidor com transição em pixels, nome, Jogar, ficha do servidor (jogadores, tempo de resposta, endereço, versão, renderizador Vulkan/OpenGL, pacote), notícias em destaque (a mais recente com resumo) e lista compacta dos outros servidores |
-| `/descobrir` | busca no Modrinth de mods, resource packs e shaders compatíveis com o servidor, com categorias e ordenação; `/descobrir/:id` mostra o projeto e instala no perfil |
+| `/descobrir` | busca no Modrinth de mods, resource packs e shaders compatíveis com o modpack oficial escolhido no topo (o mesmo do Início, que tem o atalho "Adicionar mods"), com categorias e ordenação; `/descobrir/:id` mostra o projeto e instala no perfil |
 | `/perfil` | conteúdo instalado (ativar, atualizar, remover), mods do servidor (só os opcionais da staff podem ser desligados), capturas, `latest.log`, Java do servidor, renomear, verificar arquivos e excluir perfis antigos |
 | `/skins` | skin e capa da conta Microsoft com prévia 3D a partir da textura, biblioteca local de skins |
 | `/downloads` | tarefas da sessão: arquivos do jogo, Java, atualização do launcher |

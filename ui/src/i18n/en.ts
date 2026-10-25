@@ -379,7 +379,6 @@ export const en: Record<string, string> = {
   "Conteúdo": "Content",
   "Conteúdo do perfil": "Profile content",
   "Descobrir": "Discover",
-  "Do Modrinth, só o que é compatível com {name} ({loader} {mc}). Instala no perfil": "From Modrinth, only what works with {name} ({loader} {mc}). Installs to profile",
   "Esse projeto já está no perfil.": "This project is already in the profile.",
   "Esse tipo de conteúdo não é suportado pelo launcher.": "The launcher does not support this content type.",
   "Este servidor roda Minecraft sem loader, então não aceita mods. Resource packs e shaders continuam disponíveis.": "This server runs Minecraft without a loader, so it does not accept mods. Resource packs and shaders are still available.",
@@ -452,4 +451,7 @@ export const en: Record<string, string> = {
   "{title} não tem versão para este servidor.": "{title} has no version for this server.",
   "{title} é proibido pela staff.": "{title} is blocked by staff.",
   "O perfil guarda os mundos, mods extras, resource packs, shaders e configurações do jogo. Os arquivos do servidor são conferidos sempre que você joga.": "The profile keeps your worlds, extra mods, resource packs, shaders and game settings. The server files are checked every time you play.",
+  "Adicionar mods": "Add mods",
+  "Do Modrinth, só o que é compatível com o modpack oficial. Instalar em": "From Modrinth, only what works with the official modpack. Install to",
+  "Modpack oficial": "Official modpack",
 }
