@@ -1,10 +1,11 @@
-import { Download, House, Settings, Shirt, SquareTerminal, type LucideIcon } from 'lucide-react'
+import { Compass, Download, House, Settings, Shirt, SquareTerminal, type LucideIcon } from 'lucide-react'
 
 export type NavItem = { to: string; label: string; icon: LucideIcon; match?: string[] }
 
 // Fonte única da navegação: sidebar e títulos derivam daqui.
 export const mainNav: NavItem[] = [
   { to: '/', label: 'Início', icon: House, match: ['/perfil'] },
+  { to: '/descobrir', label: 'Descobrir', icon: Compass },
   { to: '/skins', label: 'Skins', icon: Shirt },
   { to: '/downloads', label: 'Downloads', icon: Download },
 ]
