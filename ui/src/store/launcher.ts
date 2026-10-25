@@ -55,7 +55,6 @@ type State = {
   tasks: Task[]
   notifications: Notice[]
   update: Update
-  contentRev: number
   ask: Ask | null
   windowFullscreen: boolean
 
@@ -67,7 +66,6 @@ type State = {
   selectServer: (id: string) => void
   selectProfile: (id: string) => void
   selectAccount: (id: string) => Promise<void>
-  bumpContent: () => void
   launchGame: () => Promise<void>
   stopGame: () => void
   verifyFiles: () => Promise<void>
@@ -117,7 +115,6 @@ export const useLauncher = create<State>()(
       tasks: [],
       notifications: [],
       update: { state: 'idle' },
-      contentRev: 0,
       ask: null,
       windowFullscreen: false,
 
@@ -195,7 +192,7 @@ export const useLauncher = create<State>()(
       selectServer: (id) => {
         if (id === get().serverId) return
         if (isBusy(get().launch.state)) {
-          toast.warning(t('Jogo aberto'), { description: t('Troque de modpack depois de fechar o jogo.') })
+          toast.warning(t('Jogo aberto'), { description: t('Troque de servidor depois de fechar o jogo.') })
           return
         }
         try {
@@ -225,7 +222,6 @@ export const useLauncher = create<State>()(
         if (!ok) toast.warning(t('A sessão de {name} expirou', { name: acc?.name ?? '' }), { description: t('Entre de novo com a Microsoft para jogar.') })
         else if (acc) toast(t('Conta trocada para {name}', { name: acc.name }))
       },
-      bumpContent: () => set((s) => ({ contentRev: s.contentRev + 1 })),
 
       launchGame: async () => {
         const s = get()
@@ -256,7 +252,7 @@ export const useLauncher = create<State>()(
             onBlocked: (items) => {
               const names = items.map((i) => i.title).join(', ')
               toast.warning(t('Conteúdo bloqueado foi desativado'), { description: names })
-              get().notify({ title: t('Conteúdo bloqueado pela staff'), body: t('Desativado neste perfil: {names}', { names }), tone: 'warning', href: '/perfil?aba=conteudo' })
+              get().notify({ title: t('Conteúdo bloqueado pela staff'), body: t('Desativado neste perfil: {names}', { names }), tone: 'warning', href: '/perfil' })
             },
             onLog: ({ stream, line }) => {
               if (!filesDone) {
@@ -292,7 +288,7 @@ export const useLauncher = create<State>()(
             askDownloadJava: ({ major }) =>
               get().confirm({
                 title: t('Instalar Java {n}?', { n: major }),
-                body: t('Este modpack precisa do Java {n}, que não foi encontrado no computador. O launcher pode baixar uma versão compatível (Temurin) agora.', { n: major }),
+                body: t('Este servidor precisa do Java {n}, que não foi encontrado no computador. O launcher pode baixar uma versão compatível (Temurin) agora.', { n: major }),
                 confirm: t('Baixar Java'),
                 cancel: t('Agora não'),
               }),

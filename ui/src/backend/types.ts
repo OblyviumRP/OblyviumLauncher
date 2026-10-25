@@ -18,7 +18,7 @@ export type ServerInfo = {
   main: boolean
   scene: SceneKey
   packModCount: number
-  /** Grupo do modpack na lista (Vulkan ou OpenGL), como no launcher antigo. */
+  /** Grupo do servidor (Vulkan ou OpenGL), como no launcher antigo. */
   group: 'Vulkan' | 'OpenGL'
 }
 
@@ -27,17 +27,6 @@ export type ProfileInfo = { id: string; name: string; icon: string; created: str
 export type AccountInfo = { id: string; name: string; kind: 'microsoft' | 'offline' | 'mojang' }
 
 export type ContentType = 'mod' | 'resourcepack' | 'shader'
-
-export type ContentFile = {
-  fileName: string
-  type: ContentType
-  enabled: boolean
-  title: string
-  projectId: string | null
-  iconUrl: string | null
-  version: string | null
-  update: { id: string; number: string } | null
-}
 
 export type PackMod = {
   id: string
@@ -50,13 +39,13 @@ export type PackMod = {
   children: PackMod[]
 }
 
-/** Java é por modpack e perfil: cada versão do Minecraft pede o seu. */
+/** Java é por servidor e perfil: cada versão do Minecraft pede o seu. */
 export type ProfileSettings = {
   javaPath: string | null
   javaSupported: string
 }
 
-/** Memória e janela do jogo valem para todos os modpacks e perfis. */
+/** Memória e janela do jogo valem para todos os servidores e perfis. */
 export type GameSettings = {
   maxRamGB: number
   ramMinGB: number
@@ -79,39 +68,6 @@ export type LauncherSettings = {
 }
 
 export type Article = { title: string; link: string | null; date: string | null; author: string; summary: string }
-
-export type SearchHit = {
-  id: string
-  slug: string
-  title: string
-  author: string
-  description: string
-  iconUrl: string | null
-  downloads: number
-  follows: number
-  updated: string | null
-  categories: string[]
-  installed: boolean
-}
-
-export type ProjectDetails = {
-  id: string
-  slug: string
-  title: string
-  description: string
-  bodyHtml: string
-  iconUrl: string | null
-  downloads: number
-  follows: number
-  updated: string | null
-  categories: string[]
-  gallery: { url: string; title: string | null }[]
-  license: string | null
-  sourceUrl: string | null
-  type: ContentType
-  installed: boolean
-  compatibleVersion: { id: string; number: string; date: string | null } | null
-}
 
 export type LogLine = { t: string; level: 'INFO' | 'WARN' | 'ERROR' | 'DEBUG'; msg: string }
 
@@ -184,8 +140,6 @@ export interface Backend {
   profiles(serverId: string): ProfileInfo[]
   selectedProfileId(serverId: string): string
   selectProfile(serverId: string, profileId: string): void
-  createProfile(serverId: string, o: { name: string; icon: string; copyFrom: string | null }): Promise<ProfileInfo>
-  duplicateProfile(serverId: string, profileId: string): Promise<ProfileInfo>
   updateProfile(serverId: string, profileId: string, o: { name?: string; icon?: string }): void
   removeProfile(serverId: string, profileId: string): Promise<void>
   profileIcons(): { name: string; label: string; svg: string }[]
@@ -205,23 +159,12 @@ export interface Backend {
   stop(): void
   verifyFiles(h: Pick<LaunchHandlers, 'onStatus' | 'onProgress'>): Promise<boolean>
 
-  // Conteúdo do perfil
-  listContent(serverId: string, profileId: string, type: ContentType): Promise<ContentFile[]>
-  setContentEnabled(serverId: string, profileId: string, type: ContentType, fileName: string, enabled: boolean): Promise<void>
-  removeContent(serverId: string, profileId: string, type: ContentType, fileName: string): Promise<void>
-  updateContent(serverId: string, profileId: string, type: ContentType, fileName: string, versionId: string): Promise<void>
-  openContentFolder(serverId: string, profileId: string, type: ContentType): void
+  // Perfil
   packMods(serverId: string, profileId: string): PackMod[]
   setPackModEnabled(serverId: string, profileId: string, path: string[], enabled: boolean): void
   screenshots(serverId: string, profileId: string): Promise<{ name: string; url: string }[]>
   latestLog(serverId: string, profileId: string): Promise<string | null>
   openGameFolder(serverId: string, profileId: string, sub?: string): void
-
-  // Modrinth
-  categories(type: ContentType): Promise<string[]>
-  search(o: { query: string; type: ContentType; categories: string[]; sort: string; offset: number }): Promise<{ hits: SearchHit[]; total: number; pageSize: number }>
-  project(idOrSlug: string): Promise<ProjectDetails>
-  install(projectId: string): Promise<void>
 
   // Configurações
   launcherSettings(): LauncherSettings

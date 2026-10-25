@@ -8,8 +8,6 @@ import {
   type Backend,
   type BootResult,
   type ChangelogRelease,
-  type ContentFile,
-  type ContentType,
   type FeedItem,
   type GameSettings,
   type LaunchHandlers,
@@ -18,9 +16,7 @@ import {
   type PackMod,
   type ProfileInfo,
   type ProfileSettings,
-  type ProjectDetails,
   type SceneKey,
-  type SearchHit,
   type ServerInfo,
   type SkinProfile,
   type UpdateEvent,
@@ -47,9 +43,7 @@ const AuthManagerOffline = req(path.join(appRoot, 'app', 'assets', 'extension', 
 const { DistroAPI } = mod('distromanager')
 const ProfileManager = mod('profilemanager')
 const ProfileIcons = mod('profileicons')
-const ContentManager = mod('contentmanager')
 const Modrinth = mod('modrinth')
-const RichText = mod('richtext')
 const Notifications = mod('notifications')
 const Changelog = mod('changelog')
 const isDev: boolean = mod('isdev')
@@ -99,7 +93,7 @@ function mapServer(s: any): ServerInfo {
     main: Boolean(raw.mainServer),
     scene: sceneFor(raw.id, Boolean(raw.mainServer)),
     packModCount: DistroSync.countPackMods(DistroSync.packModTree(s.modules, {})),
-    // Mesmo critério do launcher antigo: o id do modpack diz se ele é Vulkan.
+    // Mesmo critério do launcher antigo: o id do servidor diz se ele é Vulkan.
     group: raw.id.toLowerCase().includes('vulkan') ? 'Vulkan' : 'OpenGL',
   }
 }
@@ -133,34 +127,6 @@ function configKey(serverId: string, profileId: string) {
   return ProfileManager.configKey(serverId, profileId)
 }
 
-// Mesmos textos de [js.mods.error] no en_US.toml, aqui para passarem pelo t().
-function modrinthMessage(err: any): string {
-  const title = err?.data?.title ?? ''
-  switch (err?.code) {
-    case 'BLOCKED':
-      return err.data?.dependency ? t('Não dá para instalar: ele precisa de {title}, que é proibido pela staff.', { title }) : t('{title} é proibido pela staff.', { title })
-    case 'ALREADY_INSTALLED':
-      return t('{title} já está instalado neste perfil.', { title })
-    case 'NO_COMPATIBLE_VERSION':
-      return t('{title} não tem versão para este servidor.', { title })
-    case 'HASH_MISMATCH':
-      return t('O arquivo baixado veio diferente do esperado e foi descartado. Tente novamente.')
-    case 'RATE_LIMITED':
-      return t('Muitas buscas seguidas, aguarde alguns segundos.')
-    case 'DESTINATION_EXISTS':
-      return t('Já existe um arquivo com esse nome na pasta.')
-    case 'BAD_FILENAME':
-      return t('O arquivo anunciado pela Modrinth tem um nome inválido e foi recusado.')
-    case 'UNSUPPORTED_TYPE':
-      return t('Esse tipo de conteúdo não é suportado pelo launcher.')
-    case 'ENOENT':
-    case 'ENOSPC':
-      return t('Não foi possível ler a pasta do perfil.')
-    default:
-      return t('Não foi possível falar com o Modrinth. Verifique a conexão e tente de novo.')
-  }
-}
-
 // Mensagens do core/skins.js, por código.
 const SKIN_MESSAGES: Record<string, string> = {
   TOO_LARGE: 'O arquivo é grande demais para uma skin.',
@@ -179,7 +145,6 @@ function asUserError(err: any, title: string): UserError {
   if (err instanceof UserError) return err
   if (err?.title && (err.desc || err.message)) return new UserError(stripTags(err.title), stripTags(err.desc ?? err.message))
   if (err instanceof Skins.SkinError) return new UserError(title, SKIN_MESSAGES[err.code] ?? err.message)
-  if (err instanceof Modrinth.ModrinthError || err?.code) return new UserError(title, modrinthMessage(err))
   return new UserError(title, 'Algo deu errado. Veja o console (Ctrl+Shift+I) para detalhes.')
 }
 
@@ -201,28 +166,6 @@ function waitDistributionIndex(): Promise<boolean> {
       }
     }, 100)
   })
-}
-
-// Pacotes do modpack e conteúdo instalado: só para não instalar duplicado.
-let packProjects: { serverId: string; promise: Promise<Set<string>> } | null = null
-function getPackProjects(s: any, strict: boolean): Promise<Set<string>> {
-  if (packProjects == null || packProjects.serverId !== s.rawServer.id || strict) {
-    const promise = Modrinth.getModpackProjects(s, { download: strict })
-    packProjects = { serverId: s.rawServer.id, promise }
-    promise.catch(() => {
-      if (packProjects?.promise === promise) packProjects = null
-    })
-  }
-  return strict ? packProjects.promise : packProjects.promise.catch(() => new Set<string>())
-}
-
-const pendingUpdates = new Map<string, any>()
-let installQueue: Promise<unknown> = Promise.resolve()
-
-function selectedTarget() {
-  const s = server(ConfigManager.getSelectedServer())
-  const p = ProfileManager.getSelected(s.rawServer.id)
-  return { s, dir: gameDir(s.rawServer.id, p.id), target: Modrinth.getServerTarget(s), blocklist: Modrinth.getBlocklist(s) }
 }
 
 async function bufToDataUrl(buf: Uint8Array) {
@@ -302,24 +245,6 @@ export function createElectronBackend(): Backend {
     selectProfile(serverId, profileId) {
       if (LaunchService.isBusy() || LaunchService.isRunning()) throw new UserError('Jogo aberto', 'Troque de perfil depois de fechar o jogo.')
       ProfileManager.select(serverId, profileId)
-    },
-    async createProfile(serverId, o) {
-      try {
-        const p = await ProfileManager.create(serverId, o)
-        sync(distro)
-        return mapProfile(p)
-      } catch (err) {
-        throw asUserError(err, 'Não foi possível criar o perfil')
-      }
-    },
-    async duplicateProfile(serverId, profileId) {
-      try {
-        const p = await ProfileManager.duplicate(serverId, profileId)
-        sync(distro)
-        return mapProfile(p)
-      } catch (err) {
-        throw asUserError(err, 'Não foi possível duplicar o perfil')
-      }
     },
     updateProfile(serverId, profileId, o) {
       ProfileManager.update(serverId, profileId, o)
@@ -437,71 +362,6 @@ export function createElectronBackend(): Backend {
       }
     },
 
-    async listContent(serverId, profileId, type) {
-      const dir = gameDir(serverId, profileId)
-      const s = server(serverId)
-      const files = await ContentManager.describe(dir, type)
-      let updates = new Map<string, any>()
-      const recognised = files.filter((f: any) => f.project != null)
-      const target = Modrinth.getServerTarget(s)
-      if (recognised.length > 0 && !(type === 'mod' && target.loader == null)) {
-        try {
-          updates = await Modrinth.checkUpdates(
-            recognised.map((f: any) => ({ path: f.path, type })),
-            target,
-          )
-        } catch {
-          // Sem Modrinth, a lista aparece sem atualizações.
-        }
-      }
-      return files.map((f: any): ContentFile => {
-        const up = updates.get(f.path)
-        if (up) pendingUpdates.set(`${dir}|${type}|${f.fileName}`, up)
-        return {
-          fileName: f.fileName,
-          type,
-          enabled: f.enabled,
-          title: f.project?.title ?? f.fileName.replace(/\.disabled$/, '').replace(/\.(jar|zip)$/, ''),
-          projectId: f.project?.id ?? null,
-          iconUrl: f.project?.iconUrl ?? null,
-          version: f.version?.number ?? null,
-          update: up ? { id: up.id, number: up.version_number } : null,
-        }
-      })
-    },
-    async setContentEnabled(serverId, profileId, type, fileName, enabled) {
-      try {
-        await ContentManager.setEnabled(gameDir(serverId, profileId), type, fileName, enabled)
-      } catch (err) {
-        throw asUserError(err, 'Não foi possível alterar o item')
-      }
-    },
-    async removeContent(serverId, profileId, type, fileName) {
-      const dir = gameDir(serverId, profileId)
-      try {
-        if (type !== 'mod') await ContentManager.setEnabled(dir, type, fileName, false)
-        const dest = path.join(ContentManager.folder(dir, type), fileName)
-        const res = await ipcRenderer.invoke('TRASH_ITEM', dest)
-        if (!res.result) await ContentManager.remove(dir, type, fileName)
-      } catch (err) {
-        throw asUserError(err, 'Não foi possível remover o item')
-      }
-    },
-    async updateContent(serverId, profileId, type, fileName) {
-      const dir = gameDir(serverId, profileId)
-      const ver = pendingUpdates.get(`${dir}|${type}|${fileName}`)
-      if (ver == null) return
-      try {
-        await ContentManager.updateFile(dir, type, fileName, ver)
-        pendingUpdates.delete(`${dir}|${type}|${fileName}`)
-      } catch (err) {
-        throw asUserError(err, 'Não foi possível atualizar')
-      }
-    },
-    openContentFolder(serverId, profileId, type) {
-      const dir = ContentManager.folder(gameDir(serverId, profileId), type)
-      fs.ensureDir(dir).then(() => shell.openPath(dir))
-    },
     packMods(serverId, profileId): PackMod[] {
       return DistroSync.getPackMods(server(serverId), configKey(serverId, profileId))
     },
@@ -533,87 +393,6 @@ export function createElectronBackend(): Backend {
     openGameFolder(serverId, profileId, sub) {
       const dir = sub ? path.join(gameDir(serverId, profileId), sub) : gameDir(serverId, profileId)
       fs.ensureDir(dir).then(() => shell.openPath(dir))
-    },
-
-    async categories(type) {
-      try {
-        return await Modrinth.getCategories(type)
-      } catch {
-        return []
-      }
-    },
-    async search(o) {
-      const { s, dir, target, blocklist } = selectedTarget()
-      try {
-        const [pack, installed] = await Promise.all([getPackProjects(s, false), ContentManager.installedProjects(dir).catch(() => new Set())])
-        const res = await Modrinth.search(o, target, blocklist, pack)
-        return {
-          total: res.total,
-          pageSize: res.pageSize,
-          hits: res.hits.map(
-            (h: any): SearchHit => ({
-              id: h.project_id,
-              slug: h.slug,
-              title: h.title,
-              author: h.author,
-              description: h.description,
-              iconUrl: h.icon_url || null,
-              downloads: h.downloads,
-              follows: h.follows,
-              updated: h.date_modified ?? null,
-              categories: h.categories ?? [],
-              installed: installed.has(h.project_id),
-            }),
-          ),
-        }
-      } catch (err) {
-        throw asUserError(err, 'Busca indisponível')
-      }
-    },
-    async project(idOrSlug) {
-      const { dir, target } = selectedTarget()
-      try {
-        const p = await Modrinth.getProject(idOrSlug)
-        const type: ContentType = p.project_type === 'shader' ? 'shader' : p.project_type === 'resourcepack' ? 'resourcepack' : 'mod'
-        const [installed, ver] = await Promise.all([
-          ContentManager.installedProjects(dir).catch(() => new Set()),
-          Modrinth.getCompatibleVersion(p.id, type, target).catch(() => null),
-        ])
-        const details: ProjectDetails = {
-          id: p.id,
-          slug: p.slug,
-          title: p.title,
-          description: p.description,
-          bodyHtml: RichText.render(p.body ?? ''),
-          iconUrl: p.icon_url || null,
-          downloads: p.downloads,
-          follows: p.followers,
-          updated: p.updated ?? null,
-          categories: p.categories ?? [],
-          gallery: (p.gallery ?? []).filter((g: any) => /^https:/.test(g.url)).map((g: any) => ({ url: g.url, title: g.title ?? null })),
-          license: p.license?.name ?? p.license?.id ?? null,
-          sourceUrl: p.source_url ?? null,
-          type,
-          installed: installed.has(p.id),
-          compatibleVersion: ver ? { id: ver.id, number: ver.version_number, date: ver.date_published ?? null } : null,
-        }
-        return details
-      } catch (err) {
-        throw asUserError(err, 'Projeto indisponível')
-      }
-    },
-    async install(projectId) {
-      const { s, dir, target, blocklist } = selectedTarget()
-      const run = installQueue.then(async () => {
-        const [pack, installed] = await Promise.all([getPackProjects(s, true), ContentManager.installedProjects(dir)])
-        await Modrinth.install(projectId, target, dir, installed, blocklist, pack)
-      })
-      installQueue = run.catch(() => {})
-      try {
-        await run
-      } catch (err) {
-        throw asUserError(err, 'Não foi possível instalar')
-      }
     },
 
     launcherSettings(): LauncherSettings {
@@ -657,7 +436,7 @@ export function createElectronBackend(): Backend {
       const servers = (distro?.servers ?? []).filter((s: any) => s.rawServer.id !== 'SELECT')
       const b = GameSettingsCore.ramBounds(servers, ConfigManager)
       const current = ConfigManager.getGlobalMaxRAM()
-      // Sem valor global ainda: mostra o que o modpack selecionado usa hoje.
+      // Sem valor global ainda: mostra o que o servidor selecionado usa hoje.
       const selected = ConfigManager.getSelectedServer()
       const fallback = selected ? GameSettingsCore.parseRam(ConfigManager.getJavaConfigKeys().includes(selected) ? ConfigManager.getMaxRAM(selected) : null, b.recommended) : b.recommended
       return {
