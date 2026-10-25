@@ -10,9 +10,6 @@
   "main": "index.js",
   "scripts": {
     "start": "electron .",
-    "verify:visual": "electron scripts/verify-visual.cjs",
-    "verify:mods": "electron scripts/verify-mods.cjs",
-    "verify:notifications": "electron scripts/verify-notifications.cjs",
     "test": "node --test \"test/*.test.js\"",
     "dist": "npm run ui:build && electron-builder build",
     "dist:win": "npm run dist -- -w",
@@ -24,8 +21,7 @@
     "ui:ci": "npm --prefix ui ci",
     "ui:verify": "npm run ui:build && electron scripts/verify-ui.cjs",
     "ui:dev": "npm --prefix ui run dev",
-    "ui:build": "npm --prefix ui run build",
-    "ui:electron": "electron scripts/preview-ui.cjs"
+    "ui:build": "npm --prefix ui run build"
   },
   "engines": {
     "node": "22.x.x"
@@ -34,18 +30,12 @@
     "@electron/remote": "^2.1.3",
     "adm-zip": "^0.5.16",
     "discord-rpc-patch": "^4.0.1",
-    "dompurify": "^3.4.17",
-    "ejs": "^3.1.10",
-    "ejs-electron": "^3.0.0",
     "electron-updater": "^6.7.3",
     "fs-extra": "^11.3.3",
-    "github-syntax-dark": "^0.5.0",
     "got": "^11.8.5",
     "helios-core": "~2.3.0",
     "helios-distribution-types": "^1.3.0",
-    "jquery": "^3.7.1",
     "lodash.merge": "^4.6.2",
-    "marked": "^15.0.12",
     "semver": "^7.7.3",
     "toml": "^3.0.0"
   },
