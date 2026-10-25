@@ -316,6 +316,7 @@ export const es: Record<string, string> = {
   "Veja o console para a causa.": "Mira la consola para ver la causa.",
   "Veja os detalhes no console.": "Mira los detalles en la consola.",
   "Ver tudo": "Ver todo",
+  "Ler notícia": "Leer noticia",
   "Verificando arquivos": "Verificando archivos",
   "Verificando atualizações…": "Buscando actualizaciones…",
   "Verificando informações do sistema..": "Comprobando la información del sistema..",

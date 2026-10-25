@@ -316,6 +316,7 @@ export const en: Record<string, string> = {
   "Veja o console para a causa.": "See the console for the cause.",
   "Veja os detalhes no console.": "See the details in the console.",
   "Ver tudo": "See all",
+  "Ler notícia": "Read article",
   "Verificando arquivos": "Verifying files",
   "Verificando atualizações…": "Checking for updates…",
   "Verificando informações do sistema..": "Checking system information..",

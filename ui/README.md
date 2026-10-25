@@ -58,7 +58,7 @@ O launcher é exclusivo do Oblyvium: o jogador não instala mods, resource packs
 | Rota | Tela |
 |---|---|
 | `/boas-vindas` | login Microsoft ou offline e escolha do servidor no primeiro acesso; `?adicionar=1` só adiciona conta |
-| `/` | arte do servidor com transição em pixels, nome, Jogar, ficha do servidor (jogadores, tempo de resposta, endereço, versão, renderizador Vulkan/OpenGL, pacote), notícias e outros servidores para trocar |
+| `/` | arte do servidor com transição em pixels, nome, Jogar, ficha do servidor (jogadores, tempo de resposta, endereço, versão, renderizador Vulkan/OpenGL, pacote), notícias em destaque (a mais recente com resumo) e lista compacta dos outros servidores |
 | `/perfil` | mods do servidor (só os opcionais da staff podem ser desligados), capturas, `latest.log`, Java do servidor, renomear, verificar arquivos e excluir perfis antigos |
 | `/skins` | skin e capa da conta Microsoft com prévia 3D a partir da textura, biblioteca local de skins |
 | `/downloads` | tarefas da sessão: arquivos do jogo, Java, atualização do launcher |
