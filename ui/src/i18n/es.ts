@@ -379,7 +379,6 @@ export const es: Record<string, string> = {
   "Conteúdo": "Contenido",
   "Conteúdo do perfil": "Contenido del perfil",
   "Descobrir": "Descubrir",
-  "Do Modrinth, só o que é compatível com {name} ({loader} {mc}). Instala no perfil": "De Modrinth, solo lo compatible con {name} ({loader} {mc}). Se instala en el perfil",
   "Esse projeto já está no perfil.": "Este proyecto ya está en el perfil.",
   "Esse tipo de conteúdo não é suportado pelo launcher.": "El launcher no admite este tipo de contenido.",
   "Este servidor roda Minecraft sem loader, então não aceita mods. Resource packs e shaders continuam disponíveis.": "Este servidor usa Minecraft sin loader, así que no admite mods. Los resource packs y shaders siguen disponibles.",
@@ -452,4 +451,7 @@ export const es: Record<string, string> = {
   "{title} não tem versão para este servidor.": "{title} no tiene versión para este servidor.",
   "{title} é proibido pela staff.": "{title} está prohibido por el staff.",
   "O perfil guarda os mundos, mods extras, resource packs, shaders e configurações do jogo. Os arquivos do servidor são conferidos sempre que você joga.": "El perfil guarda tus mundos, mods extra, resource packs, shaders y configuraciones del juego. Los archivos del servidor se comprueban cada vez que juegas.",
+  "Adicionar mods": "Añadir mods",
+  "Do Modrinth, só o que é compatível com o modpack oficial. Instalar em": "De Modrinth, solo lo compatible con el modpack oficial. Instalar en",
+  "Modpack oficial": "Modpack oficial",
 }
