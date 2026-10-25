@@ -720,8 +720,9 @@ export function createElectronBackend(): Backend {
       const s = distro?.getServerById(serverId)
       if (s == null || !s.hostname) return null
       try {
+        const started = performance.now()
         const st = await getServerStatus(47, s.hostname, s.port)
-        return { online: st.players.online, max: st.players.max }
+        return { online: st.players.online, max: st.players.max, pingMs: Math.round(performance.now() - started) }
       } catch {
         return null
       }

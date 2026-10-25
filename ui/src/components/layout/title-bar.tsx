@@ -13,13 +13,13 @@ export function TitleBar() {
   const fullscreen = useLauncher((s) => s.windowFullscreen)
 
   return (
-    <header className="flex h-10 shrink-0 items-center gap-2 border-b border-border bg-sidebar pl-3 [-webkit-app-region:drag]">
+    <header className="flex h-10 shrink-0 items-center gap-2 bg-transparent pl-3 [-webkit-app-region:drag]">
       <div className="flex-1" />
       <div className="flex items-center gap-1 [-webkit-app-region:no-drag]">
         {launch.state !== 'idle' && server && (
           <Link
             to="/console"
-            className="mr-1 flex h-7 max-w-80 items-center gap-2 rounded-sm border border-border-2 bg-card px-2.5 text-xs text-foreground hover:bg-accent"
+            className="mr-1 flex h-7 max-w-80 items-center gap-2 rounded-sm border border-border-2 bg-card/80 px-2.5 backdrop-blur-md text-xs text-foreground hover:bg-accent"
           >
             <span
               className={
