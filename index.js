@@ -134,25 +134,25 @@ ipcMain.on(GAME_OPCODE.HIDE_LAUNCHER, () => {
 
 ipcMain.on(GAME_OPCODE.SHOW_LAUNCHER, showLauncher)
 
-// The window has a fixed size; fullscreen lifts the limits while it lasts
-// and puts them back when it ends.
-const WINDOW_SIZE = { width: 1100, height: 700 }
-
-function setLauncherFullscreen(on){
-    if(win == null || win.isDestroyed() || win.isFullScreen() === on){
+// Maximize and restore like any Windows window. The interface asks for it from
+// its title bar; double-clicking the drag area and Aero Snap work on their own.
+ipcMain.on(WINDOW_OPCODE.TOGGLE_MAXIMIZE, () => {
+    if(win == null || win.isDestroyed()){
         return
     }
-    if(on){
-        win.setMaximumSize(100000, 100000)
-        win.setResizable(true)
-        win.setFullScreenable(true)
-        win.setFullScreen(true)
+    if(win.isMaximized()){
+        win.unmaximize()
     } else {
-        win.setFullScreen(false)
+        win.maximize()
     }
-}
+})
 
-ipcMain.on(WINDOW_OPCODE.SET_FULLSCREEN, (_event, on) => setLauncherFullscreen(on === true))
+// The interface reopens maximized when it was closed maximized.
+ipcMain.on(WINDOW_OPCODE.MAXIMIZE, () => {
+    if(win != null && !win.isDestroyed()){
+        win.maximize()
+    }
+})
 
 ipcMain.handle(SHELL_OPCODE.TRASH_ITEM, async (event, ...args) => {
     try {
@@ -302,11 +302,6 @@ function createWindow() {
         height: 700,
         minWidth: 1100,
         minHeight: 700,
-        maxWidth: 1100,
-        maxHeight: 700,
-        resizable: false,
-        thickFrame: false,
-        maximizable: false,
         fullscreenable: false,
         icon: getPlatformIcon('OblyviumIcon'),
         frame: false,
@@ -319,15 +314,8 @@ function createWindow() {
     })
     remoteMain.enable(win.webContents)
 
-    win.on('enter-full-screen', () => win.webContents.send(WINDOW_OPCODE.FULLSCREEN_CHANGED, true))
-    win.on('leave-full-screen', () => {
-        win.setFullScreenable(false)
-        win.setResizable(false)
-        win.setMaximumSize(WINDOW_SIZE.width, WINDOW_SIZE.height)
-        win.setSize(WINDOW_SIZE.width, WINDOW_SIZE.height)
-        win.center()
-        win.webContents.send(WINDOW_OPCODE.FULLSCREEN_CHANGED, false)
-    })
+    win.on('maximize', () => win.webContents.send(WINDOW_OPCODE.MAXIMIZED_CHANGED, true))
+    win.on('unmaximize', () => win.webContents.send(WINDOW_OPCODE.MAXIMIZED_CHANGED, false))
 
     const appUrl = pathToFileURL(RENDERER_ENTRY).toString()
     NavigationGuard.attach(win.webContents, () => appUrl, url => shell.openExternal(url))
