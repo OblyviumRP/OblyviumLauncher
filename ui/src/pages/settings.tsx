@@ -44,7 +44,14 @@ function Row({ title, description, children, htmlFor }: { title: string; descrip
   )
 }
 
-type BoolKey = 'discordPresence' | 'allowPrerelease' | 'autoConnect' | 'hideLauncherWhilePlaying' | 'launcherFullscreen'
+type BoolKey = 'discordPresence' | 'allowPrerelease' | 'autoConnect' | 'launcherFullscreen'
+
+// Rótulos em português; traduzidos na hora de mostrar.
+const onPlayOptions: { value: LauncherSettings['launcherOnPlay']; label: string; hint: string }[] = [
+  { value: 'tray', label: 'Esconder na bandeja', hint: 'A janela some e fica um ícone perto do relógio. Volta quando o jogo fechar.' },
+  { value: 'minimize', label: 'Minimizar', hint: 'A janela vai para a barra de tarefas. Volta quando o jogo fechar.' },
+  { value: 'keep', label: 'Deixar aberto', hint: 'O launcher continua na tela, com o console à mão.' },
+]
 
 function SwitchRow({ k, title, description, settings, onChange }: { k: BoolKey; title: string; description?: string; settings: LauncherSettings; onChange: () => void }) {
   const id = `s-${k}`
@@ -259,7 +266,17 @@ export function SettingsPage() {
               <Select aria-label={t('Idioma')} value={lang} onValueChange={(v) => changeLang(v as Lang)} options={LANGS.map((l) => ({ value: l.id, label: l.label }))} />
             </Row>
             <SwitchRow k="launcherFullscreen" title={t('Launcher em tela cheia')} description={t('Abre o launcher ocupando a tela toda. F11 liga e desliga a qualquer momento.')} settings={settings} onChange={bump} />
-            <SwitchRow k="hideLauncherWhilePlaying" title={t('Esconder o launcher enquanto joga')} description={t('A janela volta quando o jogo fechar.')} settings={settings} onChange={bump} />
+            <Row title={t('Quando o jogo abrir')} description={t(onPlayOptions.find((o) => o.value === settings.launcherOnPlay)!.hint)}>
+              <Select
+                aria-label={t('Quando o jogo abrir')}
+                value={settings.launcherOnPlay}
+                onValueChange={(v) => {
+                  backend().setLauncherSetting('launcherOnPlay', v as LauncherSettings['launcherOnPlay'])
+                  bump()
+                }}
+                options={onPlayOptions.map((o) => ({ value: o.value, label: t(o.label) }))}
+              />
+            </Row>
             <SwitchRow k="autoConnect" title={t('Entrar direto no servidor')} description={t('Ao abrir o jogo, conecta no endereço do modpack selecionado.')} settings={settings} onChange={bump} />
             <SwitchRow k="discordPresence" title={t('Discord Rich Presence')} description={t('Mostra no Discord o modpack em que você está jogando.')} settings={settings} onChange={bump} />
             <Row title={t('Pasta de dados')} description={<span className="break-all font-mono">{settings.dataDirectory}</span>}>

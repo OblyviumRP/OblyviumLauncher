@@ -21,7 +21,7 @@ const patterns = [
   new RegExp(String.raw`\btn\([^,]+,\s*${STR}\s*,\s*${STR}`, 'g'),
   new RegExp(String.raw`new UserError\(\s*${STR}\s*,\s*${STR}`, 'g'),
   new RegExp(String.raw`(?:asUserError|showError)\([^,]+,\s*${STR}`, 'g'),
-  new RegExp(String.raw`\blabel:\s*${STR}`, 'g'),
+  new RegExp(String.raw`\b(?:label|hint):\s*${STR}`, 'g'),
   new RegExp(String.raw`^\s+[A-Z_]+:\s*${STR},?$`, 'gm'),
   new RegExp(String.raw`message:\s*${STR}`, 'g'),
 ]

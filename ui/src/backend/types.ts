@@ -72,7 +72,8 @@ export type LauncherSettings = {
   discordPresence: boolean
   allowPrerelease: boolean
   autoConnect: boolean
-  hideLauncherWhilePlaying: boolean
+  /** O que o launcher faz quando o jogo abre. */
+  launcherOnPlay: 'tray' | 'minimize' | 'keep'
   launcherFullscreen: boolean
   dataDirectory: string
 }

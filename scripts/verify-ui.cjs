@@ -197,7 +197,7 @@ app.whenReady().then(async () => {
         await click('[role=option]', 'English')
         await pause(800)
         assert.match(await text(), /Settings/)
-        assert.match(await text(), /Hide the launcher while playing/)
+        assert.match(await text(), /When the game opens/)
         assert.equal(await config('C.getLanguage()'), 'en')
         await shot('05c-ingles')
         await click('button[aria-label="Language"]')
@@ -208,9 +208,11 @@ app.whenReady().then(async () => {
 
         // Configurações do launcher gravam no ConfigManager.
         await go('#/configuracoes')
-        const before = await config('C.getHideLauncherWhilePlaying()')
-        await click('#s-hideLauncherWhilePlaying')
-        assert.equal(await config('C.getHideLauncherWhilePlaying()'), !before, 'opção salva')
+        assert.equal(await config('C.getLauncherOnPlay()'), 'tray', 'padrão: esconder na bandeja')
+        await click('button[aria-label="Quando o jogo abrir"]')
+        await click('[role=option]', 'Minimizar')
+        assert.equal(await config('C.getLauncherOnPlay()'), 'minimize', 'opção salva')
+        assert.equal(await config('C.getHideLauncherWhilePlaying()'), false, 'interface antiga não esconde')
         await shot('06-configuracoes')
 
         for(const [hash, expected, name] of [

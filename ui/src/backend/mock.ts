@@ -87,7 +87,7 @@ const settings: LauncherSettings = {
   discordPresence: true,
   allowPrerelease: false,
   autoConnect: true,
-  hideLauncherWhilePlaying: true,
+  launcherOnPlay: 'tray',
   launcherFullscreen: false,
   dataDirectory: '~/.oblyviumlauncher',
 }
