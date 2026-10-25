@@ -74,7 +74,7 @@ export function OnboardingPage() {
     }
   }
 
-  const steps = adding ? [t('Conta')] : [t('Conta'), t('Modpack')]
+  const steps = adding ? [t('Conta')] : [t('Conta'), t('Servidor')]
   const lang = useLang((s) => s.lang)
   const changeLang = useLang((s) => s.change)
   const index = step === 'servidor' ? 1 : 0
@@ -177,8 +177,8 @@ export function OnboardingPage() {
             {step === 'servidor' && (
               <>
                 <h1 className="text-lg font-semibold">{t('Onde você quer jogar?')}</h1>
-                <p className="text-sm text-muted-foreground">{t('Dá para trocar a qualquer momento em Modpacks.')}</p>
-                <div role="radiogroup" aria-label={t('Modpack')} className="flex flex-col gap-2">
+                <p className="text-sm text-muted-foreground">{t('Dá para trocar a qualquer momento no Início.')}</p>
+                <div role="radiogroup" aria-label={t('Servidor')} className="flex flex-col gap-2">
                   {servers.map((sv) => (
                     <button
                       key={sv.id}

@@ -31,11 +31,11 @@ function NavLinkItem({ item, collapsed, badge }: { item: NavItem; collapsed: boo
       )}
     >
       {active && (
-        <motion.span
-          layoutId="nav-active"
-          className="absolute inset-0 rounded-sm border border-primary-line bg-primary-soft"
-          transition={{ type: 'spring', stiffness: 520, damping: 40 }}
-        />
+        // Item ativo: fundo suave e um filete violeta encostado na borda do menu, que desliza entre os itens.
+        <>
+          <motion.span layoutId="nav-active-bg" className="absolute inset-0 rounded-sm bg-primary-soft/60" transition={{ type: 'spring', stiffness: 520, damping: 40 }} />
+          <motion.span layoutId="nav-active-bar" className="absolute -left-2 inset-y-1.5 w-[3px] rounded-r-sm bg-primary" transition={{ type: 'spring', stiffness: 520, damping: 40 }} />
+        </>
       )}
       <span className="relative">
         <Icon className={cn('size-[18px]', active && 'text-primary-light')} />
@@ -95,7 +95,7 @@ export function Sidebar() {
       initial={false}
       animate={{ width: collapsed ? 56 : 240 }}
       transition={{ type: 'spring', stiffness: 380, damping: 38 }}
-      className="flex h-full shrink-0 flex-col gap-5 overflow-hidden rounded-lg border border-border bg-sidebar/75 px-2 py-3 shadow-popover backdrop-blur-md"
+      className="flex h-full shrink-0 flex-col gap-5 overflow-hidden border-r border-border bg-sidebar px-2 py-3"
     >
       <div className={cn('flex items-center gap-2', collapsed ? 'flex-col' : 'justify-between pl-1.5')}>
         <Link to="/" className="flex items-center gap-2.5 rounded-sm" aria-label={t('Oblyvium Launcher, início')}>
@@ -121,7 +121,7 @@ export function Sidebar() {
         ))}
       </div>
 
-      {server && (
+      {server && profiles.length > 1 && (
         <div className="flex min-h-0 flex-col gap-0.5">
           {collapsed ? (
             <span className="mx-2 mb-1 h-px bg-border" />

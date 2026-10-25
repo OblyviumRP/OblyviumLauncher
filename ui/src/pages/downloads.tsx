@@ -69,7 +69,7 @@ export function DownloadsPage() {
     <Page className="max-w-4xl">
       <PageHeader
         title={t('Downloads')}
-        description={t('Arquivos do modpack, Java, conteúdo do Modrinth e atualizações do launcher.')}
+        description={t('Arquivos do servidor, Java e atualizações do launcher.')}
         actions={
           <Button variant="secondary" onClick={clear} disabled={history.length === 0}>
             {t('Limpar histórico')}
@@ -84,7 +84,7 @@ export function DownloadsPage() {
           <AnimatePresence initial={false}>
             {active.length === 0 ? (
               <EmptyState key="vazio" icon={<Download />} title={t('Nada baixando')}>
-                {t('Ao jogar, o launcher confere e baixa o que faltar do modpack. Instalações do Descobrir também aparecem aqui.')}
+                {t('Ao jogar, o launcher confere e baixa o que faltar do servidor.')}
               </EmptyState>
             ) : (
               active.map((x) => <Row key={x.id} task={x} />)

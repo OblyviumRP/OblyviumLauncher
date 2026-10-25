@@ -194,3 +194,22 @@
 .prose-forja hr { border-color: var(--border); }
 .prose-forja table { width: 100%; border-collapse: collapse; }
 .prose-forja th, .prose-forja td { border: 1px solid var(--border); padding: 4px 8px; text-align: left; }
+
+/*
+ * Transição em pixels (dither) da arte para o fundo: a parte de baixo vira
+ * xadrez de pixels antes de sumir, como em pixel art. Usado no Início.
+ */
+.fj-dither-fade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: var(--background);
+  -webkit-mask-image:
+    linear-gradient(to top, #000 0%, #000 34%, transparent 62%),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8'><rect width='4' height='4'/><rect x='4' y='4' width='4' height='4'/></svg>");
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(to top, #000 0%, #000 34%, transparent 62%),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8'><rect width='4' height='4'/><rect x='4' y='4' width='4' height='4'/></svg>");
+  mask-composite: intersect;
+}

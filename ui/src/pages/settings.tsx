@@ -69,7 +69,7 @@ function SwitchRow({ k, title, description, settings, onChange }: { k: BoolKey; 
   )
 }
 
-/** Memória e janela do jogo: valem para todos os modpacks e perfis. */
+/** Memória e janela do jogo: valem para todos os servidores e perfis. */
 function GameSettingsSection() {
   const [rev, setRev] = useState(0)
   void rev // muda a cada troca para reler do backend
@@ -87,7 +87,7 @@ function GameSettingsSection() {
 
   return (
     <div className="flex flex-col">
-      <p className="border-b border-border py-3.5 text-sm text-muted-foreground">{t('Estas opções valem para todos os modpacks e perfis. O Java fica por modpack, na aba Configurações de cada perfil.')}</p>
+      <p className="border-b border-border py-3.5 text-sm text-muted-foreground">{t('Estas opções valem para todos os servidores. O Java fica por servidor, em Gerenciar → Configurações.')}</p>
       <div className="flex flex-col gap-3 border-b border-border py-4">
         <div className="flex items-baseline justify-between">
           <span className="text-sm font-medium">{t('Memória máxima')}</span>
@@ -277,8 +277,8 @@ export function SettingsPage() {
                 options={onPlayOptions.map((o) => ({ value: o.value, label: t(o.label) }))}
               />
             </Row>
-            <SwitchRow k="autoConnect" title={t('Entrar direto no servidor')} description={t('Ao abrir o jogo, conecta no endereço do modpack selecionado.')} settings={settings} onChange={bump} />
-            <SwitchRow k="discordPresence" title={t('Discord Rich Presence')} description={t('Mostra no Discord o modpack em que você está jogando.')} settings={settings} onChange={bump} />
+            <SwitchRow k="autoConnect" title={t('Entrar direto no servidor')} description={t('Ao abrir o jogo, conecta no endereço do servidor selecionado.')} settings={settings} onChange={bump} />
+            <SwitchRow k="discordPresence" title={t('Discord Rich Presence')} description={t('Mostra no Discord o servidor em que você está jogando.')} settings={settings} onChange={bump} />
             <Row title={t('Pasta de dados')} description={<span className="break-all font-mono">{settings.dataDirectory}</span>}>
               <Button variant="secondary" onClick={() => backend().openDataFolder()}>
                 <FolderOpen /> {t('Abrir')}

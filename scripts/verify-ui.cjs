@@ -139,30 +139,30 @@ app.whenReady().then(async () => {
         await pause(800)
 
         assert.match(await text(), /Servidor principal/)
-        assert.match(await text(), /Minecraft 1\.20\.1 · Forge/, 'pílula de versão')
-        assert.equal(await run(`document.querySelector('[role=radiogroup] [aria-checked=true]')?.textContent`), 'Padrão', 'perfil selecionado no Início')
-        assert.ok(await run(`!!document.querySelector('#root > div > div[aria-hidden] svg, #root > div > div[aria-hidden] img')`), 'arte atrás da janela no Início')
+        // Ficha do servidor (no lugar das pílulas) e arte só na área de conteúdo.
+        assert.match(await text(), /Renderizador\s+OpenGL/, 'ficha do servidor')
+        assert.match(await text(), /Versão\s+1\.20\.1 · Forge/, 'versão na ficha')
+        assert.ok(await run(`!!document.querySelector('main [aria-hidden] svg, main [aria-hidden] img')`), 'arte no Início')
+        assert.ok(await run(`!!document.querySelector('.fj-dither-fade')`), 'transição em pixels')
+        // Só o perfil padrão: o seletor de perfis não aparece.
+        assert.equal(await run(`document.querySelectorAll('main [role=radiogroup]').length`), 0, 'sem seletor de perfis')
         await noOverflow('início')
         await shot('02-inicio')
 
-        // Modpacks (agrupados em Vulkan e OpenGL, com os mods no card) e criação de perfil.
-        await go('#/servidores')
-        assert.match(await run('location.hash'), /#\/modpacks/, 'rota antiga leva a Modpacks')
-        assert.match(await text(), /Vulkan[\s\S]*Principal Vulkan[\s\S]*OpenGL[\s\S]*Servidor principal/i, 'grupos Vulkan e OpenGL')
-        assert.match(await text(), /VulkanMod/)
-        assert.match(await text(), /Perfis de Servidor principal/)
-        await click('button', 'Novo perfil')
-        await type('[role=dialog] input', 'Construção')
-        await click('[role=dialog] button[type=submit]', 'Criar perfil')
-        await pause(800)
-        const profiles = await config('C.getProfiles ? JSON.stringify(C.getProfiles()) : ""')
-        assert.match(profiles, /Construção/, 'perfil criado no config')
-        await shot('03-modpacks')
+        // Launcher exclusivo: sem Descobrir, Modpacks nem criação de perfil.
+        const nav = await run(`[...document.querySelectorAll('nav a')].map(a => a.textContent.trim()).join('|')`)
+        assert.doesNotMatch(nav, /Descobrir|Modpacks/, 'menu sem Descobrir e Modpacks: ' + nav)
+        for(const hash of ['#/descobrir', '#/modpacks', '#/servidores', '#/descobrir/abc']){
+            await go(hash)
+            assert.equal(await run('location.hash'), '#/', hash + ' volta ao Início')
+        }
 
-        // Perfil: conteúdo, mods do pacote e configurações.
+        // Perfil: só os mods opcionais da staff, capturas, logs e configurações.
         await go('#/perfil')
-        assert.match(await text(), /Construção/)
-        await click('[role=tab]', 'Mods do modpack')
+        const tabs = await run(`[...document.querySelectorAll('[role=tab]')].map(t => t.textContent.trim()).join('|')`)
+        assert.doesNotMatch(tabs, /Conteúdo/, 'sem aba de conteúdo: ' + tabs)
+        assert.match(tabs, /Mods do servidor/)
+        assert.doesNotMatch(await text(), /Duplicar|Novo perfil|Adicionar/, 'sem duplicar, criar ou adicionar')
         assert.match(await text(), /Mod opcional/)
         assert.match(await text(), /obrigatório/)
         await click('[role=switch][aria-label="Mod opcional"]')
@@ -189,7 +189,7 @@ app.whenReady().then(async () => {
         const globalRam = await config('C.getGlobalMaxRAM()')
         assert.ok(globalRam != null, 'memória global salva')
         const rams = await config('JSON.stringify(C.getJavaConfigKeys().filter(k => k.startsWith("qa-principal")).map(k => C.getMaxRAM(k)))')
-        assert.ok(JSON.parse(rams).length >= 3, 'perfis e modpacks com configuração de Java: ' + rams)
+        assert.ok(JSON.parse(rams).length >= 2, 'servidores com configuração de Java: ' + rams)
         assert.ok(JSON.parse(rams).every(v => v === JSON.parse(rams)[0]), 'mesma memória em todos: ' + rams)
         await shot('05b-config-jogo')
 
@@ -218,7 +218,6 @@ app.whenReady().then(async () => {
         await shot('06-configuracoes')
 
         for(const [hash, expected, name] of [
-            ['#/descobrir', /Descobrir/, '07-descobrir'],
             ['#/skins', /conta Microsoft/, '08-skins-offline'],
             ['#/downloads', /Downloads/, '09-downloads'],
             ['#/console', /Nenhum jogo aberto/, '10-console']
@@ -229,17 +228,13 @@ app.whenReady().then(async () => {
             await shot(name)
         }
 
-        // Modpack sem loader: Descobrir não oferece mods.
-        await go('#/modpacks')
-        await run(`[...document.querySelectorAll('article')].find(a => a.textContent.includes('Eventos')).querySelector('button').scrollIntoView({ block: 'center' })`)
-        const sel = await run(`(() => { const b = [...document.querySelectorAll('article')].find(a => a.textContent.includes('Eventos')).querySelectorAll('button'); const e = b[b.length - 1]; const r = e.getBoundingClientRect(); return { x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2) } })()`)
-        win.webContents.sendInputEvent({ type: 'mouseDown', button: 'left', clickCount: 1, ...sel })
-        win.webContents.sendInputEvent({ type: 'mouseUp', button: 'left', clickCount: 1, ...sel })
+        // Trocar de servidor pelo Início ("Outros servidores"); servidor sem mods não tem a aba.
+        await go('#/')
+        await click('button[aria-label="Jogar em Eventos"]')
         await pause(600)
-        await go('#/descobrir?tipo=mod')
-        assert.match(await text(), /Modpack sem mods/)
-
         assert.equal(await config('C.getSelectedServer()'), 'qa-vanilla')
+        await go('#/perfil')
+        assert.doesNotMatch(await run(`[...document.querySelectorAll('[role=tab]')].map(t => t.textContent).join('|')`), /Mods do servidor/, 'sem aba de mods')
 
         // Sidebar recolhida continua navegável.
         await go('#/')

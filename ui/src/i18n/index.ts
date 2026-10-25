@@ -1,4 +1,3 @@
-import { categories } from './categories'
 import { en } from './en'
 import { es } from './es'
 
@@ -54,11 +53,4 @@ export function t(text: string, vars?: Record<string, string | number>): string 
 /** Escolhe entre singular e plural pelo número. */
 export function tn(n: number, one: string, many: string, vars?: Record<string, string | number>) {
   return t(n === 1 ? one : many, { n: n.toLocaleString(locale()), ...vars })
-}
-
-/** Nome de uma categoria do Modrinth no idioma atual. */
-export function categoryLabel(slug: string) {
-  const known = categories[slug]
-  if (known) return known[current]
-  return slug.replace(/[-_]/g, ' ').replace(/^\w/, (c) => c.toUpperCase())
 }

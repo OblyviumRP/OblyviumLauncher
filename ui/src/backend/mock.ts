@@ -4,8 +4,6 @@ import {
   UserError,
   type AccountInfo,
   type Backend,
-  type ContentFile,
-  type ContentType,
   type GameSettings,
   type LaunchHandlers,
   type LauncherSettings,
@@ -13,7 +11,6 @@ import {
   type PackMod,
   type ProfileInfo,
   type ProfileSettings,
-  type SearchHit,
   type ServerInfo,
   type SkinProfile,
 } from './types'
@@ -40,7 +37,7 @@ const servers: ServerInfo[] = [
   {
     id: 'oblyvium-rp-vulkan',
     name: 'Oblyvium RP (Vulkan)',
-    description: 'O mesmo modpack com o renderizador Vulkan, para placas de vídeo mais novas.',
+    description: 'O mesmo servidor com o renderizador Vulkan, para placas de vídeo mais novas.',
     mcVersion: '1.20.1',
     version: '3.4.0',
     loader: 'Forge',
@@ -104,24 +101,6 @@ try {
   // Sem localStorage: segue o idioma do navegador.
 }
 
-const content: Record<string, ContentFile[]> = {}
-function files(key: string, type: ContentType): ContentFile[] {
-  const k = `${key}|${type}`
-  if (content[k] == null) {
-    content[k] =
-      type === 'mod'
-        ? [
-            { fileName: 'sodium-0.5.11.jar', type, enabled: true, title: 'Sodium', projectId: 'AANobbMI', iconUrl: null, version: '0.5.11', update: { id: 'v2', number: '0.5.13' } },
-            { fileName: 'iris-1.7.3.jar', type, enabled: true, title: 'Iris Shaders', projectId: 'YL57xq9U', iconUrl: null, version: '1.7.3', update: null },
-            { fileName: 'minimapa.jar.disabled', type, enabled: false, title: 'minimapa', projectId: null, iconUrl: null, version: null, update: null },
-          ]
-        : type === 'shader'
-          ? [{ fileName: 'ComplementaryReimagined.zip', type, enabled: true, title: 'Complementary Reimagined', projectId: 'HVnmMxH1', iconUrl: null, version: 'r5.2', update: null }]
-          : []
-  }
-  return content[k]
-}
-
 const packMods: Record<string, PackMod[]> = {}
 function pack(key: string): PackMod[] {
   packMods[key] ??= [
@@ -140,28 +119,6 @@ function pack(key: string): PackMod[] {
   ]
   return packMods[key]
 }
-
-const hits: SearchHit[] = [
-  ['Sodium', 'jellysquid3', 'Motor de renderização moderno que aumenta muito o FPS.', 41_000_000],
-  ['Iris Shaders', 'coderbot', 'Suporte a shaders compatível com Sodium.', 29_000_000],
-  ['Mod Menu', 'Prospector', 'Lista os mods instalados e abre as configurações.', 22_000_000],
-  ['Xaero’s Minimap', 'xaero96', 'Minimapa leve com waypoints.', 18_000_000],
-  ['Faithful 32x', 'Faithful Resource Pack', 'Texturas clássicas com o dobro de resolução.', 9_000_000],
-  ['Complementary Reimagined', 'EminGT', 'Shader bonito e leve, fiel ao estilo do jogo.', 7_000_000],
-].map(([title, author, description, downloads], i) => ({
-  id: `p${i}`,
-  slug: String(title).toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-  title: String(title),
-  author: String(author),
-  description: String(description),
-  iconUrl: null,
-  downloads: Number(downloads),
-  follows: Math.round(Number(downloads) / 400),
-  updated: '2026-10-01T10:00:00Z',
-  categories: ['optimization'],
-  installed: false,
-}))
-const installed = new Set<string>()
 
 let skin: SkinProfile = { skin: null, capes: [{ id: 'c1', alias: 'Migrator', url: '', active: false }] }
 const library: LibrarySkin[] = []
@@ -196,18 +153,6 @@ export function createMockBackend(): Backend {
     selectProfile(serverId, profileId) {
       if (running) throw new UserError('Jogo aberto', 'Troque de perfil depois de fechar o jogo.')
       selectedProfile[serverId] = profileId
-    },
-    async createProfile(serverId, o) {
-      await wait(200)
-      const p = { id: uid(), name: o.name.trim(), icon: o.icon, created: new Date().toISOString(), isDefault: false }
-      profiles[serverId].push(p)
-      return p
-    },
-    async duplicateProfile(serverId, profileId) {
-      const src = profiles[serverId].find((p) => p.id === profileId)!
-      const p = { ...src, id: uid(), name: `${src.name} (cópia)`.slice(0, 32), isDefault: false }
-      profiles[serverId].push(p)
-      return p
     },
     updateProfile(serverId, profileId, o) {
       const p = profiles[serverId].find((x) => x.id === profileId)
@@ -290,32 +235,6 @@ export function createMockBackend(): Backend {
       return true
     },
 
-    async listContent(serverId, profileId, type) {
-      await wait(250)
-      return [...files(key(serverId, profileId), type)]
-    },
-    async setContentEnabled(serverId, profileId, type, fileName, enabled) {
-      const list = files(key(serverId, profileId), type)
-      for (const f of list) {
-        if (f.fileName === fileName) {
-          f.enabled = enabled
-          if (type === 'mod') f.fileName = enabled ? f.fileName.replace(/\.disabled$/, '') : `${f.fileName}.disabled`
-        } else if (type === 'shader' && enabled) f.enabled = false
-      }
-    },
-    async removeContent(serverId, profileId, type, fileName) {
-      const k = key(serverId, profileId)
-      content[`${k}|${type}`] = files(k, type).filter((f) => f.fileName !== fileName)
-    },
-    async updateContent(serverId, profileId, type, fileName) {
-      await wait(500)
-      const f = files(key(serverId, profileId), type).find((x) => x.fileName === fileName)
-      if (f?.update) {
-        f.version = f.update.number
-        f.update = null
-      }
-    },
-    openContentFolder() {},
     packMods: (serverId, profileId) => pack(key(serverId, profileId)),
     setPackModEnabled(serverId, profileId, path, enabled) {
       let list = pack(key(serverId, profileId))
@@ -329,33 +248,6 @@ export function createMockBackend(): Backend {
     screenshots: async () => [],
     latestLog: async () => '[12:00:00] [main/INFO]: Nenhum log real no modo de desenvolvimento.',
     openGameFolder() {},
-
-    categories: async (type) => (type === 'mod' ? ['adventure', 'decoration', 'magic', 'optimization', 'storage', 'utility'] : ['realistic', 'vanilla-like', 'cartoon']),
-    async search(o) {
-      await wait(300)
-      const q = o.query.toLowerCase()
-      const list = hits.filter((h) => !q || h.title.toLowerCase().includes(q)).map((h) => ({ ...h, installed: installed.has(h.id) }))
-      return { hits: list, total: list.length, pageSize: 20 }
-    },
-    async project(id) {
-      await wait(300)
-      const h = hits.find((x) => x.id === id || x.slug === id) ?? hits[0]
-      return {
-        ...h,
-        bodyHtml: `<p>${h.description}</p><h2>Recursos</h2><ul><li>Compatível com o servidor</li><li>Instala na pasta do perfil</li></ul>`,
-        gallery: [],
-        license: 'LGPL-3.0',
-        sourceUrl: null,
-        type: h.title.includes('Faithful') ? 'resourcepack' : h.title.includes('Complementary') ? 'shader' : 'mod',
-        installed: installed.has(h.id),
-        compatibleVersion: { id: 'v1', number: '1.0.0', date: '2026-10-01T10:00:00Z' },
-      }
-    },
-    async install(projectId) {
-      await wait(900)
-      if (installed.has(projectId)) throw new UserError('Não foi possível instalar', 'Esse projeto já está no perfil.')
-      installed.add(projectId)
-    },
 
     launcherSettings: () => ({ ...settings }),
     setLauncherSetting(k, v) {
