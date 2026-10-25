@@ -2,15 +2,14 @@ const remoteMain = require('@electron/remote/main')
 remoteMain.initialize()
 
 // Requirements
-const { app, BrowserWindow, ipcMain, Menu, shell, Tray } = require('electron')
+const { app, BrowserWindow, dialog, ipcMain, Menu, shell, Tray } = require('electron')
 const autoUpdater                       = require('electron-updater').autoUpdater
-const ejse                              = require('ejs-electron')
 const fs                                = require('fs')
 const isDev                             = require('./app/assets/js/isdev')
 const path                              = require('path')
 const semver                            = require('semver')
 const { pathToFileURL }                 = require('url')
-const { AZURE_CLIENT_ID, MSFT_OPCODE, MSFT_REPLY_TYPE, MSFT_ERROR, SHELL_OPCODE, GAME_OPCODE } = require('./app/assets/js/ipcconstants')
+const { AZURE_CLIENT_ID, MSFT_OPCODE, MSFT_REPLY_TYPE, MSFT_ERROR, SHELL_OPCODE, GAME_OPCODE, WINDOW_OPCODE } = require('./app/assets/js/ipcconstants')
 const LangLoader                        = require('./app/assets/js/langloader')
 const NavigationGuard                   = require('./app/assets/js/navigationguard')
 
@@ -105,10 +104,19 @@ function showLauncher(){
         tray = null
     }
     if(win != null && !win.isDestroyed()){
+        if(win.isMinimized()){
+            win.restore()
+        }
         win.show()
         win.focus()
     }
 }
+
+ipcMain.on(GAME_OPCODE.MINIMIZE_LAUNCHER, () => {
+    if(win != null && !win.isDestroyed()){
+        win.minimize()
+    }
+})
 
 ipcMain.on(GAME_OPCODE.HIDE_LAUNCHER, () => {
     if(win == null || win.isDestroyed() || tray != null){
@@ -125,6 +133,26 @@ ipcMain.on(GAME_OPCODE.HIDE_LAUNCHER, () => {
 })
 
 ipcMain.on(GAME_OPCODE.SHOW_LAUNCHER, showLauncher)
+
+// The window has a fixed size; fullscreen lifts the limits while it lasts
+// and puts them back when it ends.
+const WINDOW_SIZE = { width: 1100, height: 700 }
+
+function setLauncherFullscreen(on){
+    if(win == null || win.isDestroyed() || win.isFullScreen() === on){
+        return
+    }
+    if(on){
+        win.setMaximumSize(100000, 100000)
+        win.setResizable(true)
+        win.setFullScreenable(true)
+        win.setFullScreen(true)
+    } else {
+        win.setFullScreen(false)
+    }
+}
+
+ipcMain.on(WINDOW_OPCODE.SET_FULLSCREEN, (_event, on) => setLauncherFullscreen(on === true))
 
 ipcMain.handle(SHELL_OPCODE.TRASH_ITEM, async (event, ...args) => {
     try {
@@ -258,20 +286,16 @@ ipcMain.on(MSFT_OPCODE.OPEN_LOGOUT, (ipcEvent, uuid, isLastAccount) => {
 // be closed automatically when the JavaScript object is garbage collected.
 let win
 
-/**
- * The page the window loads: the new interface (ui/dist, built with
- * `npm run ui:build`) when present, else the classic EJS interface.
- * OBLYVIUM_LEGACY_UI=1 forces the classic one.
- */
-function rendererEntry() {
-    const newUi = path.join(__dirname, 'ui', 'dist', 'index.html')
-    if(process.env.OBLYVIUM_LEGACY_UI !== '1' && fs.existsSync(newUi)) {
-        return newUi
-    }
-    return path.join(__dirname, 'app', 'app.ejs')
-}
+// The interface, built from ui/ with `npm run ui:build` (dist does it first).
+const RENDERER_ENTRY = path.join(__dirname, 'ui', 'dist', 'index.html')
 
 function createWindow() {
+
+    if(!fs.existsSync(RENDERER_ENTRY)) {
+        dialog.showErrorBox('Oblyvium Launcher', 'A interface não foi compilada. Rode "npm run ui:build" e abra de novo.')
+        app.quit()
+        return
+    }
 
     win = new BrowserWindow({
         width: 1100,
@@ -295,13 +319,17 @@ function createWindow() {
     })
     remoteMain.enable(win.webContents)
 
-    const data = {
-        bkid: Math.floor((Math.random() * fs.readdirSync(path.join(__dirname, 'app', 'assets', 'images', 'backgrounds')).length)),
-        lang: (str, placeHolders) => LangLoader.queryEJS(str, placeHolders)
-    }
-    Object.entries(data).forEach(([key, val]) => ejse.data(key, val))
+    win.on('enter-full-screen', () => win.webContents.send(WINDOW_OPCODE.FULLSCREEN_CHANGED, true))
+    win.on('leave-full-screen', () => {
+        win.setFullScreenable(false)
+        win.setResizable(false)
+        win.setMaximumSize(WINDOW_SIZE.width, WINDOW_SIZE.height)
+        win.setSize(WINDOW_SIZE.width, WINDOW_SIZE.height)
+        win.center()
+        win.webContents.send(WINDOW_OPCODE.FULLSCREEN_CHANGED, false)
+    })
 
-    const appUrl = pathToFileURL(rendererEntry()).toString()
+    const appUrl = pathToFileURL(RENDERER_ENTRY).toString()
     NavigationGuard.attach(win.webContents, () => appUrl, url => shell.openExternal(url))
     win.loadURL(appUrl)
 

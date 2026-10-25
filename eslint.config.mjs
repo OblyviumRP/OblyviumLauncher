@@ -44,12 +44,5 @@ export default defineConfig(
         argsIgnorePattern: '^_|^reject$'
       }],
     }
-  },
-  {
-    files: ['app/assets/js/scripts/*.js'],
-    rules: {
-      'no-unused-vars': 'off',
-      'no-undef': 'off'
-    }
   }
 );

@@ -34,6 +34,8 @@ const root = ${JSON.stringify(root)};
 const { ipcRenderer } = require('electron');
 const C = require(root + '/app/assets/js/configmanager');
 C.load();
+// O teste lê os textos em português; o idioma do sistema da máquina de teste não importa.
+if(C.getLanguage() == null) C.setLanguage('pt-BR');
 require(root + '/app/assets/js/langloader').setupLanguage();
 const api = require(root + '/app/assets/js/distromanager').DistroAPI;
 api.commonDir = C.getCommonDirectory();
@@ -47,6 +49,12 @@ const raw = { version: '1.0.0', servers: [
         { id: 'net.minecraftforge:forge:1.20.1-47.3.0', name: 'Minecraft Forge', type: 'ForgeHosted', artifact },
         { id: 'com.exemplo:obrigatorio:1.0.0', name: 'Mod obrigatório', type: 'ForgeMod', artifact },
         { id: 'com.exemplo:opcional:1.0.0', name: 'Mod opcional', type: 'ForgeMod', required: { value: false, def: true }, artifact }
+      ] },
+    { id: 'qa-principal-vulkan', name: 'Principal Vulkan', description: 'Mesmo modpack com Vulkan', icon: '', address: '127.0.0.1:9',
+      minecraftVersion: '1.20.1', version: '1.0.0', mainServer: false, autoconnect: false,
+      modules: [
+        { id: 'net.minecraftforge:forge:1.20.1-47.3.0', name: 'Minecraft Forge', type: 'ForgeHosted', artifact },
+        { id: 'com.exemplo:vulkanmod:1.0.0', name: 'VulkanMod', type: 'ForgeMod', artifact }
       ] },
     { id: 'qa-vanilla', name: 'Eventos', description: 'Sem mods', icon: '', address: '127.0.0.1:9',
       minecraftVersion: '1.21.1', version: '1.0.0', mainServer: false, autoconnect: false, modules: [] }
@@ -131,25 +139,30 @@ app.whenReady().then(async () => {
         await pause(800)
 
         assert.match(await text(), /Servidor principal/)
-        assert.match(await text(), /Perfil\s+Padrão/)
+        // Ficha do servidor (no lugar das pílulas) e arte só na área de conteúdo.
+        assert.match(await text(), /Renderizador\s+OpenGL/, 'ficha do servidor')
+        assert.match(await text(), /Versão\s+1\.20\.1 · Forge/, 'versão na ficha')
+        assert.ok(await run(`!!document.querySelector('main [aria-hidden] svg, main [aria-hidden] img')`), 'arte no Início')
+        assert.ok(await run(`!!document.querySelector('.fj-dither-fade')`), 'transição em pixels')
+        // Só o perfil padrão: o seletor de perfis não aparece.
+        assert.equal(await run(`document.querySelectorAll('main [role=radiogroup]').length`), 0, 'sem seletor de perfis')
         await noOverflow('início')
         await shot('02-inicio')
 
-        // Servidores e criação de perfil.
-        await go('#/servidores')
-        assert.match(await text(), /Perfis de Servidor principal/)
-        await click('button', 'Novo perfil')
-        await type('[role=dialog] input', 'Construção')
-        await click('[role=dialog] button[type=submit]', 'Criar perfil')
-        await pause(800)
-        const profiles = await config('C.getProfiles ? JSON.stringify(C.getProfiles()) : ""')
-        assert.match(profiles, /Construção/, 'perfil criado no config')
-        await shot('03-servidores')
+        // Launcher exclusivo: sem Descobrir, Modpacks nem criação de perfil.
+        const nav = await run(`[...document.querySelectorAll('nav a')].map(a => a.textContent.trim()).join('|')`)
+        assert.doesNotMatch(nav, /Descobrir|Modpacks/, 'menu sem Descobrir e Modpacks: ' + nav)
+        for(const hash of ['#/descobrir', '#/modpacks', '#/servidores', '#/descobrir/abc']){
+            await go(hash)
+            assert.equal(await run('location.hash'), '#/', hash + ' volta ao Início')
+        }
 
-        // Perfil: conteúdo, mods do pacote e configurações.
+        // Perfil: só os mods opcionais da staff, capturas, logs e configurações.
         await go('#/perfil')
-        assert.match(await text(), /Construção/)
-        await click('[role=tab]', 'Mods do servidor')
+        const tabs = await run(`[...document.querySelectorAll('[role=tab]')].map(t => t.textContent.trim()).join('|')`)
+        assert.doesNotMatch(tabs, /Conteúdo/, 'sem aba de conteúdo: ' + tabs)
+        assert.match(tabs, /Mods do servidor/)
+        assert.doesNotMatch(await text(), /Duplicar|Novo perfil|Adicionar/, 'sem duplicar, criar ou adicionar')
         assert.match(await text(), /Mod opcional/)
         assert.match(await text(), /obrigatório/)
         await click('[role=switch][aria-label="Mod opcional"]')
@@ -158,19 +171,53 @@ app.whenReady().then(async () => {
         assert.match(modConf, /"com\.exemplo:opcional":false/, 'mod opcional desligado no perfil')
         await shot('04-perfil-pacote')
         await click('[role=tab]', 'Configurações')
-        assert.match(await text(), /Memória máxima/)
+        assert.match(await text(), /Versões aceitas/)
+        assert.doesNotMatch(await text(), /Memória máxima/, 'memória saiu do perfil')
         await noOverflow('perfil')
         await shot('05-perfil-config')
 
+        // Memória global: vale para todas as chaves (modpacks e perfis).
+        await go('#/configuracoes?aba=jogo')
+        assert.match(await text(), /Memória máxima/)
+        await click('[role=slider]')
+        for(const keyCode of ['Right', 'Right']){
+            win.webContents.sendInputEvent({ type: 'keyDown', keyCode })
+            win.webContents.sendInputEvent({ type: 'keyUp', keyCode })
+            await pause(200)
+        }
+        await pause(400)
+        const globalRam = await config('C.getGlobalMaxRAM()')
+        assert.ok(globalRam != null, 'memória global salva')
+        const rams = await config('JSON.stringify(C.getJavaConfigKeys().filter(k => k.startsWith("qa-principal")).map(k => C.getMaxRAM(k)))')
+        assert.ok(JSON.parse(rams).length >= 2, 'servidores com configuração de Java: ' + rams)
+        assert.ok(JSON.parse(rams).every(v => v === JSON.parse(rams)[0]), 'mesma memória em todos: ' + rams)
+        await shot('05b-config-jogo')
+
+        // Idioma: troca para inglês e volta.
+        await go('#/configuracoes')
+        await click('button[aria-label="Idioma"]')
+        await click('[role=option]', 'English')
+        await pause(800)
+        assert.match(await text(), /Settings/)
+        assert.match(await text(), /When the game opens/)
+        assert.equal(await config('C.getLanguage()'), 'en')
+        await shot('05c-ingles')
+        await click('button[aria-label="Language"]')
+        await click('[role=option]', 'Português')
+        await pause(800)
+        assert.match(await text(), /Configurações/)
+
+
         // Configurações do launcher gravam no ConfigManager.
         await go('#/configuracoes')
-        const before = await config('C.getHideLauncherWhilePlaying()')
-        await click('#s-hideLauncherWhilePlaying')
-        assert.equal(await config('C.getHideLauncherWhilePlaying()'), !before, 'opção salva')
+        assert.equal(await config('C.getLauncherOnPlay()'), 'tray', 'padrão: esconder na bandeja')
+        await click('button[aria-label="Quando o jogo abrir"]')
+        await click('[role=option]', 'Minimizar')
+        assert.equal(await config('C.getLauncherOnPlay()'), 'minimize', 'opção salva')
+        assert.equal(await config('C.getHideLauncherWhilePlaying()'), false, 'opção antiga em sincronia')
         await shot('06-configuracoes')
 
         for(const [hash, expected, name] of [
-            ['#/descobrir', /Descobrir/, '07-descobrir'],
             ['#/skins', /conta Microsoft/, '08-skins-offline'],
             ['#/downloads', /Downloads/, '09-downloads'],
             ['#/console', /Nenhum jogo aberto/, '10-console']
@@ -181,12 +228,13 @@ app.whenReady().then(async () => {
             await shot(name)
         }
 
-        // Servidor sem loader: Descobrir não oferece mods.
-        await go('#/servidores')
-        await click('button', 'Selecionar')
-        await go('#/descobrir?tipo=mod')
-        assert.match(await text(), /Servidor sem mods/)
+        // Trocar de servidor pelo Início ("Outros servidores"); servidor sem mods não tem a aba.
+        await go('#/')
+        await click('button[aria-label="Jogar em Eventos"]')
+        await pause(600)
         assert.equal(await config('C.getSelectedServer()'), 'qa-vanilla')
+        await go('#/perfil')
+        assert.doesNotMatch(await run(`[...document.querySelectorAll('[role=tab]')].map(t => t.textContent).join('|')`), /Mods do servidor/, 'sem aba de mods')
 
         // Sidebar recolhida continua navegável.
         await go('#/')

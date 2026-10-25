@@ -1,6 +1,7 @@
 import { Dialog as DialogPrimitive } from 'radix-ui'
 import { Button } from '@/components/ui/button'
 import { DialogContent } from '@/components/ui/dialog'
+import { t } from '@/i18n'
 import { useLauncher } from '@/store/launcher'
 
 /** Confirmação global: o store pede (ex.: baixar Java) e espera a resposta. */
@@ -13,7 +14,8 @@ export function AskDialog() {
         <DialogContent title={ask.title} description={ask.body}>
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => close(false)}>
-              {ask.cancel ?? 'Cancelar'}
+              {ask.cancel ?? t('Cancelar')}
+
             </Button>
             <Button variant={ask.tone === 'danger' ? 'destructive' : 'default'} onClick={() => close(true)} autoFocus>
               {ask.confirm}

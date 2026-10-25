@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { backend } from '@/backend'
-import { cn } from '@/lib/utils'
+import { t } from '@/i18n'
+import { ago, cn } from '@/lib/utils'
 import { useLauncher, type Notice } from '@/store/launcher'
 
 const toneDot: Record<Notice['tone'], string> = {
@@ -16,14 +17,6 @@ const toneDot: Record<Notice['tone'], string> = {
 
 const toneLabel: Record<Notice['tone'], string> = { primary: 'Aviso', success: 'Concluído', warning: 'Atenção', danger: 'Erro' }
 
-function ago(at: number) {
-  const m = Math.round((Date.now() - at) / 60000)
-  if (m < 1) return 'agora'
-  if (m < 60) return `há ${m} min`
-  const h = Math.round(m / 60)
-  return h < 24 ? `há ${h} h` : `há ${Math.round(h / 24)} d`
-}
-
 export function NotificationCenter() {
   const navigate = useNavigate()
   const items = useLauncher((s) => s.notifications)
@@ -34,7 +27,7 @@ export function NotificationCenter() {
   return (
     <Popover onOpenChange={(open) => !open && unread && markAllRead()}>
       <PopoverTrigger
-        aria-label={unread ? `Notificações, ${unread} não lidas` : 'Notificações'}
+        aria-label={unread ? t('Notificações, {n} não lidas', { n: unread }) : t('Notificações')}
         className="relative grid size-8 cursor-pointer place-items-center rounded-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground data-[state=open]:bg-accent data-[state=open]:text-foreground"
       >
         <Bell className="size-4" />
@@ -55,13 +48,13 @@ export function NotificationCenter() {
       </PopoverTrigger>
       <PopoverContent align="end" className="w-80 p-0">
         <div className="flex items-center justify-between border-b border-border-2 px-3 py-2">
-          <span className="text-sm font-semibold">Notificações</span>
+          <span className="text-sm font-semibold">{t('Notificações')}</span>
           <div className="flex gap-1">
             <Button variant="ghost" size="sm" onClick={markAllRead} disabled={!unread}>
-              <CheckCheck /> Marcar lidas
+              <CheckCheck /> {t('Marcar lidas')}
             </Button>
             <Button variant="ghost" size="sm" onClick={clear} disabled={!items.length}>
-              Limpar
+              {t('Limpar')}
             </Button>
           </div>
         </div>
@@ -69,7 +62,7 @@ export function NotificationCenter() {
           {items.length === 0 ? (
             <div className="flex flex-col items-center gap-2 px-4 py-8 text-center text-muted-foreground">
               <BellOff className="size-5" />
-              <span className="text-sm">Nada por aqui. Avisos da staff, atualizações e erros aparecem nesta lista.</span>
+              <span className="text-sm">{t('Nada por aqui. Avisos da staff, atualizações e erros aparecem nesta lista.')}</span>
             </div>
           ) : (
             <AnimatePresence initial={false}>
@@ -85,7 +78,8 @@ export function NotificationCenter() {
                   className={cn('flex w-full cursor-pointer gap-3 rounded-sm px-2 py-2 text-left hover:bg-border-2', !n.read && 'bg-primary-soft/60')}
                 >
                   <span className={cn('mt-1.5 size-2 shrink-0 rounded-full', toneDot[n.tone])} aria-hidden />
-                  <span className="sr-only">{toneLabel[n.tone]}:</span>
+                  <span className="sr-only">{t(toneLabel[n.tone])}:</span>
+
                   <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                     <span className="text-sm font-medium">{n.title}</span>
                     {n.image && <img src={n.image} alt="" className="my-1 max-h-28 w-full rounded-sm object-cover" />}

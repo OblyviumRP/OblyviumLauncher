@@ -1,6 +1,7 @@
 import { toast } from 'sonner'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { t } from '@/i18n'
 import { backend, UserError, type AccountInfo, type FeedItem, type LogLine, type ProfileInfo, type ServerInfo } from '@/backend'
 
 // Estado da interface. Tudo que é do launcher (servidores, perfis, contas, config)
@@ -54,8 +55,8 @@ type State = {
   tasks: Task[]
   notifications: Notice[]
   update: Update
-  contentRev: number
   ask: Ask | null
+  windowFullscreen: boolean
 
   toggleSidebar: () => void
   start: () => Promise<void>
@@ -65,7 +66,6 @@ type State = {
   selectServer: (id: string) => void
   selectProfile: (id: string) => void
   selectAccount: (id: string) => Promise<void>
-  bumpContent: () => void
   launchGame: () => Promise<void>
   stopGame: () => void
   verifyFiles: () => Promise<void>
@@ -115,8 +115,8 @@ export const useLauncher = create<State>()(
       tasks: [],
       notifications: [],
       update: { state: 'idle' },
-      contentRev: 0,
       ask: null,
+      windowFullscreen: false,
 
       toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
 
@@ -137,20 +137,23 @@ export const useLauncher = create<State>()(
         get().refreshAccounts()
         set({ boot: { phase: 'ready', firstLaunch: res.firstLaunch } })
 
+        b.onWindowFullscreen((on) => set({ windowFullscreen: on }))
+        if (b.launcherSettings().launcherFullscreen) set({ windowFullscreen: true })
         b.onUpdate((e) => {
+
           if (e.kind === 'checking') set({ update: { state: 'checking' } })
           else if (e.kind === 'none') set({ update: { state: 'none' } })
           else if (e.kind === 'available') {
             set({ update: { state: 'available', version: e.version, percent: 0 } })
-            get().addTask({ id: 'launcher-update', title: `Launcher ${e.version}`, detail: 'Baixando atualização', progress: 0, kind: 'update' })
+            get().addTask({ id: 'launcher-update', title: `Launcher ${e.version}`, detail: t('Baixando atualização'), progress: 0, kind: 'update' })
           } else if (e.kind === 'progress') {
             const u = get().update
             if (u.state === 'available') set({ update: { ...u, percent: e.percent } })
             get().patchTask('launcher-update', { progress: e.percent })
           } else if (e.kind === 'ready') {
             set({ update: { state: 'ready', version: e.version } })
-            get().patchTask('launcher-update', { status: 'done', progress: 100, detail: 'Pronta para instalar', finishedAt: Date.now() })
-            get().notify({ title: `Atualização ${e.version} pronta`, body: 'Reinicie o launcher para instalar.', tone: 'primary', href: '/configuracoes?aba=sobre' })
+            get().patchTask('launcher-update', { status: 'done', progress: 100, detail: t('Pronta para instalar'), finishedAt: Date.now() })
+            get().notify({ title: t('Atualização {v} pronta', { v: e.version }), body: t('Reinicie o launcher para instalar.'), tone: 'primary', href: '/configuracoes?aba=sobre' })
           } else if (e.kind === 'error') set({ update: { state: 'error', message: e.message } })
         })
 
@@ -189,7 +192,7 @@ export const useLauncher = create<State>()(
       selectServer: (id) => {
         if (id === get().serverId) return
         if (isBusy(get().launch.state)) {
-          toast.warning('Jogo aberto', { description: 'Troque de servidor depois de fechar o jogo.' })
+          toast.warning(t('Jogo aberto'), { description: t('Troque de servidor depois de fechar o jogo.') })
           return
         }
         try {
@@ -216,22 +219,21 @@ export const useLauncher = create<State>()(
         get().refreshAccounts()
         const acc = get().accounts.find((a) => a.id === id)
         const ok = await b.validateSelectedAccount()
-        if (!ok) toast.warning(`A sessão de ${acc?.name ?? 'conta'} expirou`, { description: 'Entre de novo com a Microsoft para jogar.' })
-        else if (acc) toast(`Conta trocada para ${acc.name}`)
+        if (!ok) toast.warning(t('A sessão de {name} expirou', { name: acc?.name ?? '' }), { description: t('Entre de novo com a Microsoft para jogar.') })
+        else if (acc) toast(t('Conta trocada para {name}', { name: acc.name }))
       },
-      bumpContent: () => set((s) => ({ contentRev: s.contentRev + 1 })),
 
       launchGame: async () => {
         const s = get()
         if (isBusy(s.launch.state)) return
         if (!s.accountId) {
-          toast.warning('Entre em uma conta', { description: 'Adicione uma conta para jogar.' })
+          toast.warning(t('Entre em uma conta'), { description: t('Adicione uma conta para jogar.') })
           return
         }
         const serv = s.servers.find((x) => x.id === s.serverId)
-        const taskId = get().addTask({ title: serv ? `${serv.name} · arquivos do jogo` : 'Arquivos do jogo', detail: 'Preparando', progress: null, kind: 'game' })
+        const taskId = get().addTask({ title: t('{name} · arquivos do jogo', { name: serv?.name ?? '' }), detail: t('Preparando'), progress: null, kind: 'game' })
         set({
-          launch: { state: 'preparing', status: 'Preparando…', progress: null, serverId: s.serverId, profileId: s.profileId, startedAt: null, crashReport: null, code: null },
+          launch: { state: 'preparing', status: t('Preparando…'), progress: null, serverId: s.serverId, profileId: s.profileId, startedAt: null, crashReport: null, code: null },
           logs: [],
         })
         let started = false
@@ -244,18 +246,18 @@ export const useLauncher = create<State>()(
             },
             onProgress: ({ phase, percent }) => {
               set((st) => ({ launch: { ...st.launch, progress: percent } }))
-              if (phase === 'java') get().patchTask(taskId, { title: 'Java', detail: 'Baixando Java', progress: percent })
+              if (phase === 'java') get().patchTask(taskId, { title: 'Java', detail: t('Baixando Java'), progress: percent })
               else if (!filesDone) get().patchTask(taskId, { progress: percent })
             },
             onBlocked: (items) => {
               const names = items.map((i) => i.title).join(', ')
-              toast.warning('Conteúdo bloqueado foi desativado', { description: names })
-              get().notify({ title: 'Conteúdo bloqueado pela staff', body: `Desativado neste perfil: ${names}`, tone: 'warning', href: '/perfil?aba=conteudo' })
+              toast.warning(t('Conteúdo bloqueado foi desativado'), { description: names })
+              get().notify({ title: t('Conteúdo bloqueado pela staff'), body: t('Desativado neste perfil: {names}', { names }), tone: 'warning', href: '/perfil' })
             },
             onLog: ({ stream, line }) => {
               if (!filesDone) {
                 filesDone = true
-                get().patchTask(taskId, { status: 'done', progress: 100, detail: 'Arquivos verificados', finishedAt: Date.now() })
+                get().patchTask(taskId, { status: 'done', progress: 100, detail: t('Arquivos verificados'), finishedAt: Date.now() })
               }
               pendingLogs.push(toLogLine(stream, line))
               if (logFlush == null) {
@@ -269,8 +271,8 @@ export const useLauncher = create<State>()(
             },
             onStarted: () => {
               started = true
-              set((st) => ({ launch: { ...st.launch, state: 'running', status: 'Jogando', progress: null, startedAt: Date.now() } }))
-              toast.success(`${serv?.name ?? 'Jogo'} aberto`)
+              set((st) => ({ launch: { ...st.launch, state: 'running', status: t('Jogando'), progress: null, startedAt: Date.now() } }))
+              toast.success(t('{name} aberto', { name: serv?.name ?? 'Minecraft' }))
             },
             onExit: ({ code, started: wasStarted, crashReport }) => {
               const crashed = code !== 0 && code != null
@@ -279,26 +281,26 @@ export const useLauncher = create<State>()(
                 logs: [...st.logs, { t: clock(), level: crashed ? 'ERROR' : 'INFO', msg: `Processo encerrado com código ${code ?? '?'}` }],
               }))
               if (crashed) {
-                toast.error(wasStarted ? 'O jogo fechou inesperadamente' : 'O jogo não abriu', { description: 'Veja os detalhes no console.' })
-                get().notify({ title: `O jogo fechou (código ${code})`, body: crashReport ? 'Um relatório de erro foi gerado.' : 'Veja o console para a causa.', tone: 'danger', href: '/console' })
+                toast.error(wasStarted ? t('O jogo fechou inesperadamente') : t('O jogo não abriu'), { description: t('Veja os detalhes no console.') })
+                get().notify({ title: t('O jogo fechou (código {code})', { code: code ?? '?' }), body: crashReport ? t('Um relatório de erro foi gerado.') : t('Veja o console para a causa.'), tone: 'danger', href: '/console' })
               }
             },
             askDownloadJava: ({ major }) =>
               get().confirm({
-                title: `Instalar Java ${major}?`,
-                body: `Este servidor precisa do Java ${major}, que não foi encontrado no computador. O launcher pode baixar uma versão compatível (Temurin) agora.`,
-                confirm: 'Baixar Java',
-                cancel: 'Agora não',
+                title: t('Instalar Java {n}?', { n: major }),
+                body: t('Este servidor precisa do Java {n}, que não foi encontrado no computador. O launcher pode baixar uma versão compatível (Temurin) agora.', { n: major }),
+                confirm: t('Baixar Java'),
+                cancel: t('Agora não'),
               }),
           })
           if (!ok) {
-            get().patchTask(taskId, { status: 'error', detail: 'Cancelado', finishedAt: Date.now() })
+            get().patchTask(taskId, { status: 'error', detail: t('Cancelado'), finishedAt: Date.now() })
             set((st) => ({ launch: { ...st.launch, state: 'idle', status: '', progress: null } }))
           } else if (!started && get().launch.state === 'preparing') {
-            set((st) => ({ launch: { ...st.launch, status: 'Abrindo o jogo…', progress: null } }))
+            set((st) => ({ launch: { ...st.launch, status: t('Abrindo o jogo…'), progress: null } }))
           }
         } catch (err) {
-          get().patchTask(taskId, { status: 'error', detail: err instanceof UserError ? err.message : 'Falhou', finishedAt: Date.now() })
+          get().patchTask(taskId, { status: 'error', detail: err instanceof UserError ? err.message : t('Falhou'), finishedAt: Date.now() })
           set((st) => ({ launch: { ...st.launch, state: 'idle', status: '', progress: null } }))
           get().showError(err, 'Não foi possível abrir o jogo')
         }
@@ -308,27 +310,27 @@ export const useLauncher = create<State>()(
       verifyFiles: async () => {
         if (isBusy(get().launch.state)) return
         const serv = get().servers.find((x) => x.id === get().serverId)
-        const taskId = get().addTask({ title: `${serv?.name ?? 'Servidor'} · verificação`, detail: 'Verificando arquivos', progress: null, kind: 'game' })
+        const taskId = get().addTask({ title: t('{name} · verificação', { name: serv?.name ?? '' }), detail: t('Verificando arquivos'), progress: null, kind: 'game' })
         try {
           await backend().verifyFiles({
             onStatus: (text) => get().patchTask(taskId, { detail: text }),
             onProgress: ({ percent }) => get().patchTask(taskId, { progress: percent }),
           })
-          get().patchTask(taskId, { status: 'done', progress: 100, detail: 'Arquivos verificados', finishedAt: Date.now() })
-          toast.success('Arquivos verificados', { description: 'Tudo pronto para jogar.' })
+          get().patchTask(taskId, { status: 'done', progress: 100, detail: t('Arquivos verificados'), finishedAt: Date.now() })
+          toast.success(t('Arquivos verificados'), { description: t('Tudo pronto para jogar.') })
         } catch (err) {
-          get().patchTask(taskId, { status: 'error', detail: 'Falhou', finishedAt: Date.now() })
+          get().patchTask(taskId, { status: 'error', detail: t('Falhou'), finishedAt: Date.now() })
           get().showError(err, 'Não foi possível verificar os arquivos')
         }
       },
 
-      addTask: (t) => {
-        const id = t.id ?? uid()
-        set((s) => ({ tasks: [{ ...t, id, status: 'active' as const, startedAt: Date.now() }, ...s.tasks.filter((x) => x.id !== id)].slice(0, 50) }))
+      addTask: (task) => {
+        const id = task.id ?? uid()
+        set((s) => ({ tasks: [{ ...task, id, status: 'active' as const, startedAt: Date.now() }, ...s.tasks.filter((x) => x.id !== id)].slice(0, 50) }))
         return id
       },
-      patchTask: (id, p) => set((s) => ({ tasks: s.tasks.map((t) => (t.id === id ? { ...t, ...p } : t)) })),
-      clearTasks: () => set((s) => ({ tasks: s.tasks.filter((t) => t.status === 'active') })),
+      patchTask: (id, p) => set((s) => ({ tasks: s.tasks.map((x) => (x.id === id ? { ...x, ...p } : x)) })),
+      clearTasks: () => set((s) => ({ tasks: s.tasks.filter((x) => x.status === 'active') })),
 
       notify: (n) => set((s) => ({ notifications: [{ ...n, id: uid(), at: Date.now(), read: false }, ...s.notifications].slice(0, 40) })),
       markAllRead: () => {
@@ -356,7 +358,8 @@ export const useLauncher = create<State>()(
         if (err instanceof UserError) toast.error(err.title, { description: err.message })
         else {
           console.error(err)
-          toast.error(fallbackTitle, { description: 'Veja o console (Ctrl+Shift+I) para detalhes.' })
+          toast.error(t(fallbackTitle), { description: t('Veja o console (Ctrl+Shift+I) para detalhes.') })
+
         }
       },
     }),

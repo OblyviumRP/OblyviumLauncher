@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Tooltip } from '@/components/ui/tooltip'
+import { t } from '@/i18n'
 import { useAsync } from '@/lib/use-async'
 import { cn } from '@/lib/utils'
 import { useAccount, useLauncher } from '@/store/launcher'
@@ -36,7 +37,7 @@ function LibraryCard({ skin, selected, onPick, onRemove }: { skin: LibrarySkin; 
         type="button"
         onClick={onPick}
         aria-pressed={selected}
-        aria-label={`Skin ${skin.name}`}
+        aria-label={t('Skin {name}', { name: skin.name })}
         className={cn(
           'flex h-44 w-full cursor-pointer flex-col items-center justify-end gap-2 rounded-lg border-2 bg-card pb-2.5 pt-3 transition-colors',
           selected ? 'border-primary bg-primary-soft' : 'border-border hover:border-border-2',
@@ -45,8 +46,8 @@ function LibraryCard({ skin, selected, onPick, onRemove }: { skin: LibrarySkin; 
         <Preview src={skin.dataUrl} slim={skin.variant === 'slim'} scale={0.42} />
         <span className="max-w-full truncate px-2 text-xs font-medium">{skin.name}</span>
       </button>
-      <Tooltip content="Remover da biblioteca" side="top">
-        <Button variant="ghost" size="icon-sm" aria-label={`Remover ${skin.name}`} onClick={onRemove} className="absolute right-1.5 top-1.5 text-danger-fg opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100">
+      <Tooltip content={t('Remover da biblioteca')} side="top">
+        <Button variant="ghost" size="icon-sm" aria-label={t('Remover {name}', { name: skin.name })} onClick={onRemove} className="absolute right-1.5 top-1.5 text-danger-fg opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100">
           <Trash2 />
         </Button>
       </Tooltip>
@@ -101,7 +102,7 @@ export function SkinsPage() {
       }
       setProfile(await backend().applyLibrarySkin(entry.id, variant))
       setPick({ kind: 'current' })
-      toast.success(`Skin “${entry.name}” aplicada`, { description: 'Pode levar alguns minutos para aparecer para os outros jogadores.' })
+      toast.success(t('Skin “{name}” aplicada', { name: entry.name }), { description: t('Pode levar alguns minutos para aparecer para os outros jogadores.') })
     })
 
   const addFile = () =>
@@ -119,16 +120,16 @@ export function SkinsPage() {
       const s = await backend().addSkinFromCurrent(account?.name ?? 'Skin')
       if (s) {
         setLibRev((r) => r + 1)
-        toast.success('Skin atual salva na biblioteca')
+        toast.success(t('Skin atual salva na biblioteca'))
       }
     })
 
   const reset = async () => {
-    const ok = await confirm({ title: 'Voltar à skin padrão?', body: 'A conta passa a usar Steve ou Alex. Salve a skin atual na biblioteca antes, se quiser usá-la de novo.', confirm: 'Voltar ao padrão' })
+    const ok = await confirm({ title: t('Voltar à skin padrão?'), body: t('A conta passa a usar Steve ou Alex. Salve a skin atual na biblioteca antes, se quiser usá-la de novo.'), confirm: t('Voltar ao padrão') })
     if (ok)
       run('reset', async () => {
         setProfile(await backend().resetSkin())
-        toast('Skin padrão aplicada')
+        toast(t('Skin padrão aplicada'))
       })
   }
 
@@ -150,14 +151,14 @@ export function SkinsPage() {
       <div className="mx-auto w-full max-w-3xl px-6 py-5">
         <EmptyState
           icon={<Shirt />}
-          title="Skins precisam de conta Microsoft"
+          title={t('Skins precisam de conta Microsoft')}
           action={
             <Button asChild>
-              <Link to="/boas-vindas?adicionar=1">Entrar com Microsoft</Link>
+              <Link to="/boas-vindas?adicionar=1">{t('Entrar com Microsoft')}</Link>
             </Button>
           }
         >
-          {account.name} é uma conta offline. A skin fica nos servidores da Mojang, então só dá para trocar com uma conta Microsoft.
+          {t('{name} é uma conta offline. A skin fica nos servidores da Mojang, então só dá para trocar com uma conta Microsoft.', { name: account.name })}
         </EmptyState>
       </div>
     )
@@ -165,12 +166,12 @@ export function SkinsPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-[1400px] flex-wrap items-start gap-6 px-6 py-5">
-      <section aria-label="Pré-visualização" className="flex w-72 shrink-0 flex-col gap-4 lg:sticky lg:top-5">
+      <section aria-label={t('Pré-visualização')} className="flex w-72 shrink-0 flex-col gap-4 lg:sticky lg:top-5">
         <div className="flex flex-col gap-1">
-          <h1 className="font-display text-2xl font-bold">Skins</h1>
+          <h1 className="font-display text-2xl font-bold">{t('Skins')}</h1>
           <p className="flex items-center gap-2 text-sm text-muted-foreground">
             <Avatar name={account.name} className="size-5" />
-            Personagem de <span className="font-semibold text-foreground">{account.name}</span>
+            {t('Personagem de')} <span className="font-semibold text-foreground">{account.name}</span>
           </p>
         </div>
         <Card className="relative grid h-[360px] place-items-center overflow-hidden">
@@ -178,46 +179,46 @@ export function SkinsPage() {
           {prof.loading ? (
             <Loader2 className="size-6 animate-spin text-muted-foreground" />
           ) : prof.error ? (
-            <p className="px-6 text-center text-sm text-muted-foreground">Não foi possível carregar a skin da conta. Verifique a conexão ou entre de novo.</p>
+            <p className="px-6 text-center text-sm text-muted-foreground">{t('Não foi possível carregar a skin da conta. Verifique a conexão ou entre de novo.')}</p>
           ) : (
             <motion.div key={src ?? 'none'} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 22 }}>
               <Preview src={src} slim={variant === 'slim'} cape={activeCape?.url || null} scale={1.05} interactive />
             </motion.div>
           )}
-          <span className="absolute bottom-3 text-2xs text-muted-2">Arraste para girar</span>
+          <span className="absolute bottom-3 text-2xs text-muted-2">{t('Arraste para girar')}</span>
           {picked && (
             <Badge tone="primary" className="absolute left-3 top-3">
-              pré-visualização
+              {t('pré-visualização')}
             </Badge>
           )}
         </Card>
         <Tabs value={variant} onValueChange={(v) => setVariant(v as Variant)} variant="pill">
-          <TabsList aria-label="Modelo de braço" className="w-full">
+          <TabsList aria-label={t('Modelo de braço')} className="w-full">
             <TabsTrigger value="classic" className="flex-1 justify-center">
-              Clássico
+              {t('Clássico')}
             </TabsTrigger>
             <TabsTrigger value="slim" className="flex-1 justify-center">
-              Slim
+              {t('Slim')}
             </TabsTrigger>
           </TabsList>
         </Tabs>
         <div className="flex gap-2">
           <Button size="lg" className="flex-1" disabled={!dirty || busy != null} onClick={apply}>
             {busy === 'apply' && <Loader2 className="animate-spin" />}
-            {dirty ? (picked ? `Aplicar “${picked.name}”` : 'Aplicar modelo') : 'Em uso'}
+            {dirty ? (picked ? t('Aplicar “{name}”', { name: picked.name }) : t('Aplicar modelo')) : t('Em uso')}
           </Button>
           {picked && (
             <Button variant="secondary" size="lg" onClick={() => setPick({ kind: 'current' })}>
-              Cancelar
+              {t('Cancelar')}
             </Button>
           )}
         </div>
         <div className="flex gap-2">
           <Button variant="secondary" className="flex-1" onClick={saveCurrent} disabled={!profile?.skin || busy != null}>
-            <Save /> Salvar atual
+            <Save /> {t('Salvar atual')}
           </Button>
-          <Tooltip content="Voltar à skin padrão" side="top">
-            <Button variant="secondary" size="icon" aria-label="Voltar à skin padrão" onClick={reset} disabled={busy != null}>
+          <Tooltip content={t('Voltar à skin padrão')} side="top">
+            <Button variant="secondary" size="icon" aria-label={t('Voltar à skin padrão')} onClick={reset} disabled={busy != null}>
               <RotateCcw />
             </Button>
           </Tooltip>
@@ -225,10 +226,10 @@ export function SkinsPage() {
       </section>
 
       <div className="flex min-w-[300px] flex-1 flex-col gap-6 pt-1">
-        <section className="flex flex-col gap-3" aria-label="Biblioteca">
+        <section className="flex flex-col gap-3" aria-label={t('Biblioteca')}>
           <div className="flex items-baseline justify-between gap-3">
-            <h2 className="text-base font-semibold">Biblioteca</h2>
-            <span className="text-xs text-muted-foreground">Fica neste PC; só a aplicada vai para a conta.</span>
+            <h2 className="text-base font-semibold">{t('Biblioteca')}</h2>
+            <span className="text-xs text-muted-foreground">{t('Fica neste PC; só a aplicada vai para a conta.')}</span>
           </div>
           <div className="grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-2.5">
             <button
@@ -238,7 +239,7 @@ export function SkinsPage() {
               className="flex h-44 cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-primary-line bg-sidebar text-sm text-primary-fg transition-colors hover:bg-primary-soft/50 disabled:cursor-progress"
             >
               {busy === 'add' ? <Loader2 className="size-5 animate-spin" /> : <ImagePlus className="size-5" />}
-              Adicionar skin
+              {t('Adicionar skin')}
               <span className="text-2xs text-muted-foreground">.png 64×64</span>
             </button>
             {library.map((s) => (
@@ -255,13 +256,14 @@ export function SkinsPage() {
             ))}
           </div>
         </section>
-        <section className="flex flex-col gap-3" aria-label="Capa">
-          <h2 className="text-base font-semibold">Capa</h2>
+        <section className="flex flex-col gap-3" aria-label={t('Capa')}>
+          <h2 className="text-base font-semibold">{t('Capa')}</h2>
           {profile && profile.capes.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Esta conta não tem capas. Capas vêm de eventos da Mojang e da Minecraft Experience.</p>
+            <p className="text-sm text-muted-foreground">{t('Esta conta não tem capas. Capas vêm de eventos da Mojang e da Minecraft Experience.')}</p>
           ) : (
-            <div role="radiogroup" aria-label="Capa" className="flex flex-wrap gap-2">
-              {[{ id: null, alias: 'Nenhuma', url: '' }, ...(profile?.capes ?? [])].map((c) => {
+            <div role="radiogroup" aria-label={t('Capa')} className="flex flex-wrap gap-2">
+              {[{ id: null, alias: t('Nenhuma'), url: '' },
+ ...(profile?.capes ?? [])].map((c) => {
                 const on = c.id == null ? activeCape == null : activeCape?.id === c.id
                 return (
                   <button

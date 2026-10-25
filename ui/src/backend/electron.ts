@@ -8,22 +8,20 @@ import {
   type Backend,
   type BootResult,
   type ChangelogRelease,
-  type ContentFile,
-  type ContentType,
   type FeedItem,
+  type GameSettings,
   type LaunchHandlers,
   type LauncherSettings,
   type LibrarySkin,
   type PackMod,
   type ProfileInfo,
   type ProfileSettings,
-  type ProjectDetails,
   type SceneKey,
-  type SearchHit,
   type ServerInfo,
   type SkinProfile,
   type UpdateEvent,
 } from './types'
+import { t } from '@/i18n'
 
 const w = window as any
 const nodeRequire: (id: string) => any = w.require
@@ -45,18 +43,16 @@ const AuthManagerOffline = req(path.join(appRoot, 'app', 'assets', 'extension', 
 const { DistroAPI } = mod('distromanager')
 const ProfileManager = mod('profilemanager')
 const ProfileIcons = mod('profileicons')
-const ContentManager = mod('contentmanager')
 const Modrinth = mod('modrinth')
-const RichText = mod('richtext')
 const Notifications = mod('notifications')
 const Changelog = mod('changelog')
-const Lang = mod('langloader')
 const isDev: boolean = mod('isdev')
-const { MSFT_OPCODE, MSFT_REPLY_TYPE, MSFT_ERROR } = mod('ipcconstants')
+const { MSFT_OPCODE, MSFT_REPLY_TYPE, MSFT_ERROR, WINDOW_OPCODE } = mod('ipcconstants')
 const DistroSync = mod('core/distrosync')
 const LaunchService = mod('core/launchservice')
 const News = mod('core/news')
 const Skins = mod('core/skins')
+const GameSettingsCore = mod('core/gamesettings')
 const { getServerStatus } = req('helios-core/mojang')
 const { validateSelectedJvm, ensureJavaDirIsRoot, javaExecFromRoot, discoverBestJvmInstallation } = req('helios-core/java')
 
@@ -72,14 +68,6 @@ function sceneFor(id: string, main: boolean): SceneKey {
 
 function stripTags(text: unknown) {
   return String(text ?? '').replace(/<[^>]+>/g, '').trim()
-}
-
-function q(key: string, ph?: Record<string, unknown>) {
-  try {
-    return stripTags(Lang.queryJS(key, ph))
-  } catch {
-    return key
-  }
 }
 
 function server(id: string) {
@@ -105,7 +93,22 @@ function mapServer(s: any): ServerInfo {
     main: Boolean(raw.mainServer),
     scene: sceneFor(raw.id, Boolean(raw.mainServer)),
     packModCount: DistroSync.countPackMods(DistroSync.packModTree(s.modules, {})),
+    // Mesmo critério do launcher antigo: o id do servidor diz se ele é Vulkan.
+    group: raw.id.toLowerCase().includes('vulkan') ? 'Vulkan' : 'OpenGL',
   }
+}
+
+/** Depois de carregar a distribuição: mods opcionais, Java e a configuração global do jogo. */
+function sync(d: any) {
+  DistroSync.syncDistribution(d)
+  GameSettingsCore.apply(d, ConfigManager, ProfileManager)
+  ConfigManager.save()
+}
+
+/** Status do launcher (textos em português do en_US.toml) no idioma da interface. */
+function status(text: string) {
+  const java = /^Baixando Java (\d+)$/.exec(text)
+  return java ? t('Baixando Java {n}', { n: java[1] }) : t(text)
 }
 
 function mapProfile(p: any): ProfileInfo {
@@ -124,47 +127,25 @@ function configKey(serverId: string, profileId: string) {
   return ProfileManager.configKey(serverId, profileId)
 }
 
-function modrinthMessage(err: any): string {
-  const title = err?.data?.title
-  switch (err?.code) {
-    case 'BLOCKED':
-      return q(err.data?.dependency ? 'mods.error.blockedDependency' : 'mods.error.blocked', { title })
-    case 'ALREADY_INSTALLED':
-      return q('mods.error.alreadyInstalled', { title })
-    case 'NO_COMPATIBLE_VERSION':
-      return q('mods.error.noCompatibleVersion', { title })
-    case 'HASH_MISMATCH':
-      return q('mods.error.hashMismatch')
-    case 'RATE_LIMITED':
-      return q('mods.error.rateLimited')
-    case 'DESTINATION_EXISTS':
-      return q('mods.error.destinationExists')
-    case 'BAD_FILENAME':
-      return q('mods.error.badFile')
-    case 'UNSUPPORTED_TYPE':
-      return q('mods.error.unsupported')
-    case 'ENOENT':
-    case 'ENOSPC':
-      return q('mods.error.disk')
-    default:
-      return 'Não foi possível falar com o Modrinth. Verifique a conexão e tente de novo.'
-  }
+// Mensagens do core/skins.js, por código.
+const SKIN_MESSAGES: Record<string, string> = {
+  TOO_LARGE: 'O arquivo é grande demais para uma skin.',
+  NOT_PNG: 'Escolha um arquivo .png.',
+  BAD_SIZE: 'A skin precisa ter 64×64 pixels.',
+  NETWORK: 'Sem conexão com os servidores do Minecraft.',
+  UNAUTHORIZED: 'A sessão expirou. Entre de novo na conta.',
+  RATE_LIMITED: 'Muitas trocas seguidas. Tente de novo em alguns minutos.',
+  HTTP: 'Os servidores do Minecraft recusaram o pedido.',
+  BAD_URL: 'Endereço de textura inválido.',
+  NOT_FOUND: 'Skin não encontrada na biblioteca.',
+  LIBRARY_FULL: 'A biblioteca aceita até 60 skins.',
 }
 
 function asUserError(err: any, title: string): UserError {
   if (err instanceof UserError) return err
   if (err?.title && (err.desc || err.message)) return new UserError(stripTags(err.title), stripTags(err.desc ?? err.message))
-  if (err instanceof Modrinth.ModrinthError || err?.code) return new UserError(title, modrinthMessage(err))
-  if (err instanceof Skins.SkinError) return new UserError(title, err.message)
+  if (err instanceof Skins.SkinError) return new UserError(title, SKIN_MESSAGES[err.code] ?? err.message)
   return new UserError(title, 'Algo deu errado. Veja o console (Ctrl+Shift+I) para detalhes.')
-}
-
-function parseRamGB(value: string | null | undefined, fallback: number) {
-  if (value == null) return fallback
-  const m = /^(\d+(?:\.\d+)?)([MG])$/i.exec(String(value))
-  if (!m) return fallback
-  const n = Number(m[1])
-  return m[2].toUpperCase() === 'G' ? n : Math.round((n / 1024) * 2) / 2
 }
 
 function waitDistributionIndex(): Promise<boolean> {
@@ -185,28 +166,6 @@ function waitDistributionIndex(): Promise<boolean> {
       }
     }, 100)
   })
-}
-
-// Pacotes do modpack e conteúdo instalado: só para não instalar duplicado.
-let packProjects: { serverId: string; promise: Promise<Set<string>> } | null = null
-function getPackProjects(s: any, strict: boolean): Promise<Set<string>> {
-  if (packProjects == null || packProjects.serverId !== s.rawServer.id || strict) {
-    const promise = Modrinth.getModpackProjects(s, { download: strict })
-    packProjects = { serverId: s.rawServer.id, promise }
-    promise.catch(() => {
-      if (packProjects?.promise === promise) packProjects = null
-    })
-  }
-  return strict ? packProjects.promise : packProjects.promise.catch(() => new Set<string>())
-}
-
-const pendingUpdates = new Map<string, any>()
-let installQueue: Promise<unknown> = Promise.resolve()
-
-function selectedTarget() {
-  const s = server(ConfigManager.getSelectedServer())
-  const p = ProfileManager.getSelected(s.rawServer.id)
-  return { s, dir: gameDir(s.rawServer.id, p.id), target: Modrinth.getServerTarget(s), blocklist: Modrinth.getBlocklist(s) }
 }
 
 async function bufToDataUrl(buf: Uint8Array) {
@@ -253,7 +212,8 @@ export function createElectronBackend(): Backend {
         return { ok: false, message: 'Não foi possível carregar a lista de servidores. Verifique a conexão e abra o launcher de novo.' }
       }
       distro = await DistroAPI.getDistribution()
-      DistroSync.syncDistribution(distro)
+      sync(distro)
+      if (ConfigManager.getLauncherFullscreen()) ipcRenderer.send(WINDOW_OPCODE.SET_FULLSCREEN, true)
       if (!isDev) ipcRenderer.send('autoUpdateAction', 'initAutoUpdater', ConfigManager.getAllowPrerelease())
       LaunchService.updateLauncherPresence()
       return { ok: true, firstLaunch: ConfigManager.isFirstLaunch() || Object.keys(ConfigManager.getAuthAccounts()).length === 0 }
@@ -261,7 +221,7 @@ export function createElectronBackend(): Backend {
 
     async refreshDistribution() {
       distro = await DistroAPI.refreshDistributionOrFallback()
-      DistroSync.syncDistribution(distro)
+      sync(distro)
     },
 
     servers() {
@@ -285,24 +245,6 @@ export function createElectronBackend(): Backend {
     selectProfile(serverId, profileId) {
       if (LaunchService.isBusy() || LaunchService.isRunning()) throw new UserError('Jogo aberto', 'Troque de perfil depois de fechar o jogo.')
       ProfileManager.select(serverId, profileId)
-    },
-    async createProfile(serverId, o) {
-      try {
-        const p = await ProfileManager.create(serverId, o)
-        DistroSync.syncDistribution(distro)
-        return mapProfile(p)
-      } catch (err) {
-        throw asUserError(err, 'Não foi possível criar o perfil')
-      }
-    },
-    async duplicateProfile(serverId, profileId) {
-      try {
-        const p = await ProfileManager.duplicate(serverId, profileId)
-        DistroSync.syncDistribution(distro)
-        return mapProfile(p)
-      } catch (err) {
-        throw asUserError(err, 'Não foi possível duplicar o perfil')
-      }
     },
     updateProfile(serverId, profileId, o) {
       ProfileManager.update(serverId, profileId, o)
@@ -399,6 +341,7 @@ export function createElectronBackend(): Backend {
       try {
         return await LaunchService.launch({
           ...h,
+          onStatus: (text: string) => h.onStatus(status(text)),
           onBlocked: (items: any[]) => h.onBlocked(items.map((i) => ({ title: i.title, type: i.type }))),
           onDistro: (d: any) => {
             distro = d
@@ -413,77 +356,12 @@ export function createElectronBackend(): Backend {
     },
     async verifyFiles(h) {
       try {
-        return await LaunchService.verifyOnly({ ...h, onDistro: (d: any) => (distro = d) })
+        return await LaunchService.verifyOnly({ ...h, onStatus: (text: string) => h.onStatus(status(text)), onDistro: (d: any) => (distro = d) })
       } catch (err) {
         throw asUserError(err, 'Não foi possível verificar os arquivos')
       }
     },
 
-    async listContent(serverId, profileId, type) {
-      const dir = gameDir(serverId, profileId)
-      const s = server(serverId)
-      const files = await ContentManager.describe(dir, type)
-      let updates = new Map<string, any>()
-      const recognised = files.filter((f: any) => f.project != null)
-      const target = Modrinth.getServerTarget(s)
-      if (recognised.length > 0 && !(type === 'mod' && target.loader == null)) {
-        try {
-          updates = await Modrinth.checkUpdates(
-            recognised.map((f: any) => ({ path: f.path, type })),
-            target,
-          )
-        } catch {
-          // Sem Modrinth, a lista aparece sem atualizações.
-        }
-      }
-      return files.map((f: any): ContentFile => {
-        const up = updates.get(f.path)
-        if (up) pendingUpdates.set(`${dir}|${type}|${f.fileName}`, up)
-        return {
-          fileName: f.fileName,
-          type,
-          enabled: f.enabled,
-          title: f.project?.title ?? f.fileName.replace(/\.disabled$/, '').replace(/\.(jar|zip)$/, ''),
-          projectId: f.project?.id ?? null,
-          iconUrl: f.project?.iconUrl ?? null,
-          version: f.version?.number ?? null,
-          update: up ? { id: up.id, number: up.version_number } : null,
-        }
-      })
-    },
-    async setContentEnabled(serverId, profileId, type, fileName, enabled) {
-      try {
-        await ContentManager.setEnabled(gameDir(serverId, profileId), type, fileName, enabled)
-      } catch (err) {
-        throw asUserError(err, 'Não foi possível alterar o item')
-      }
-    },
-    async removeContent(serverId, profileId, type, fileName) {
-      const dir = gameDir(serverId, profileId)
-      try {
-        if (type !== 'mod') await ContentManager.setEnabled(dir, type, fileName, false)
-        const dest = path.join(ContentManager.folder(dir, type), fileName)
-        const res = await ipcRenderer.invoke('TRASH_ITEM', dest)
-        if (!res.result) await ContentManager.remove(dir, type, fileName)
-      } catch (err) {
-        throw asUserError(err, 'Não foi possível remover o item')
-      }
-    },
-    async updateContent(serverId, profileId, type, fileName) {
-      const dir = gameDir(serverId, profileId)
-      const ver = pendingUpdates.get(`${dir}|${type}|${fileName}`)
-      if (ver == null) return
-      try {
-        await ContentManager.updateFile(dir, type, fileName, ver)
-        pendingUpdates.delete(`${dir}|${type}|${fileName}`)
-      } catch (err) {
-        throw asUserError(err, 'Não foi possível atualizar')
-      }
-    },
-    openContentFolder(serverId, profileId, type) {
-      const dir = ContentManager.folder(gameDir(serverId, profileId), type)
-      fs.ensureDir(dir).then(() => shell.openPath(dir))
-    },
     packMods(serverId, profileId): PackMod[] {
       return DistroSync.getPackMods(server(serverId), configKey(serverId, profileId))
     },
@@ -517,150 +395,74 @@ export function createElectronBackend(): Backend {
       fs.ensureDir(dir).then(() => shell.openPath(dir))
     },
 
-    async categories(type) {
-      try {
-        return await Modrinth.getCategories(type)
-      } catch {
-        return []
-      }
-    },
-    async search(o) {
-      const { s, dir, target, blocklist } = selectedTarget()
-      try {
-        const [pack, installed] = await Promise.all([getPackProjects(s, false), ContentManager.installedProjects(dir).catch(() => new Set())])
-        const res = await Modrinth.search(o, target, blocklist, pack)
-        return {
-          total: res.total,
-          pageSize: res.pageSize,
-          hits: res.hits.map(
-            (h: any): SearchHit => ({
-              id: h.project_id,
-              slug: h.slug,
-              title: h.title,
-              author: h.author,
-              description: h.description,
-              iconUrl: h.icon_url || null,
-              downloads: h.downloads,
-              follows: h.follows,
-              updated: h.date_modified ?? null,
-              categories: h.categories ?? [],
-              installed: installed.has(h.project_id),
-            }),
-          ),
-        }
-      } catch (err) {
-        throw asUserError(err, 'Busca indisponível')
-      }
-    },
-    async project(idOrSlug) {
-      const { dir, target } = selectedTarget()
-      try {
-        const p = await Modrinth.getProject(idOrSlug)
-        const type: ContentType = p.project_type === 'shader' ? 'shader' : p.project_type === 'resourcepack' ? 'resourcepack' : 'mod'
-        const [installed, ver] = await Promise.all([
-          ContentManager.installedProjects(dir).catch(() => new Set()),
-          Modrinth.getCompatibleVersion(p.id, type, target).catch(() => null),
-        ])
-        const details: ProjectDetails = {
-          id: p.id,
-          slug: p.slug,
-          title: p.title,
-          description: p.description,
-          bodyHtml: RichText.render(p.body ?? ''),
-          iconUrl: p.icon_url || null,
-          downloads: p.downloads,
-          follows: p.followers,
-          updated: p.updated ?? null,
-          categories: p.categories ?? [],
-          gallery: (p.gallery ?? []).filter((g: any) => /^https:/.test(g.url)).map((g: any) => ({ url: g.url, title: g.title ?? null })),
-          license: p.license?.name ?? p.license?.id ?? null,
-          sourceUrl: p.source_url ?? null,
-          type,
-          installed: installed.has(p.id),
-          compatibleVersion: ver ? { id: ver.id, number: ver.version_number, date: ver.date_published ?? null } : null,
-        }
-        return details
-      } catch (err) {
-        throw asUserError(err, 'Projeto indisponível')
-      }
-    },
-    async install(projectId) {
-      const { s, dir, target, blocklist } = selectedTarget()
-      const run = installQueue.then(async () => {
-        const [pack, installed] = await Promise.all([getPackProjects(s, true), ContentManager.installedProjects(dir)])
-        await Modrinth.install(projectId, target, dir, installed, blocklist, pack)
-      })
-      installQueue = run.catch(() => {})
-      try {
-        await run
-      } catch (err) {
-        throw asUserError(err, 'Não foi possível instalar')
-      }
-    },
-
     launcherSettings(): LauncherSettings {
       return {
         discordPresence: ConfigManager.getDiscordPresence(),
         allowPrerelease: ConfigManager.getAllowPrerelease(),
         autoConnect: ConfigManager.getAutoConnect(),
-        hideLauncherWhilePlaying: ConfigManager.getHideLauncherWhilePlaying(),
+        launcherOnPlay: ConfigManager.getLauncherOnPlay(),
+        launcherFullscreen: ConfigManager.getLauncherFullscreen(),
         dataDirectory: ConfigManager.getDataDirectory(),
       }
     },
     setLauncherSetting(key, value) {
       if (key === 'discordPresence') {
         ConfigManager.setDiscordPresence(value)
-        ConfigManager.save()
         LaunchService.updateLauncherPresence()
       } else if (key === 'allowPrerelease') {
         ConfigManager.setAllowPrerelease(value)
-        ConfigManager.save()
         if (!isDev) ipcRenderer.send('autoUpdateAction', 'allowPrereleaseChange', value)
       } else if (key === 'autoConnect') {
         ConfigManager.setAutoConnect(value)
-        ConfigManager.save()
-      } else if (key === 'hideLauncherWhilePlaying') {
-        ConfigManager.setHideLauncherWhilePlaying(value)
-        ConfigManager.save()
+      } else if (key === 'launcherOnPlay') {
+        ConfigManager.setLauncherOnPlay(value)
+      } else if (key === 'launcherFullscreen') {
+        ConfigManager.setLauncherFullscreen(value)
+        ipcRenderer.send(WINDOW_OPCODE.SET_FULLSCREEN, Boolean(value))
       }
+      ConfigManager.save()
     },
     profileSettings(serverId, profileId): ProfileSettings {
       const s = server(serverId)
       const key = configKey(serverId, profileId)
       ConfigManager.ensureJavaConfig(key, s.effectiveJavaOptions, s.rawServer.javaOptions?.ram)
-      const ram = s.rawServer.javaOptions?.ram
-      const sys = Math.floor(os.totalmem() / 1024 ** 3)
-      const max = Math.max(1, Math.min(ConfigManager.getAbsoluteMaxRAM(ram), sys))
-      const min = Math.min(max, ConfigManager.getAbsoluteMinRAM(ram))
+      return { javaPath: ConfigManager.getJavaExecutable(key), javaSupported: s.effectiveJavaOptions?.supported ?? '' }
+    },
+    setProfileSetting(serverId, profileId, _key, value) {
+      ConfigManager.setJavaExecutable(configKey(serverId, profileId), value)
+      ConfigManager.save()
+    },
+    gameSettings(): GameSettings {
+      const servers = (distro?.servers ?? []).filter((s: any) => s.rawServer.id !== 'SELECT')
+      const b = GameSettingsCore.ramBounds(servers, ConfigManager)
+      const current = ConfigManager.getGlobalMaxRAM()
+      // Sem valor global ainda: mostra o que o servidor selecionado usa hoje.
+      const selected = ConfigManager.getSelectedServer()
+      const fallback = selected ? GameSettingsCore.parseRam(ConfigManager.getJavaConfigKeys().includes(selected) ? ConfigManager.getMaxRAM(selected) : null, b.recommended) : b.recommended
       return {
-        maxRamGB: parseRamGB(ConfigManager.getMaxRAM(key), min),
-        ramMinGB: min,
-        ramMaxGB: max,
-        ramRecommendedGB: ram?.recommended ? Math.round(ram.recommended / 512) / 2 : min,
-        systemRamGB: sys,
-        javaPath: ConfigManager.getJavaExecutable(key),
-        javaSupported: s.effectiveJavaOptions?.supported ?? '',
-        width: ConfigManager.getProfileGameWidth(key),
-        height: ConfigManager.getProfileGameHeight(key),
-        fullscreen: ConfigManager.getProfileFullscreen(key),
+        maxRamGB: Math.min(b.max, Math.max(b.min, current ?? fallback)),
+        ramMinGB: b.min,
+        ramMaxGB: b.max,
+        ramRecommendedGB: b.recommended,
+        systemRamGB: b.system,
+        width: ConfigManager.getGameWidth(),
+        height: ConfigManager.getGameHeight(),
+        fullscreen: ConfigManager.getFullscreen(),
       }
     },
-    setProfileSetting(serverId, profileId, key, value) {
-      const k = configKey(serverId, profileId)
-      if (key === 'maxRamGB') {
-        const gb = Number(value)
-        const v = Number.isInteger(gb) ? `${gb}G` : `${Math.round(gb * 1024)}M`
-        ConfigManager.setMaxRAM(k, v)
-        ConfigManager.setMinRAM(k, v)
-      } else if (key === 'width') {
-        if (ConfigManager.validateProfileGameWidth(Number(value))) ConfigManager.setProfileGameWidth(k, Number(value))
-      } else if (key === 'height') {
-        if (ConfigManager.validateProfileGameHeight(Number(value))) ConfigManager.setProfileGameHeight(k, Number(value))
-      } else if (key === 'fullscreen') {
-        ConfigManager.setProfileFullscreen(k, Boolean(value))
-      } else if (key === 'javaPath') {
-        ConfigManager.setJavaExecutable(k, value == null ? null : String(value))
-      }
+    setGameSetting(key, value) {
+      if (key === 'maxRamGB') ConfigManager.setGlobalMaxRAM(Number(value))
+      else if (key === 'width' && ConfigManager.validateGameWidth(Number(value))) ConfigManager.setGameWidth(Number(value))
+      else if (key === 'height' && ConfigManager.validateGameHeight(Number(value))) ConfigManager.setGameHeight(Number(value))
+      else if (key === 'fullscreen') ConfigManager.setFullscreen(Boolean(value))
+      if (distro) GameSettingsCore.apply(distro, ConfigManager, ProfileManager)
+      ConfigManager.save()
+    },
+    language() {
+      return ConfigManager.getLanguage()
+    },
+    setLanguage(lang) {
+      ConfigManager.setLanguage(lang)
       ConfigManager.save()
     },
     async detectJava(serverId, profileId) {
@@ -697,8 +499,9 @@ export function createElectronBackend(): Backend {
       const s = distro?.getServerById(serverId)
       if (s == null || !s.hostname) return null
       try {
+        const started = performance.now()
         const st = await getServerStatus(47, s.hostname, s.port)
-        return { online: st.players.online, max: st.players.max }
+        return { online: st.players.online, max: st.players.max, pingMs: Math.round(performance.now() - started) }
       } catch {
         return null
       }
@@ -882,6 +685,12 @@ export function createElectronBackend(): Backend {
       } catch {
         // Endereço inválido: ignora.
       }
+    },
+    setWindowFullscreen(on) {
+      ipcRenderer.send(WINDOW_OPCODE.SET_FULLSCREEN, on)
+    },
+    onWindowFullscreen(cb) {
+      ipcRenderer.on(WINDOW_OPCODE.FULLSCREEN_CHANGED, (_e: unknown, on: boolean) => cb(on))
     },
     showFile(file) {
       shell.showItemInFolder(file)

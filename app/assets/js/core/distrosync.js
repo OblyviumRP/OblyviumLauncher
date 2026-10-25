@@ -1,9 +1,9 @@
 /**
- * Distribution bookkeeping shared by the renderers, without any DOM.
+ * Distribution bookkeeping, without any DOM.
  *
  * Keeps each profile's optional-mod configuration and Java settings in step
- * with the distribution index, and exposes the modpack mods as a tree the
- * new UI can render. Ported from scripts/uibinder.js and scripts/mods.js.
+ * with the distribution index, and exposes the server's mods as a tree the
+ * interface can render.
  */
 const { Type } = require('helios-distribution-types')
 
