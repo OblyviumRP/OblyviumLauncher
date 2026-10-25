@@ -95,7 +95,7 @@ const DEFAULT_CONFIG = {
             discordPresence: true,
             dataDirectory: dataPath,
             language: null,
-            fullscreen: false
+            maximized: false
         }
     },
     newsCache: {
@@ -976,13 +976,16 @@ exports.setLanguage = function(language){
     config.settings.launcher.language = language
 }
 
-/** Se a janela do launcher abre em tela cheia. */
-exports.getLauncherFullscreen = function(){
-    return config.settings.launcher.fullscreen === true
+/**
+ * Se a janela do launcher estava maximizada ao fechar; ela reabre assim.
+ * (A antiga opção de tela cheia, settings.launcher.fullscreen, é ignorada.)
+ */
+exports.getLauncherMaximized = function(){
+    return config.settings.launcher.maximized === true
 }
 
-exports.setLauncherFullscreen = function(fullscreen){
-    config.settings.launcher.fullscreen = fullscreen === true
+exports.setLauncherMaximized = function(maximized){
+    config.settings.launcher.maximized = maximized === true
 }
 
 /**
