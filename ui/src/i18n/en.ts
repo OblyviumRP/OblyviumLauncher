@@ -1,7 +1,6 @@
 // Traduções (inglês). A chave é o texto em português usado no t().
 // O arquivo é gerado a partir de uma tabela pt/en/es; `npm run i18n:check` aponta chaves faltando.
 export const en: Record<string, string> = {
-  "/ {max} jogadores": "/ {max} players",
   "A biblioteca aceita até 60 skins.": "The library holds up to 60 skins.",
   "A conta e a skin são as mesmas em todos os perfis.": "The account and skin are the same in every profile.",
   "A conta passa a usar Steve ou Alex. Salve a skin atual na biblioteca antes, se quiser usá-la de novo.": "The account goes back to Steve or Alex. Save the current skin to the library first if you want to use it again.",
@@ -154,7 +153,6 @@ export const en: Record<string, string> = {
   "Esta conta não tem capas. Capas vêm de eventos da Mojang e da Minecraft Experience.": "This account has no capes. Capes come from Mojang events and Minecraft Experience.",
   "Estas opções valem para todos os modpacks e perfis. O Java fica por modpack, na aba Configurações de cada perfil.": "These options apply to every modpack and profile. Java is set per modpack, in each profile's Settings tab.",
   "Este modpack não distribui mods próprios.": "This modpack does not ship its own mods.",
-  "Este modpack não tem servidor público.": "This modpack has no public server.",
   "Este modpack precisa do Java {n}, que não foi encontrado no computador. O launcher pode baixar uma versão compatível (Temurin) agora.": "This modpack needs Java {n}, which was not found on this computer. The launcher can download a compatible version (Temurin) now.",
   "Este modpack roda Minecraft sem loader, então não aceita mods. Resource packs e shaders continuam disponíveis.": "This modpack runs Minecraft without a loader, so it does not accept mods. Resource packs and shaders are still available.",
   "Este servidor não está mais na distribuição.": "This modpack is no longer in the distribution.",
@@ -213,7 +211,6 @@ export const en: Record<string, string> = {
   "Log copiado": "Log copied",
   "Login já aberto": "Sign-in already open",
   "Logout já aberto": "Sign-out already open",
-  "Lotação do servidor": "Server capacity",
   "Machado": "Axe",
   "Marcar lidas": "Mark as read",
   "Memória e tamanho da janela valem para todos os modpacks.": "Memory and window size apply to every modpack.",
@@ -365,7 +362,6 @@ export const en: Record<string, string> = {
   "Sem mods no pacote": "No mods in the pack",
   "Sem resposta do servidor agora.": "No answer from the server right now.",
   "Sem versão compatível com Minecraft {mc}.": "No version compatible with Minecraft {mc}.",
-  "Servidor": "Server",
   "Servidor não encontrado": "Modpack not found",
   "Servidor oficial": "Official server",
   "Servidor principal": "Main server",
@@ -384,6 +380,7 @@ export const en: Record<string, string> = {
   "Skins só podem ser trocadas em contas Microsoft.": "Skins can only be changed on Microsoft accounts.",
   "Sobre e atualizações": "About and updates",
   "Tela cheia (F11)": "Fullscreen (F11)",
+  "Tempo de resposta da consulta de status": "Status query response time",
   "Tentar de novo": "Try again",
   "Tente outra busca ou menos filtros.": "Try another search or fewer filters.",
   "Tipo de conteúdo": "Content type",
@@ -444,7 +441,6 @@ export const en: Record<string, string> = {
   "mín. {min} GB · recomendado {rec} GB · PC {pc} GB": "min. {min} GB · recommended {rec} GB · PC {pc} GB",
   "o jogo": "the game",
   "obrigatório": "required",
-  "online": "online",
   "opcional": "optional",
   "padrão": "default",
   "placas de vídeo mais novas": "newer graphics cards",

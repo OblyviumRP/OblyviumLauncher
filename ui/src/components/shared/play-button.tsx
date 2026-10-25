@@ -37,7 +37,7 @@ export function PlayButton({ size = 'lg', className }: { size?: 'lg' | 'md'; cla
       className={cn(
         'relative isolate inline-flex cursor-pointer items-center justify-center gap-2.5 overflow-hidden rounded-md font-semibold uppercase tracking-[0.12em] text-white transition-colors disabled:cursor-progress',
         size === 'lg' ? 'h-12 min-w-44 px-7 text-base' : 'h-9 min-w-28 px-4 text-sm',
-        state === 'running' ? 'border border-danger-line bg-danger-soft text-danger-fg' : 'bg-primary-fill hover:bg-primary-hover',
+        state === 'running' ? 'border border-danger-line bg-danger-soft text-danger-fg' : 'bg-primary-fill shadow-[0_10px_32px_-10px_var(--primary)] hover:bg-primary-hover',
         className,
       )}
     >

@@ -60,9 +60,26 @@ function Part({ src, tex, box, s, x, y, z = 0, inflate = 0, mirror }: { src: str
   )
 }
 
-export function SkinModel({ src, slim, capeSrc, scale = 1, interactive = false, className }: { src: string; slim?: boolean; capeSrc?: string | null; scale?: number; interactive?: boolean; className?: string }) {
+export function SkinModel({
+  src,
+  slim,
+  capeSrc,
+  scale = 1,
+  interactive = false,
+  angle = -24,
+  className,
+}: {
+  src: string
+  slim?: boolean
+  capeSrc?: string | null
+  scale?: number
+  interactive?: boolean
+  /** Giro inicial em graus (180 mostra as costas). */
+  angle?: number
+  className?: string
+}) {
   const reduce = useReducedMotion()
-  const rotY = useMotionValue(-24)
+  const rotY = useMotionValue(angle)
   const transform = useTransform(rotY, (v) => `rotateX(-8deg) rotateY(${v}deg)`)
   const texH = useTextureHeight(src)
   const legacy = texH === 32
@@ -111,7 +128,12 @@ export function SkinModel({ src, slim, capeSrc, scale = 1, interactive = false, 
         </>
       )}
       {capeSrc && (
-        <div className="absolute [transform-style:preserve-3d]" style={{ left: bx - s, top: 8 * s, width: 10 * s, height: 16 * s, transform: `translateZ(${-2 * s - 1}px) rotateX(8deg) rotateY(180deg)`, transformOrigin: 'top' }}>
+        // A capa fica toda atrás das costas, inclusive da camada externa da skin (0,25 px de textura),
+        // e pende para trás a partir dos ombros. rotateY(180) vira a face de fora para trás.
+        <div
+          className="absolute [transform-style:preserve-3d]"
+          style={{ left: bx - s, top: 8 * s, width: 10 * s, height: 16 * s, transform: `translateZ(${-(2.25 * s + 0.5 * s + 1)}px) rotateX(-10deg) rotateY(180deg)`, transformOrigin: 'top' }}
+        >
           <Part src={capeSrc} tex={[64, 32]} s={s} box={{ u: 0, v: 0, w: 10, h: 16, d: 1 }} x={0} y={0} />
         </div>
       )}

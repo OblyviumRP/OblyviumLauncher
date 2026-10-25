@@ -237,7 +237,8 @@ export interface Backend {
   openDataFolder(): void
 
   // Extras da tela inicial
-  serverStatus(serverId: string): Promise<{ online: number; max: number } | null>
+  /** Jogadores e tempo de resposta da consulta de status (não é o ping dentro do jogo). */
+  serverStatus(serverId: string): Promise<{ online: number; max: number; pingMs: number } | null>
   news(): Promise<Article[] | null>
 
   // Skins

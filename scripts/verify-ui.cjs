@@ -139,7 +139,9 @@ app.whenReady().then(async () => {
         await pause(800)
 
         assert.match(await text(), /Servidor principal/)
-        assert.match(await text(), /Perfil\s+Padrão/)
+        assert.match(await text(), /Minecraft 1\.20\.1 · Forge/, 'pílula de versão')
+        assert.equal(await run(`document.querySelector('[role=radiogroup] [aria-checked=true]')?.textContent`), 'Padrão', 'perfil selecionado no Início')
+        assert.ok(await run(`!!document.querySelector('#root > div > div[aria-hidden] svg, #root > div > div[aria-hidden] img')`), 'arte atrás da janela no Início')
         await noOverflow('início')
         await shot('02-inicio')
 

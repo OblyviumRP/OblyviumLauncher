@@ -382,7 +382,7 @@ export function createMockBackend(): Backend {
     chooseJava: async () => null,
     openDataFolder() {},
 
-    serverStatus: async (id) => (id === 'oblyvium-rp' ? { online: 87, max: 200 } : null),
+    serverStatus: async (id) => (id.startsWith('oblyvium-rp') ? { online: 87, max: 200, pingMs: 24 } : null),
     news: async () => [
       { title: 'Temporada 4: As Ruínas de Vel’Thar', link: 'https://oblyvium.com.br', date: '2026-10-20T18:00:00Z', author: 'Staff', summary: 'Nova região, três masmorras e o retorno das guildas mercantes.' },
       { title: 'Manutenção programada', link: null, date: '2026-10-15T12:00:00Z', author: 'Staff', summary: 'O servidor fica fora do ar das 3h às 5h para atualização do mapa.' },

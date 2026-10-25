@@ -95,7 +95,7 @@ export function Sidebar() {
       initial={false}
       animate={{ width: collapsed ? 56 : 240 }}
       transition={{ type: 'spring', stiffness: 380, damping: 38 }}
-      className="flex h-full shrink-0 flex-col gap-5 overflow-hidden border-r border-border bg-sidebar px-2 py-3"
+      className="flex h-full shrink-0 flex-col gap-5 overflow-hidden rounded-lg border border-border bg-sidebar/75 px-2 py-3 shadow-popover backdrop-blur-md"
     >
       <div className={cn('flex items-center gap-2', collapsed ? 'flex-col' : 'justify-between pl-1.5')}>
         <Link to="/" className="flex items-center gap-2.5 rounded-sm" aria-label={t('Oblyvium Launcher, início')}>
