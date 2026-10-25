@@ -621,7 +621,7 @@ export function createElectronBackend(): Backend {
         discordPresence: ConfigManager.getDiscordPresence(),
         allowPrerelease: ConfigManager.getAllowPrerelease(),
         autoConnect: ConfigManager.getAutoConnect(),
-        hideLauncherWhilePlaying: ConfigManager.getHideLauncherWhilePlaying(),
+        launcherOnPlay: ConfigManager.getLauncherOnPlay(),
         launcherFullscreen: ConfigManager.getLauncherFullscreen(),
         dataDirectory: ConfigManager.getDataDirectory(),
       }
@@ -635,8 +635,8 @@ export function createElectronBackend(): Backend {
         if (!isDev) ipcRenderer.send('autoUpdateAction', 'allowPrereleaseChange', value)
       } else if (key === 'autoConnect') {
         ConfigManager.setAutoConnect(value)
-      } else if (key === 'hideLauncherWhilePlaying') {
-        ConfigManager.setHideLauncherWhilePlaying(value)
+      } else if (key === 'launcherOnPlay') {
+        ConfigManager.setLauncherOnPlay(value)
       } else if (key === 'launcherFullscreen') {
         ConfigManager.setLauncherFullscreen(value)
         ipcRenderer.send(WINDOW_OPCODE.SET_FULLSCREEN, Boolean(value))

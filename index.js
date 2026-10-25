@@ -105,10 +105,19 @@ function showLauncher(){
         tray = null
     }
     if(win != null && !win.isDestroyed()){
+        if(win.isMinimized()){
+            win.restore()
+        }
         win.show()
         win.focus()
     }
 }
+
+ipcMain.on(GAME_OPCODE.MINIMIZE_LAUNCHER, () => {
+    if(win != null && !win.isDestroyed()){
+        win.minimize()
+    }
+})
 
 ipcMain.on(GAME_OPCODE.HIDE_LAUNCHER, () => {
     if(win == null || win.isDestroyed() || tray != null){

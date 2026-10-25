@@ -85,6 +85,8 @@ const DEFAULT_CONFIG = {
             fullscreen: false,
             autoConnectServer: false,
             hideLauncherWhilePlaying: true,
+            // 'tray', 'minimize' ou 'keep' (nova interface). null: segue hideLauncherWhilePlaying.
+            launcherOnPlay: null,
             // Memória máxima em GB para todos os modpacks (nova interface). null: cada modpack usa o próprio padrão.
             maxRAM: null
         },
@@ -908,6 +910,35 @@ exports.getProfileFullscreen = function(key){
  */
 exports.setProfileFullscreen = function(key, fullscreen){
     gameConfigFor(key).fullscreen = fullscreen
+}
+
+const LAUNCHER_ON_PLAY = ['tray', 'minimize', 'keep']
+
+/**
+ * O que a janela do launcher faz quando o jogo abre: 'tray' (esconde na
+ * bandeja), 'minimize' ou 'keep' (fica aberta). Sem escolha, segue a opção
+ * antiga hideLauncherWhilePlaying.
+ *
+ * @returns {'tray' | 'minimize' | 'keep'}
+ */
+exports.getLauncherOnPlay = function(){
+    const value = config.settings.game.launcherOnPlay
+    if(LAUNCHER_ON_PLAY.includes(value)){
+        return value
+    }
+    return exports.getHideLauncherWhilePlaying() ? 'tray' : 'keep'
+}
+
+/**
+ * @param {'tray' | 'minimize' | 'keep'} value
+ */
+exports.setLauncherOnPlay = function(value){
+    if(!LAUNCHER_ON_PLAY.includes(value)){
+        return
+    }
+    config.settings.game.launcherOnPlay = value
+    // A interface antiga só conhece esconder ou não.
+    config.settings.game.hideLauncherWhilePlaying = value === 'tray'
 }
 
 /**

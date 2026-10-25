@@ -48,9 +48,19 @@ export function ConsolePage() {
   const filtered = useMemo(() => logs.filter((l) => (level === 'all' || l.level === level) && (!q || l.msg.toLowerCase().includes(q.toLowerCase()))), [logs, level, q])
   const shown = filtered.slice(-MAX_SHOWN)
 
+  // Segue o fim a cada linha nova. O total de linhas (e não só as visíveis) dispara o efeito,
+  // porque passadas MAX_SHOWN linhas a lista visível para de crescer.
   useEffect(() => {
     if (follow && box.current) box.current.scrollTop = box.current.scrollHeight
-  }, [shown.length, follow])
+  }, [logs.length, filtered.length, follow])
+
+  // Rolar para cima pausa a rolagem automática; voltar ao fim liga de novo.
+  const onScroll = () => {
+    const el = box.current
+    if (!el) return
+    const atEnd = el.scrollHeight - el.scrollTop - el.clientHeight < 24
+    if (atEnd !== follow) setFollow(atEnd)
+  }
 
   if (!server || (launch.state === 'idle' && logs.length === 0))
     return (
@@ -86,7 +96,8 @@ export function ConsolePage() {
   }
 
   return (
-    <div className="mx-auto flex h-full w-full max-w-[1400px] flex-col gap-3 px-6 py-5">
+    // Altura da janela menos a barra de título: assim quem rola é a caixa do log, não a página.
+    <div className="mx-auto flex h-[calc(100vh-2.5rem)] w-full max-w-[1400px] flex-col gap-3 px-6 py-5">
       <header className="flex flex-wrap items-center gap-4 rounded-lg border border-border bg-card p-3">
         <ServerIcon server={server} className="size-11" />
         <div className="flex min-w-48 flex-1 flex-col gap-0.5">
@@ -156,7 +167,8 @@ export function ConsolePage() {
         </Button>
       </div>
 
-      <div ref={box} role="log" aria-label={t('Saída do jogo')} className="min-h-72 flex-1 overflow-auto rounded-lg border border-border bg-sidebar p-3 font-mono text-xs leading-relaxed">
+      <div ref={box} role="log" aria-label={t('Saída do jogo')} onScroll={onScroll} className="min-h-0 flex-1 overflow-auto
+ rounded-lg border border-border bg-sidebar p-3 font-mono text-xs leading-relaxed">
         {filtered.length > MAX_SHOWN && <div className="pb-2 text-muted-2">{t('… {n} linhas anteriores ocultas. Use Copiar para pegar tudo.', { n: (filtered.length - MAX_SHOWN).toLocaleString(locale()) })}</div>}
         {shown.map((l, i) => (
           <div key={i} className="flex gap-3 whitespace-pre">
