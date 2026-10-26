@@ -154,6 +154,10 @@ export const useLauncher = create<State>()(
             get().patchTask('launcher-update', { progress: e.percent })
           } else if (e.kind === 'ready') {
             set({ update: { state: 'ready', version: e.version } })
+            // Atualização obrigatória: instala na hora; com o jogo aberto, fica para o próximo Jogar.
+            try {
+              return b.installUpdate()
+            } catch {}
             get().patchTask('launcher-update', { status: 'done', progress: 100, detail: t('Pronta para instalar'), finishedAt: Date.now() })
             get().notify({ title: t('Atualização {v} pronta', { v: e.version }), body: t('Reinicie o launcher para instalar.'), tone: 'primary', href: '/configuracoes?aba=sobre' })
           } else if (e.kind === 'error') set({ update: { state: 'error', message: e.message } })
@@ -230,6 +234,17 @@ export const useLauncher = create<State>()(
       launchGame: async () => {
         const s = get()
         if (isBusy(s.launch.state)) return
+        if (s.update.state === 'available') {
+          toast(t('Atualizando o launcher'), { description: t('Aguarde o download terminar para jogar.') })
+          return
+        }
+        if (s.update.state === 'ready') {
+          try {
+            return backend().installUpdate()
+          } catch (err) {
+            return get().showError(err)
+          }
+        }
         if (!s.accountId) {
           toast.warning(t('Entre em uma conta'), { description: t('Adicione uma conta para jogar.') })
           return

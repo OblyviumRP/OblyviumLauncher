@@ -269,7 +269,7 @@ export function HomePage() {
           <NewsPanel className="md:col-span-2" />
 
           <Panel
-            title={tasks.length ? t('Downloads') : t('Outros servidores')}
+            title={tasks.length ? t('Downloads') : t('Modpacks')}
             icon={tasks.length ? <Download /> : <Layers />}
             action={
               tasks.length > 0 && (
