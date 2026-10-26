@@ -55,7 +55,7 @@ export function AppShell() {
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
-              transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+              transition={{ duration: 0.18, ease: [0.2, 0.8, 0.2, 1] }}
               className="min-h-full"
             >
               <Outlet />

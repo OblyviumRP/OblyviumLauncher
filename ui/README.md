@@ -59,7 +59,7 @@ O launcher é exclusivo do Oblyvium: o jogador não cria perfis nem instala modp
 | Rota | Tela |
 |---|---|
 | `/boas-vindas` | login Microsoft ou offline e escolha do servidor no primeiro acesso; `?adicionar=1` só adiciona conta |
-| `/` | arte do servidor com transição em pixels, nome, Jogar, ficha do servidor (jogadores, tempo de resposta, endereço, versão, renderizador Vulkan/OpenGL, pacote), notícias em destaque (a mais recente com resumo) e lista compacta dos outros servidores |
+| `/` | arte do servidor com desfoque no pé, nome, Jogar, ficha do servidor (jogadores, tempo de resposta, endereço, versão, renderizador Vulkan/OpenGL, pacote), notícias em destaque (a mais recente com resumo) e lista compacta dos outros servidores |
 | `/descobrir` | busca no Modrinth de mods, resource packs e shaders compatíveis com o modpack oficial escolhido no topo (o mesmo do Início, que tem o atalho "Adicionar mods"), com categorias e ordenação; `/descobrir/:id` mostra o projeto e instala no perfil |
 | `/perfil` | conteúdo instalado (ativar, atualizar, remover), mods do servidor (só os opcionais da staff podem ser desligados), capturas, `latest.log`, Java do servidor, renomear, verificar arquivos e excluir perfis antigos |
 | `/skins` | skin e capa da conta Microsoft com prévia 3D a partir da textura, biblioteca local de skins |
@@ -78,7 +78,9 @@ Comportamentos globais:
 
 ## Arte
 
-Quando o servidor tem `background` na distribuição, o Início e o perfil usam essa imagem. Sem ela, entra a pixel art gerada por código (`src/components/shared/pixel-scene.tsx`), com o aviso "Arte gerada, não é uma captura do servidor".
+Quando o servidor tem `background` na distribuição, o Início e o perfil usam essa imagem. Sem ela, o Início mostra o cenário em camadas do site (`src/components/shared/realm-scene.tsx`, imagens em `src/assets/scene/`, as mesmas `inicio-*.webp` do oblyvium.com.br) com o aviso "Arte conceitual, não é uma captura do servidor", e o perfil usa a pixel art gerada por código (`src/components/shared/pixel-scene.tsx`), com o aviso "Arte gerada, não é uma captura do servidor".
+
+O cenário do Início tem parallax pelo ponteiro, já que a tela não rola: cada camada tem a profundidade (`--depth`) do site, e o primeiro plano anda até 20px. `prefers-reduced-motion` desliga. O movimento é feito em JS a cada quadro (sem `transition` do CSS) e precisa da aceleração por GPU, que o `index.js` deixa ligada: por software, o parallax com o desfoque cai para ~30 fps. A névoa fica parada (a deriva do site pediria um controle de pausar animações). As cores seguem a marca 2.0.0 (https://oblyvium.com.br/marca).
 
 ## Segurança
 

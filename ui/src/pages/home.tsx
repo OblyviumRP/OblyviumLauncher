@@ -5,7 +5,8 @@ import { useShallow } from 'zustand/react/shallow'
 import { backend, type ServerInfo } from '@/backend'
 import { PlayButton } from '@/components/shared/play-button'
 import { ProfileIcon, profileLabel } from '@/components/shared/profile-icon'
-import { artNotice, hasRealArt, ServerArt, ServerIcon } from '@/components/shared/server-art'
+import { RealmScene } from '@/components/shared/realm-scene'
+import { hasRealArt, ServerArt, ServerIcon } from '@/components/shared/server-art'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Tooltip } from '@/components/ui/tooltip'
@@ -14,8 +15,8 @@ import { useAsync } from '@/lib/use-async'
 import { cn, formatDate } from '@/lib/utils'
 import { isBusy, useLauncher, useProfile, useServer } from '@/store/launcher'
 
-// Início: a arte do servidor ocupa a área de conteúdo e se desfaz em pixels no
-// fundo (dither). O texto fica embaixo à esquerda, a ficha do servidor à direita
+// Início: a arte do servidor (sem ela, o cenário em camadas do site, com parallax)
+// ocupa a área de conteúdo e se desfaz em desfoque no fundo. O texto fica embaixo à esquerda, a ficha do servidor à direita
 // e os cartões por último.
 
 const stagger: Variants = { show: { transition: { staggerChildren: 0.06 } } }
@@ -33,8 +34,9 @@ function Art({ server }: { server: ServerInfo }) {
         exit={{ opacity: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <ServerArt server={server} twinkle className="absolute inset-0 size-full" />
-        <div className="fj-dither-fade" />
+        {hasRealArt(server) ? <ServerArt server={server} className="absolute inset-0 size-full" /> : <RealmScene className="absolute inset-x-0 top-0 h-[80%]" />}
+        {/* Desfoque do site (o vidro do cabeçalho do oblyvium.com.br), entrando aos poucos no pé da arte. */}
+        <div className="absolute inset-0 bg-background/85 backdrop-blur-md [mask-image:linear-gradient(to_top,#000_30%,transparent_70%)] supports-[not(backdrop-filter:blur(0))]:bg-background" />
         <div className="absolute inset-0 bg-[linear-gradient(to_top,var(--background)_26%,transparent_44%)]" />
         <div className="absolute inset-0 bg-[radial-gradient(110%_80%_at_0%_100%,color-mix(in_srgb,var(--background)_85%,transparent)_0%,transparent_65%)]" />
       </motion.div>
@@ -197,7 +199,7 @@ export function HomePage() {
               initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+              transition={{ duration: 0.3, ease: [0.2, 0.8, 0.2, 1] }}
               className="flex min-w-0 max-w-[560px] flex-1 flex-col gap-3"
             >
               <span className="font-mono text-2xs uppercase tracking-[0.2em] text-primary-light">{server.main ? t('Servidor oficial') : t('Servidor')}</span>
@@ -316,7 +318,7 @@ export function HomePage() {
           </Panel>
         </div>
 
-        {!hasRealArt(server) && <span className="self-end text-2xs text-muted-2">{artNotice()}</span>}
+        {!hasRealArt(server) && <span className="self-end text-2xs text-muted-2">{t('Arte conceitual, não é uma captura do servidor')}</span>}
       </div>
     </motion.div>
   )

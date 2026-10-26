@@ -37,6 +37,7 @@ export const es: Record<string, string> = {
   "Arco": "Arco",
   "Arquivos verificados": "Archivos verificados",
   "Arraste para girar": "Arrastra para girar",
+  "Arte conceitual, não é uma captura do servidor": "Arte conceptual, no es una captura del servidor",
   "Arte gerada, não é uma captura do servidor": "Arte generado, no es una captura del servidor",
   "Atenção": "Atención",
   "Atualização {v} pronta": "Actualización {v} lista",
