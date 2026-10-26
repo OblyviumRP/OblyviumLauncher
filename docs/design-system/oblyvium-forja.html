@@ -8,47 +8,47 @@
 <style>
 /* Oblyvium Forja — generated from tokens.json */
 :root, [data-theme="forja"] {
-  --background: #060509;
+  --background: #030305;
   --foreground: #ececf5;
-  --card: #0e0c16;
+  --card: #0e0e13;
   --surface: var(--card);
-  --surface-2: #15131f;
-  --popover: #15131f;
-  --sidebar: #0a0810;
-  --accent: #221d30;
-  --muted-foreground: #a69cb7;
-  --muted-2: #9487aa;
-  --border: #221d30;
-  --border-2: #3d3154;
-  --input-border: #796b91;
+  --surface-2: #18181e;
+  --popover: #18181e;
+  --sidebar: #09090d;
+  --accent: #24242c;
+  --muted-foreground: #babac2;
+  --muted-2: #aaaab2;
+  --border: #282830;
+  --border-2: #36363f;
+  --input-border: #71717b;
   --ring: #c4b5fd;
   --primary: #8b5cf6;
   --primary-light: #a78bfa;
   --primary-fill: #7c3aed;
   --primary-hover: #6d28d9;
-  --primary-soft: #1d142e;
-  --primary-line: #513781;
-  --primary-fg: #c4b5fd;
-  --success-soft: #0c2119;
-  --success-line: #245c43;
-  --success-fg: #86efac;
-  --warning-soft: #281e0e;
-  --warning-line: #72511f;
-  --warning-fg: #fcd34d;
-  --info-soft: #0b1a2c;
-  --info-line: #25507c;
-  --info-fg: #93c5fd;
-  --danger-soft: #2a101b;
-  --danger-line: #793048;
+  --primary-soft: #8b5cf61f;
+  --primary-line: #8b5cf64d;
+  --primary-fg: #a78bfa;
+  --success-soft: #34d3991f;
+  --success-line: #34d3994d;
+  --success-fg: #6ee7b7;
+  --warning-soft: #facc151f;
+  --warning-line: #facc154d;
+  --warning-fg: #fde047;
+  --info-soft: #38bdf81f;
+  --info-line: #38bdf84d;
+  --info-fg: #7dd3fc;
+  --danger-soft: #f43f5e1f;
+  --danger-line: #f43f5e4d;
   --danger-fg: #fda4af;
   --ember: #f59e0b;
-  --ember-soft: #2a1a06;
-  --ember-line: #7a4a0f;
-  --ember-fg: #fcd34d;
-  --overlay: #060509d9;
+  --ember-soft: #f59e0b1f;
+  --ember-line: #f59e0b4d;
+  --ember-fg: #fb923c;
+  --overlay: #030305d9;
   --scene-glow: #1c1236;
-  --shadow-dialog: 0 24px 80px #030207b3;
-  --shadow-popover: 0 12px 32px #03020799;
+  --shadow-dialog: 0 20px 50px #000000b3;
+  --shadow-popover: 0 8px 24px #00000080;
 }
 :root {
   --space-1: 4px;
@@ -73,7 +73,7 @@
   --dur-fast: 120ms;
   --dur-base: 180ms;
   --dur-slow: 280ms;
-  --ease-forja: cubic-bezier(.22, 1, .36, 1);
+  --ease-forja: cubic-bezier(.2, .8, .2, 1);
   --font-sans: Geist, "Segoe UI", sans-serif;
   --font-mono: "Geist Mono", ui-monospace, monospace;
   --font-display: Cinzel, Georgia, serif;
@@ -426,8 +426,8 @@ scales: tiles 24px at a 28px pitch (space-6 + space-1), corners radius-sm; block
 <ul>
 <li><strong>Botão primário:</strong> <code>primary-fill</code> com texto branco, e <code>primary-hover</code> no hover.</li>
 <li><strong>Item ativo</strong> (menu, chip, aba lateral): fundo <code>primary-soft</code>, borda <code>primary-line</code>, ícone <code>primary-light</code>.</li>
-<li><strong>Texto violeta:</strong> <code>primary-light</code> sobre <code>card</code> e <code>popover</code>. Nunca <code>primary</code> como texto sobre <code>popover</code> (4,33:1).</li>
-<li><strong>Hover:</strong> <code>accent</code> sobre <code>card</code>, e <code>border-2</code> dentro de menu, popover e botão ghost. Nunca <code>surface-2</code> sobre <code>card</code> ou <code>popover</code> (1,06:1, igual ao popover).</li>
+<li><strong>Texto violeta:</strong> <code>primary-light</code> sobre <code>card</code> e <code>popover</code>. Nunca <code>primary</code> como texto sobre <code>popover</code> (4,17:1).</li>
+<li><strong>Hover:</strong> <code>accent</code> sobre <code>card</code>, e <code>border-2</code> dentro de menu, popover e botão ghost. Nunca <code>surface-2</code> sobre <code>card</code> ou <code>popover</code> (1,09:1).</li>
 <li><strong>Estados:</strong> cada um tem três tokens, fundo / borda / texto (<code>*-soft</code>, <code>*-line</code>, <code>*-fg</code>). Todo estado traz também um rótulo ou ícone, nunca só a cor ("online", "falhou", "expirada").</li>
 <li><strong>Brasa:</strong> <code>ember</code> só para prioridade máxima e CTA raro, com texto em <code>background</code> sobre ela. <code>ember-soft</code>/<code>ember-fg</code> em badge.</li>
 <li><strong>Texto sobre imagem:</strong> sempre sobre a película <code>overlay</code>.</li>
@@ -519,68 +519,68 @@ scales: tiles 24px at a 28px pitch (space-6 + space-1), corners radius-sm; block
     <section id="cores" class="group">
       <div><h2 class="part">Cores</h2><p class="part-intro">Clique na amostra para copiar o hex, ou no hex para copiar a variável CSS. Os números mostram o contraste com <code>background</code> e <code>foreground</code>.</p></div>
       <h3>Superfícies</h3><ul class="swatches"><li class="sw">
-  <button type="button" class="chip" style="background:var(--background)" data-copy="#060509" aria-label="Copiar #060509"></button>
+  <button type="button" class="chip" style="background:var(--background)" data-copy="#030305" aria-label="Copiar #030305"></button>
   <div class="sw-body">
-    <div class="sw-head"><code class="tok">background</code><button type="button" class="hex" data-copy="var(--background)" title="Copiar var(--background)">#060509</button></div>
+    <div class="sw-head"><code class="tok">background</code><button type="button" class="hex" data-copy="var(--background)" title="Copiar var(--background)">#030305</button></div>
     
     <p>Fundo da janela e das páginas. Tema único: o Oblyvium só tem tema escuro.</p>
-    <div class="ratios"><span title="Contraste com background">bg 1.00:1</span><span title="Contraste com foreground">fg 17.31:1</span></div>
+    <div class="ratios"><span title="Contraste com background">bg 1.00:1</span><span title="Contraste com foreground">fg 17.55:1</span></div>
   </div>
 </li><li class="sw">
-  <button type="button" class="chip" style="background:var(--card)" data-copy="#0e0c16" aria-label="Copiar #0e0c16"></button>
+  <button type="button" class="chip" style="background:var(--card)" data-copy="#0e0e13" aria-label="Copiar #0e0e13"></button>
   <div class="sw-body">
-    <div class="sw-head"><code class="tok">card</code><button type="button" class="hex" data-copy="var(--card)" title="Copiar var(--card)">#0e0c16</button></div>
+    <div class="sw-head"><code class="tok">card</code><button type="button" class="hex" data-copy="var(--card)" title="Copiar var(--card)">#0e0e13</button></div>
     
     <p>Cartões, painéis e tabelas sobre <code>background</code>.</p>
-    <div class="ratios"><span title="Contraste com background">bg 1.05:1</span><span title="Contraste com foreground">fg 16.52:1</span></div>
+    <div class="ratios"><span title="Contraste com background">bg 1.07:1</span><span title="Contraste com foreground">fg 16.39:1</span></div>
   </div>
 </li><li class="sw">
-  <button type="button" class="chip" style="background:var(--surface)" data-copy="#0e0c16" aria-label="Copiar #0e0c16"></button>
+  <button type="button" class="chip" style="background:var(--surface)" data-copy="#0e0e13" aria-label="Copiar #0e0e13"></button>
   <div class="sw-body">
-    <div class="sw-head"><code class="tok">surface</code><button type="button" class="hex" data-copy="var(--surface)" title="Copiar var(--surface)">#0e0c16</button></div>
+    <div class="sw-head"><code class="tok">surface</code><button type="button" class="hex" data-copy="var(--surface)" title="Copiar var(--surface)">#0e0e13</button></div>
     <span class="alias">= {card}</span>
     <p>Sinônimo de <code>card</code> usado no CSS do launcher.</p>
-    <div class="ratios"><span title="Contraste com background">bg 1.05:1</span><span title="Contraste com foreground">fg 16.52:1</span></div>
+    <div class="ratios"><span title="Contraste com background">bg 1.07:1</span><span title="Contraste com foreground">fg 16.39:1</span></div>
   </div>
 </li><li class="sw">
-  <button type="button" class="chip" style="background:var(--surface-2)" data-copy="#15131f" aria-label="Copiar #15131f"></button>
+  <button type="button" class="chip" style="background:var(--surface-2)" data-copy="#18181e" aria-label="Copiar #18181e"></button>
   <div class="sw-body">
-    <div class="sw-head"><code class="tok">surface-2</code><button type="button" class="hex" data-copy="var(--surface-2)" title="Copiar var(--surface-2)">#15131f</button></div>
+    <div class="sw-head"><code class="tok">surface-2</code><button type="button" class="hex" data-copy="var(--surface-2)" title="Copiar var(--surface-2)">#18181e</button></div>
     
-    <p>Elevado: cabeçalho de tabela, linhas de runtime. Nunca como hover sobre <code>card</code> ou <code>popover</code> (1,06:1).</p>
-    <div class="ratios"><span title="Contraste com background">bg 1.11:1</span><span title="Contraste com foreground">fg 15.62:1</span></div>
+    <p>Elevado: cabeçalho de tabela, linhas de runtime. Nunca como hover sobre <code>card</code> ou <code>popover</code> (1,09:1).</p>
+    <div class="ratios"><span title="Contraste com background">bg 1.17:1</span><span title="Contraste com foreground">fg 15.05:1</span></div>
   </div>
 </li><li class="sw">
-  <button type="button" class="chip" style="background:var(--popover)" data-copy="#15131f" aria-label="Copiar #15131f"></button>
+  <button type="button" class="chip" style="background:var(--popover)" data-copy="#18181e" aria-label="Copiar #18181e"></button>
   <div class="sw-body">
-    <div class="sw-head"><code class="tok">popover</code><button type="button" class="hex" data-copy="var(--popover)" title="Copiar var(--popover)">#15131f</button></div>
+    <div class="sw-head"><code class="tok">popover</code><button type="button" class="hex" data-copy="var(--popover)" title="Copiar var(--popover)">#18181e</button></div>
     
     <p>Popover, menu suspenso, select aberto, toast.</p>
-    <div class="ratios"><span title="Contraste com background">bg 1.11:1</span><span title="Contraste com foreground">fg 15.62:1</span></div>
+    <div class="ratios"><span title="Contraste com background">bg 1.17:1</span><span title="Contraste com foreground">fg 15.05:1</span></div>
   </div>
 </li><li class="sw">
-  <button type="button" class="chip" style="background:var(--sidebar)" data-copy="#0a0810" aria-label="Copiar #0a0810"></button>
+  <button type="button" class="chip" style="background:var(--sidebar)" data-copy="#09090d" aria-label="Copiar #09090d"></button>
   <div class="sw-body">
-    <div class="sw-head"><code class="tok">sidebar</code><button type="button" class="hex" data-copy="var(--sidebar)" title="Copiar var(--sidebar)">#0a0810</button></div>
+    <div class="sw-head"><code class="tok">sidebar</code><button type="button" class="hex" data-copy="var(--sidebar)" title="Copiar var(--sidebar)">#09090d</button></div>
     
     <p>Menu lateral, barra de título e fundo de campos (<code>input-fill</code>).</p>
-    <div class="ratios"><span title="Contraste com background">bg 1.02:1</span><span title="Contraste com foreground">fg 16.95:1</span></div>
+    <div class="ratios"><span title="Contraste com background">bg 1.04:1</span><span title="Contraste com foreground">fg 16.93:1</span></div>
   </div>
 </li><li class="sw">
-  <button type="button" class="chip" style="background:var(--accent)" data-copy="#221d30" aria-label="Copiar #221d30"></button>
+  <button type="button" class="chip" style="background:var(--accent)" data-copy="#24242c" aria-label="Copiar #24242c"></button>
   <div class="sw-body">
-    <div class="sw-head"><code class="tok">accent</code><button type="button" class="hex" data-copy="var(--accent)" title="Copiar var(--accent)">#221d30</button></div>
+    <div class="sw-head"><code class="tok">accent</code><button type="button" class="hex" data-copy="var(--accent)" title="Copiar var(--accent)">#24242c</button></div>
     
     <p>Hover sobre <code>card</code>; trilho de progresso, slider e switch desligado.</p>
-    <div class="ratios"><span title="Contraste com background">bg 1.24:1</span><span title="Contraste com foreground">fg 13.90:1</span></div>
+    <div class="ratios"><span title="Contraste com background">bg 1.34:1</span><span title="Contraste com foreground">fg 13.11:1</span></div>
   </div>
 </li><li class="sw">
-  <button type="button" class="chip" style="background:var(--overlay)" data-copy="#060509d9" aria-label="Copiar #060509d9"></button>
+  <button type="button" class="chip" style="background:var(--overlay)" data-copy="#030305d9" aria-label="Copiar #030305d9"></button>
   <div class="sw-body">
-    <div class="sw-head"><code class="tok">overlay</code><button type="button" class="hex" data-copy="var(--overlay)" title="Copiar var(--overlay)">#060509d9</button></div>
+    <div class="sw-head"><code class="tok">overlay</code><button type="button" class="hex" data-copy="var(--overlay)" title="Copiar var(--overlay)">#030305d9</button></div>
     
     <p>Película sobre arte e cenários: todo texto sobre imagem fica sobre ela. Também o fundo de diálogos.</p>
-    <div class="ratios"><span title="Contraste com background">bg 1.00:1</span><span title="Contraste com foreground">fg 17.31:1</span></div>
+    <div class="ratios"><span title="Contraste com background">bg 1.00:1</span><span title="Contraste com foreground">fg 17.55:1</span></div>
   </div>
 </li><li class="sw">
   <button type="button" class="chip" style="background:var(--scene-glow)" data-copy="#1c1236" aria-label="Copiar #1c1236"></button>
@@ -588,7 +588,7 @@ scales: tiles 24px at a 28px pitch (space-6 + space-1), corners radius-sm; block
     <div class="sw-head"><code class="tok">scene-glow</code><button type="button" class="hex" data-copy="var(--scene-glow)" title="Copiar var(--scene-glow)">#1c1236</button></div>
     
     <p>Brilho do cenário noturno atrás da marca nas telas do jogador.</p>
-    <div class="ratios"><span title="Contraste com background">bg 1.15:1</span><span title="Contraste com foreground">fg 15.04:1</span></div>
+    <div class="ratios"><span title="Contraste com background">bg 1.17:1</span><span title="Contraste com foreground">fg 15.04:1</span></div>
   </div>
 </li></ul><h3>Texto e bordas</h3><ul class="swatches"><li class="sw">
   <button type="button" class="chip" style="background:var(--foreground)" data-copy="#ececf5" aria-label="Copiar #ececf5"></button>
@@ -596,47 +596,47 @@ scales: tiles 24px at a 28px pitch (space-6 + space-1), corners radius-sm; block
     <div class="sw-head"><code class="tok">foreground</code><button type="button" class="hex" data-copy="var(--foreground)" title="Copiar var(--foreground)">#ececf5</button></div>
     
     <p>Texto principal sobre <code>background</code>, <code>card</code>, <code>surface-2</code> e <code>sidebar</code>.</p>
-    <div class="ratios"><span title="Contraste com background">bg 17.31:1</span><span title="Contraste com foreground">fg 1.00:1</span></div>
+    <div class="ratios"><span title="Contraste com background">bg 17.55:1</span><span title="Contraste com foreground">fg 1.00:1</span></div>
   </div>
 </li><li class="sw">
-  <button type="button" class="chip" style="background:var(--muted-foreground)" data-copy="#a69cb7" aria-label="Copiar #a69cb7"></button>
+  <button type="button" class="chip" style="background:var(--muted-foreground)" data-copy="#babac2" aria-label="Copiar #babac2"></button>
   <div class="sw-body">
-    <div class="sw-head"><code class="tok">muted-foreground</code><button type="button" class="hex" data-copy="var(--muted-foreground)" title="Copiar var(--muted-foreground)">#a69cb7</button></div>
+    <div class="sw-head"><code class="tok">muted-foreground</code><button type="button" class="hex" data-copy="var(--muted-foreground)" title="Copiar var(--muted-foreground)">#babac2</button></div>
     
     <p>Texto secundário e descrições sobre <code>card</code> (7,44:1) e <code>background</code>.</p>
-    <div class="ratios"><span title="Contraste com background">bg 7.80:1</span><span title="Contraste com foreground">fg 2.22:1</span></div>
+    <div class="ratios"><span title="Contraste com background">bg 10.69:1</span><span title="Contraste com foreground">fg 1.64:1</span></div>
   </div>
 </li><li class="sw">
-  <button type="button" class="chip" style="background:var(--muted-2)" data-copy="#9487aa" aria-label="Copiar #9487aa"></button>
+  <button type="button" class="chip" style="background:var(--muted-2)" data-copy="#aaaab2" aria-label="Copiar #aaaab2"></button>
   <div class="sw-body">
-    <div class="sw-head"><code class="tok">muted-2</code><button type="button" class="hex" data-copy="var(--muted-2)" title="Copiar var(--muted-2)">#9487aa</button></div>
+    <div class="sw-head"><code class="tok">muted-2</code><button type="button" class="hex" data-copy="var(--muted-2)" title="Copiar var(--muted-2)">#aaaab2</button></div>
     
     <p>Metadados: datas, contagens, placeholders e rótulos mono sobre <code>card</code> (5,82:1).</p>
-    <div class="ratios"><span title="Contraste com background">bg 6.10:1</span><span title="Contraste com foreground">fg 2.84:1</span></div>
+    <div class="ratios"><span title="Contraste com background">bg 8.93:1</span><span title="Contraste com foreground">fg 1.96:1</span></div>
   </div>
 </li><li class="sw">
-  <button type="button" class="chip" style="background:var(--border)" data-copy="#221d30" aria-label="Copiar #221d30"></button>
+  <button type="button" class="chip" style="background:var(--border)" data-copy="#282830" aria-label="Copiar #282830"></button>
   <div class="sw-body">
-    <div class="sw-head"><code class="tok">border</code><button type="button" class="hex" data-copy="var(--border)" title="Copiar var(--border)">#221d30</button></div>
+    <div class="sw-head"><code class="tok">border</code><button type="button" class="hex" data-copy="var(--border)" title="Copiar var(--border)">#282830</button></div>
     
     <p>Divisórias discretas e borda de cartões.</p>
-    <div class="ratios"><span title="Contraste com background">bg 1.24:1</span><span title="Contraste com foreground">fg 13.90:1</span></div>
+    <div class="ratios"><span title="Contraste com background">bg 1.41:1</span><span title="Contraste com foreground">fg 12.45:1</span></div>
   </div>
 </li><li class="sw">
-  <button type="button" class="chip" style="background:var(--border-2)" data-copy="#3d3154" aria-label="Copiar #3d3154"></button>
+  <button type="button" class="chip" style="background:var(--border-2)" data-copy="#36363f" aria-label="Copiar #36363f"></button>
   <div class="sw-body">
-    <div class="sw-head"><code class="tok">border-2</code><button type="button" class="hex" data-copy="var(--border-2)" title="Copiar var(--border-2)">#3d3154</button></div>
+    <div class="sw-head"><code class="tok">border-2</code><button type="button" class="hex" data-copy="var(--border-2)" title="Copiar var(--border-2)">#36363f</button></div>
     
     <p>Separação nítida, borda de popover e menu, hover dentro de menus e popovers.</p>
-    <div class="ratios"><span title="Contraste com background">bg 1.71:1</span><span title="Contraste com foreground">fg 10.13:1</span></div>
+    <div class="ratios"><span title="Contraste com background">bg 1.72:1</span><span title="Contraste com foreground">fg 10.18:1</span></div>
   </div>
 </li><li class="sw">
-  <button type="button" class="chip" style="background:var(--input-border)" data-copy="#796b91" aria-label="Copiar #796b91"></button>
+  <button type="button" class="chip" style="background:var(--input-border)" data-copy="#71717b" aria-label="Copiar #71717b"></button>
   <div class="sw-body">
-    <div class="sw-head"><code class="tok">input-border</code><button type="button" class="hex" data-copy="var(--input-border)" title="Copiar var(--input-border)">#796b91</button></div>
+    <div class="sw-head"><code class="tok">input-border</code><button type="button" class="hex" data-copy="var(--input-border)" title="Copiar var(--input-border)">#71717b</button></div>
     
     <p>Borda de input, select, checkbox e switch desligado (3,99:1 sobre <code>sidebar</code>).</p>
-    <div class="ratios"><span title="Contraste com background">bg 4.19:1</span><span title="Contraste com foreground">fg 4.13:1</span></div>
+    <div class="ratios"><span title="Contraste com background">bg 4.27:1</span><span title="Contraste com foreground">fg 4.11:1</span></div>
   </div>
 </li><li class="sw">
   <button type="button" class="chip" style="background:var(--ring)" data-copy="#c4b5fd" aria-label="Copiar #c4b5fd"></button>
@@ -644,15 +644,15 @@ scales: tiles 24px at a 28px pitch (space-6 + space-1), corners radius-sm; block
     <div class="sw-head"><code class="tok">ring</code><button type="button" class="hex" data-copy="var(--ring)" title="Copiar var(--ring)">#c4b5fd</button></div>
     
     <p>Anel de foco de 2px com 2px de afastamento, em toda superfície (10,5:1).</p>
-    <div class="ratios"><span title="Contraste com background">bg 11.01:1</span><span title="Contraste com foreground">fg 1.57:1</span></div>
+    <div class="ratios"><span title="Contraste com background">bg 11.16:1</span><span title="Contraste com foreground">fg 1.57:1</span></div>
   </div>
 </li></ul><h3>Marca</h3><ul class="swatches"><li class="sw">
   <button type="button" class="chip" style="background:var(--primary)" data-copy="#8b5cf6" aria-label="Copiar #8b5cf6"></button>
   <div class="sw-body">
     <div class="sw-head"><code class="tok">primary</code><button type="button" class="hex" data-copy="var(--primary)" title="Copiar var(--primary)">#8b5cf6</button></div>
     
-    <p>Violeta da marca: ícone ativo, barra de progresso, indicador de aba, borda do item selecionado. Não use como texto sobre <code>popover</code> (4,33:1).</p>
-    <div class="ratios"><span title="Contraste com background">bg 4.80:1</span><span title="Contraste com foreground">fg 3.61:1</span></div>
+    <p>Violeta da marca: ícone ativo, barra de progresso, indicador de aba, borda do item selecionado. Não use como texto sobre <code>popover</code> (4,17:1).</p>
+    <div class="ratios"><span title="Contraste com background">bg 4.87:1</span><span title="Contraste com foreground">fg 3.61:1</span></div>
   </div>
 </li><li class="sw">
   <button type="button" class="chip" style="background:var(--primary-light)" data-copy="#a78bfa" aria-label="Copiar #a78bfa"></button>
@@ -660,7 +660,7 @@ scales: tiles 24px at a 28px pitch (space-6 + space-1), corners radius-sm; block
     <div class="sw-head"><code class="tok">primary-light</code><button type="button" class="hex" data-copy="var(--primary-light)" title="Copiar var(--primary-light)">#a78bfa</button></div>
     
     <p>Links, marca do Oblyvium e texto violeta sobre <code>popover</code> e <code>card</code>.</p>
-    <div class="ratios"><span title="Contraste com background">bg 7.47:1</span><span title="Contraste com foreground">fg 2.32:1</span></div>
+    <div class="ratios"><span title="Contraste com background">bg 7.57:1</span><span title="Contraste com foreground">fg 2.32:1</span></div>
   </div>
 </li><li class="sw">
   <button type="button" class="chip" style="background:var(--primary-fill)" data-copy="#7c3aed" aria-label="Copiar #7c3aed"></button>
@@ -668,7 +668,7 @@ scales: tiles 24px at a 28px pitch (space-6 + space-1), corners radius-sm; block
     <div class="sw-head"><code class="tok">primary-fill</code><button type="button" class="hex" data-copy="var(--primary-fill)" title="Copiar var(--primary-fill)">#7c3aed</button></div>
     
     <p>Fundo do botão primário e do Jogar, com texto branco (5,70:1).</p>
-    <div class="ratios"><span title="Contraste com background">bg 3.57:1</span><span title="Contraste com foreground">fg 4.85:1</span></div>
+    <div class="ratios"><span title="Contraste com background">bg 3.62:1</span><span title="Contraste com foreground">fg 4.85:1</span></div>
   </div>
 </li><li class="sw">
   <button type="button" class="chip" style="background:var(--primary-hover)" data-copy="#6d28d9" aria-label="Copiar #6d28d9"></button>
@@ -676,31 +676,31 @@ scales: tiles 24px at a 28px pitch (space-6 + space-1), corners radius-sm; block
     <div class="sw-head"><code class="tok">primary-hover</code><button type="button" class="hex" data-copy="var(--primary-hover)" title="Copiar var(--primary-hover)">#6d28d9</button></div>
     
     <p>Hover do botão primário; preenchimento de progresso dentro do Jogar.</p>
-    <div class="ratios"><span title="Contraste com background">bg 2.86:1</span><span title="Contraste com foreground">fg 6.05:1</span></div>
+    <div class="ratios"><span title="Contraste com background">bg 2.90:1</span><span title="Contraste com foreground">fg 6.05:1</span></div>
   </div>
 </li><li class="sw">
-  <button type="button" class="chip" style="background:var(--primary-soft)" data-copy="#1d142e" aria-label="Copiar #1d142e"></button>
+  <button type="button" class="chip" style="background:var(--primary-soft)" data-copy="#8b5cf61f" aria-label="Copiar #8b5cf61f"></button>
   <div class="sw-body">
-    <div class="sw-head"><code class="tok">primary-soft</code><button type="button" class="hex" data-copy="var(--primary-soft)" title="Copiar var(--primary-soft)">#1d142e</button></div>
+    <div class="sw-head"><code class="tok">primary-soft</code><button type="button" class="hex" data-copy="var(--primary-soft)" title="Copiar var(--primary-soft)">#8b5cf61f</button></div>
     
     <p>Fundo de item ativo do menu, chip selecionado, notificação não lida.</p>
-    <div class="ratios"><span title="Contraste com background">bg 1.15:1</span><span title="Contraste com foreground">fg 15.01:1</span></div>
+    <div class="ratios"><span title="Contraste com background">bg 1.09:1</span><span title="Contraste com foreground">fg 16.05:1</span></div>
   </div>
 </li><li class="sw">
-  <button type="button" class="chip" style="background:var(--primary-line)" data-copy="#513781" aria-label="Copiar #513781"></button>
+  <button type="button" class="chip" style="background:var(--primary-line)" data-copy="#8b5cf64d" aria-label="Copiar #8b5cf64d"></button>
   <div class="sw-body">
-    <div class="sw-head"><code class="tok">primary-line</code><button type="button" class="hex" data-copy="var(--primary-line)" title="Copiar var(--primary-line)">#513781</button></div>
+    <div class="sw-head"><code class="tok">primary-line</code><button type="button" class="hex" data-copy="var(--primary-line)" title="Copiar var(--primary-line)">#8b5cf64d</button></div>
     
     <p>Borda de item ativo e de elementos <code>primary-soft</code>.</p>
-    <div class="ratios"><span title="Contraste com background">bg 2.14:1</span><span title="Contraste com foreground">fg 8.08:1</span></div>
+    <div class="ratios"><span title="Contraste com background">bg 1.37:1</span><span title="Contraste com foreground">fg 12.76:1</span></div>
   </div>
 </li><li class="sw">
-  <button type="button" class="chip" style="background:var(--primary-fg)" data-copy="#c4b5fd" aria-label="Copiar #c4b5fd"></button>
+  <button type="button" class="chip" style="background:var(--primary-fg)" data-copy="#a78bfa" aria-label="Copiar #a78bfa"></button>
   <div class="sw-body">
-    <div class="sw-head"><code class="tok">primary-fg</code><button type="button" class="hex" data-copy="var(--primary-fg)" title="Copiar var(--primary-fg)">#c4b5fd</button></div>
+    <div class="sw-head"><code class="tok">primary-fg</code><button type="button" class="hex" data-copy="var(--primary-fg)" title="Copiar var(--primary-fg)">#a78bfa</button></div>
     
     <p>Texto sobre <code>primary-soft</code> (badges, botão soft, valores em destaque).</p>
-    <div class="ratios"><span title="Contraste com background">bg 11.01:1</span><span title="Contraste com foreground">fg 1.57:1</span></div>
+    <div class="ratios"><span title="Contraste com background">bg 7.57:1</span><span title="Contraste com foreground">fg 2.32:1</span></div>
   </div>
 </li></ul><h3>Brasa</h3><ul class="swatches"><li class="sw">
   <button type="button" class="chip" style="background:var(--ember)" data-copy="#f59e0b" aria-label="Copiar #f59e0b"></button>
@@ -708,119 +708,119 @@ scales: tiles 24px at a 28px pitch (space-6 + space-1), corners radius-sm; block
     <div class="sw-head"><code class="tok">ember</code><button type="button" class="hex" data-copy="var(--ember)" title="Copiar var(--ember)">#f59e0b</button></div>
     
     <p>Brasa: urgência, prioridade máxima, CTA raro. Texto sobre ela em <code>background</code>.</p>
-    <div class="ratios"><span title="Contraste com background">bg 9.46:1</span><span title="Contraste com foreground">fg 1.83:1</span></div>
+    <div class="ratios"><span title="Contraste com background">bg 9.59:1</span><span title="Contraste com foreground">fg 1.83:1</span></div>
   </div>
 </li><li class="sw">
-  <button type="button" class="chip" style="background:var(--ember-soft)" data-copy="#2a1a06" aria-label="Copiar #2a1a06"></button>
+  <button type="button" class="chip" style="background:var(--ember-soft)" data-copy="#f59e0b1f" aria-label="Copiar #f59e0b1f"></button>
   <div class="sw-body">
-    <div class="sw-head"><code class="tok">ember-soft</code><button type="button" class="hex" data-copy="var(--ember-soft)" title="Copiar var(--ember-soft)">#2a1a06</button></div>
+    <div class="sw-head"><code class="tok">ember-soft</code><button type="button" class="hex" data-copy="var(--ember-soft)" title="Copiar var(--ember-soft)">#f59e0b1f</button></div>
     
     <p>Fundo de badge brasa (ex.: fonte CurseForge).</p>
-    <div class="ratios"><span title="Contraste com background">bg 1.21:1</span><span title="Contraste com foreground">fg 14.32:1</span></div>
+    <div class="ratios"><span title="Contraste com background">bg 1.16:1</span><span title="Contraste com foreground">fg 15.17:1</span></div>
   </div>
 </li><li class="sw">
-  <button type="button" class="chip" style="background:var(--ember-line)" data-copy="#7a4a0f" aria-label="Copiar #7a4a0f"></button>
+  <button type="button" class="chip" style="background:var(--ember-line)" data-copy="#f59e0b4d" aria-label="Copiar #f59e0b4d"></button>
   <div class="sw-body">
-    <div class="sw-head"><code class="tok">ember-line</code><button type="button" class="hex" data-copy="var(--ember-line)" title="Copiar var(--ember-line)">#7a4a0f</button></div>
+    <div class="sw-head"><code class="tok">ember-line</code><button type="button" class="hex" data-copy="var(--ember-line)" title="Copiar var(--ember-line)">#f59e0b4d</button></div>
     
     <p>Borda de badge brasa.</p>
-    <div class="ratios"><span title="Contraste com background">bg 2.72:1</span><span title="Contraste com foreground">fg 6.36:1</span></div>
+    <div class="ratios"><span title="Contraste com background">bg 1.73:1</span><span title="Contraste com foreground">fg 10.14:1</span></div>
   </div>
 </li><li class="sw">
-  <button type="button" class="chip" style="background:var(--ember-fg)" data-copy="#fcd34d" aria-label="Copiar #fcd34d"></button>
+  <button type="button" class="chip" style="background:var(--ember-fg)" data-copy="#fb923c" aria-label="Copiar #fb923c"></button>
   <div class="sw-body">
-    <div class="sw-head"><code class="tok">ember-fg</code><button type="button" class="hex" data-copy="var(--ember-fg)" title="Copiar var(--ember-fg)">#fcd34d</button></div>
+    <div class="sw-head"><code class="tok">ember-fg</code><button type="button" class="hex" data-copy="var(--ember-fg)" title="Copiar var(--ember-fg)">#fb923c</button></div>
     
     <p>Texto sobre <code>ember-soft</code>.</p>
-    <div class="ratios"><span title="Contraste com background">bg 14.09:1</span><span title="Contraste com foreground">fg 1.23:1</span></div>
+    <div class="ratios"><span title="Contraste com background">bg 9.10:1</span><span title="Contraste com foreground">fg 1.93:1</span></div>
   </div>
 </li></ul><h3>Estados</h3><ul class="swatches"><li class="sw">
-  <button type="button" class="chip" style="background:var(--success-soft)" data-copy="#0c2119" aria-label="Copiar #0c2119"></button>
+  <button type="button" class="chip" style="background:var(--success-soft)" data-copy="#34d3991f" aria-label="Copiar #34d3991f"></button>
   <div class="sw-body">
-    <div class="sw-head"><code class="tok">success-soft</code><button type="button" class="hex" data-copy="var(--success-soft)" title="Copiar var(--success-soft)">#0c2119</button></div>
+    <div class="sw-head"><code class="tok">success-soft</code><button type="button" class="hex" data-copy="var(--success-soft)" title="Copiar var(--success-soft)">#34d3991f</button></div>
     
     <p>Fundo de badge e aviso de sucesso.</p>
-    <div class="ratios"><span title="Contraste com background">bg 1.21:1</span><span title="Contraste com foreground">fg 14.34:1</span></div>
+    <div class="ratios"><span title="Contraste com background">bg 1.17:1</span><span title="Contraste com foreground">fg 14.99:1</span></div>
   </div>
 </li><li class="sw">
-  <button type="button" class="chip" style="background:var(--success-line)" data-copy="#245c43" aria-label="Copiar #245c43"></button>
+  <button type="button" class="chip" style="background:var(--success-line)" data-copy="#34d3994d" aria-label="Copiar #34d3994d"></button>
   <div class="sw-body">
-    <div class="sw-head"><code class="tok">success-line</code><button type="button" class="hex" data-copy="var(--success-line)" title="Copiar var(--success-line)">#245c43</button></div>
+    <div class="sw-head"><code class="tok">success-line</code><button type="button" class="hex" data-copy="var(--success-line)" title="Copiar var(--success-line)">#34d3994d</button></div>
     
     <p>Borda de badge e aviso de sucesso.</p>
-    <div class="ratios"><span title="Contraste com background">bg 2.60:1</span><span title="Contraste com foreground">fg 6.66:1</span></div>
+    <div class="ratios"><span title="Contraste com background">bg 1.81:1</span><span title="Contraste com foreground">fg 9.69:1</span></div>
   </div>
 </li><li class="sw">
-  <button type="button" class="chip" style="background:var(--success-fg)" data-copy="#86efac" aria-label="Copiar #86efac"></button>
+  <button type="button" class="chip" style="background:var(--success-fg)" data-copy="#6ee7b7" aria-label="Copiar #6ee7b7"></button>
   <div class="sw-body">
-    <div class="sw-head"><code class="tok">success-fg</code><button type="button" class="hex" data-copy="var(--success-fg)" title="Copiar var(--success-fg)">#86efac</button></div>
+    <div class="sw-head"><code class="tok">success-fg</code><button type="button" class="hex" data-copy="var(--success-fg)" title="Copiar var(--success-fg)">#6ee7b7</button></div>
     
     <p>Texto e ponto de status &quot;online&quot;, &quot;concluído&quot;, &quot;atualizado&quot; sobre <code>success-soft</code> e <code>card</code>.</p>
-    <div class="ratios"><span title="Contraste com background">bg 14.47:1</span><span title="Contraste com foreground">fg 1.20:1</span></div>
+    <div class="ratios"><span title="Contraste com background">bg 13.52:1</span><span title="Contraste com foreground">fg 1.30:1</span></div>
   </div>
 </li><li class="sw">
-  <button type="button" class="chip" style="background:var(--warning-soft)" data-copy="#281e0e" aria-label="Copiar #281e0e"></button>
+  <button type="button" class="chip" style="background:var(--warning-soft)" data-copy="#facc151f" aria-label="Copiar #facc151f"></button>
   <div class="sw-body">
-    <div class="sw-head"><code class="tok">warning-soft</code><button type="button" class="hex" data-copy="var(--warning-soft)" title="Copiar var(--warning-soft)">#281e0e</button></div>
+    <div class="sw-head"><code class="tok">warning-soft</code><button type="button" class="hex" data-copy="var(--warning-soft)" title="Copiar var(--warning-soft)">#facc151f</button></div>
     
     <p>Fundo de atualização disponível e aviso de memória.</p>
-    <div class="ratios"><span title="Contraste com background">bg 1.24:1</span><span title="Contraste com foreground">fg 13.95:1</span></div>
+    <div class="ratios"><span title="Contraste com background">bg 1.21:1</span><span title="Contraste com foreground">fg 14.56:1</span></div>
   </div>
 </li><li class="sw">
-  <button type="button" class="chip" style="background:var(--warning-line)" data-copy="#72511f" aria-label="Copiar #72511f"></button>
+  <button type="button" class="chip" style="background:var(--warning-line)" data-copy="#facc154d" aria-label="Copiar #facc154d"></button>
   <div class="sw-body">
-    <div class="sw-head"><code class="tok">warning-line</code><button type="button" class="hex" data-copy="var(--warning-line)" title="Copiar var(--warning-line)">#72511f</button></div>
+    <div class="sw-head"><code class="tok">warning-line</code><button type="button" class="hex" data-copy="var(--warning-line)" title="Copiar var(--warning-line)">#facc154d</button></div>
     
     <p>Borda dos avisos de atenção.</p>
-    <div class="ratios"><span title="Contraste com background">bg 2.82:1</span><span title="Contraste com foreground">fg 6.14:1</span></div>
+    <div class="ratios"><span title="Contraste com background">bg 2.01:1</span><span title="Contraste com foreground">fg 8.72:1</span></div>
   </div>
 </li><li class="sw">
-  <button type="button" class="chip" style="background:var(--warning-fg)" data-copy="#fcd34d" aria-label="Copiar #fcd34d"></button>
+  <button type="button" class="chip" style="background:var(--warning-fg)" data-copy="#fde047" aria-label="Copiar #fde047"></button>
   <div class="sw-body">
-    <div class="sw-head"><code class="tok">warning-fg</code><button type="button" class="hex" data-copy="var(--warning-fg)" title="Copiar var(--warning-fg)">#fcd34d</button></div>
+    <div class="sw-head"><code class="tok">warning-fg</code><button type="button" class="hex" data-copy="var(--warning-fg)" title="Copiar var(--warning-fg)">#fde047</button></div>
     
     <p>Texto de atenção sobre <code>warning-soft</code> e <code>card</code>: versão nova, linha WARN do log.</p>
-    <div class="ratios"><span title="Contraste com background">bg 14.09:1</span><span title="Contraste com foreground">fg 1.23:1</span></div>
+    <div class="ratios"><span title="Contraste com background">bg 15.63:1</span><span title="Contraste com foreground">fg 1.12:1</span></div>
   </div>
 </li><li class="sw">
-  <button type="button" class="chip" style="background:var(--info-soft)" data-copy="#0b1a2c" aria-label="Copiar #0b1a2c"></button>
+  <button type="button" class="chip" style="background:var(--info-soft)" data-copy="#38bdf81f" aria-label="Copiar #38bdf81f"></button>
   <div class="sw-body">
-    <div class="sw-head"><code class="tok">info-soft</code><button type="button" class="hex" data-copy="var(--info-soft)" title="Copiar var(--info-soft)">#0b1a2c</button></div>
+    <div class="sw-head"><code class="tok">info-soft</code><button type="button" class="hex" data-copy="var(--info-soft)" title="Copiar var(--info-soft)">#38bdf81f</button></div>
     
     <p>Fundo de badge informativo.</p>
-    <div class="ratios"><span title="Contraste com background">bg 1.16:1</span><span title="Contraste com foreground">fg 14.92:1</span></div>
+    <div class="ratios"><span title="Contraste com background">bg 1.16:1</span><span title="Contraste com foreground">fg 15.15:1</span></div>
   </div>
 </li><li class="sw">
-  <button type="button" class="chip" style="background:var(--info-line)" data-copy="#25507c" aria-label="Copiar #25507c"></button>
+  <button type="button" class="chip" style="background:var(--info-line)" data-copy="#38bdf84d" aria-label="Copiar #38bdf84d"></button>
   <div class="sw-body">
-    <div class="sw-head"><code class="tok">info-line</code><button type="button" class="hex" data-copy="var(--info-line)" title="Copiar var(--info-line)">#25507c</button></div>
+    <div class="sw-head"><code class="tok">info-line</code><button type="button" class="hex" data-copy="var(--info-line)" title="Copiar var(--info-line)">#38bdf84d</button></div>
     
     <p>Borda de badge informativo.</p>
-    <div class="ratios"><span title="Contraste com background">bg 2.44:1</span><span title="Contraste com foreground">fg 7.10:1</span></div>
+    <div class="ratios"><span title="Contraste com background">bg 1.73:1</span><span title="Contraste com foreground">fg 10.12:1</span></div>
   </div>
 </li><li class="sw">
-  <button type="button" class="chip" style="background:var(--info-fg)" data-copy="#93c5fd" aria-label="Copiar #93c5fd"></button>
+  <button type="button" class="chip" style="background:var(--info-fg)" data-copy="#7dd3fc" aria-label="Copiar #7dd3fc"></button>
   <div class="sw-body">
-    <div class="sw-head"><code class="tok">info-fg</code><button type="button" class="hex" data-copy="var(--info-fg)" title="Copiar var(--info-fg)">#93c5fd</button></div>
+    <div class="sw-head"><code class="tok">info-fg</code><button type="button" class="hex" data-copy="var(--info-fg)" title="Copiar var(--info-fg)">#7dd3fc</button></div>
     
     <p>Texto informativo sobre <code>info-soft</code> e <code>card</code>.</p>
-    <div class="ratios"><span title="Contraste com background">bg 11.27:1</span><span title="Contraste com foreground">fg 1.54:1</span></div>
+    <div class="ratios"><span title="Contraste com background">bg 12.36:1</span><span title="Contraste com foreground">fg 1.42:1</span></div>
   </div>
 </li><li class="sw">
-  <button type="button" class="chip" style="background:var(--danger-soft)" data-copy="#2a101b" aria-label="Copiar #2a101b"></button>
+  <button type="button" class="chip" style="background:var(--danger-soft)" data-copy="#f43f5e1f" aria-label="Copiar #f43f5e1f"></button>
   <div class="sw-body">
-    <div class="sw-head"><code class="tok">danger-soft</code><button type="button" class="hex" data-copy="var(--danger-soft)" title="Copiar var(--danger-soft)">#2a101b</button></div>
+    <div class="sw-head"><code class="tok">danger-soft</code><button type="button" class="hex" data-copy="var(--danger-soft)" title="Copiar var(--danger-soft)">#f43f5e1f</button></div>
     
     <p>Fundo de botão destrutivo e aviso de falha do jogo.</p>
-    <div class="ratios"><span title="Contraste com background">bg 1.15:1</span><span title="Contraste com foreground">fg 15.05:1</span></div>
+    <div class="ratios"><span title="Contraste com background">bg 1.09:1</span><span title="Contraste com foreground">fg 16.05:1</span></div>
   </div>
 </li><li class="sw">
-  <button type="button" class="chip" style="background:var(--danger-line)" data-copy="#793048" aria-label="Copiar #793048"></button>
+  <button type="button" class="chip" style="background:var(--danger-line)" data-copy="#f43f5e4d" aria-label="Copiar #f43f5e4d"></button>
   <div class="sw-body">
-    <div class="sw-head"><code class="tok">danger-line</code><button type="button" class="hex" data-copy="var(--danger-line)" title="Copiar var(--danger-line)">#793048</button></div>
+    <div class="sw-head"><code class="tok">danger-line</code><button type="button" class="hex" data-copy="var(--danger-line)" title="Copiar var(--danger-line)">#f43f5e4d</button></div>
     
     <p>Borda de elementos de perigo.</p>
-    <div class="ratios"><span title="Contraste com background">bg 2.25:1</span><span title="Contraste com foreground">fg 7.68:1</span></div>
+    <div class="ratios"><span title="Contraste com background">bg 1.41:1</span><span title="Contraste com foreground">fg 12.47:1</span></div>
   </div>
 </li><li class="sw">
   <button type="button" class="chip" style="background:var(--danger-fg)" data-copy="#fda4af" aria-label="Copiar #fda4af"></button>
@@ -828,7 +828,7 @@ scales: tiles 24px at a 28px pitch (space-6 + space-1), corners radius-sm; block
     <div class="sw-head"><code class="tok">danger-fg</code><button type="button" class="hex" data-copy="var(--danger-fg)" title="Copiar var(--danger-fg)">#fda4af</button></div>
     
     <p>Texto de erro sobre <code>danger-soft</code> e <code>card</code>: falha, excluir, linha ERROR.</p>
-    <div class="ratios"><span title="Contraste com background">bg 10.75:1</span><span title="Contraste com foreground">fg 1.61:1</span></div>
+    <div class="ratios"><span title="Contraste com background">bg 10.90:1</span><span title="Contraste com foreground">fg 1.61:1</span></div>
   </div>
 </li></ul>
     </section>
@@ -954,8 +954,8 @@ scales: tiles 24px at a 28px pitch (space-6 + space-1), corners radius-sm; block
 </article><article class="comp" id="c-InstanceCard">
   <header><h3>InstanceCard</h3><span class="badge">Launcher</span></header>
   <div class="stage"><div class="fj" style="padding:16px;display:grid;grid-template-columns:repeat(2,minmax(0,220px));gap:12px">
- <article class="fj-card"><div class="fj-scene"><svg viewBox="0 0 64 28" preserveAspectRatio="xMidYMid slice" shape-rendering="crispEdges" aria-hidden="true"><rect width="64" height="28" fill="#0b0716"/><rect y="12" width="64" height="16" fill="#1f1238"/><rect x="34" y="5" width="0.6" height="0.6" fill="#ede9fe" opacity=".7"/><rect x="26" y="1" width="0.6" height="0.6" fill="#ede9fe" opacity=".7"/><rect x="28" y="10" width="0.6" height="0.6" fill="#ede9fe" opacity=".7"/><rect x="55" y="0" width="0.6" height="0.6" fill="#ede9fe" opacity=".7"/><rect x="57" y="4" width="0.6" height="0.6" fill="#ede9fe" opacity=".7"/><rect x="56" y="10" width="0.6" height="0.6" fill="#ede9fe" opacity=".7"/><rect x="16" y="3" width="0.6" height="0.6" fill="#ede9fe" opacity=".7"/><rect x="43" y="7" width="0.6" height="0.6" fill="#ede9fe" opacity=".7"/><rect x="28" y="2" width="0.6" height="0.6" fill="#ede9fe" opacity=".7"/><rect x="14" y="10" width="0.6" height="0.6" fill="#ede9fe" opacity=".7"/><rect x="15" y="10" width="0.6" height="0.6" fill="#ede9fe" opacity=".7"/><rect x="15" y="8" width="0.6" height="0.6" fill="#ede9fe" opacity=".7"/><rect x="48" y="2" width="0.6" height="0.6" fill="#ede9fe" opacity=".7"/><rect x="13" y="9" width="0.6" height="0.6" fill="#ede9fe" opacity=".7"/><rect x="10" y="6" width="0.6" height="0.6" fill="#ede9fe" opacity=".7"/><rect x="26" y="8" width="0.6" height="0.6" fill="#ede9fe" opacity=".7"/><rect x="33" y="5" width="0.6" height="0.6" fill="#ede9fe" opacity=".7"/><rect x="38" y="6" width="0.6" height="0.6" fill="#ede9fe" opacity=".7"/><rect x="50" y="4" width="5" height="5" fill="#ede9fe"/><rect x="49" y="5" width="7" height="3" fill="#ede9fe"/><rect x="0" y="15" width="1.02" height="13" fill="#2a1a4a"/><rect x="1" y="15" width="1.02" height="13" fill="#2a1a4a"/><rect x="2" y="15" width="1.02" height="13" fill="#2a1a4a"/><rect x="3" y="16" width="1.02" height="12" fill="#2a1a4a"/><rect x="4" y="16" width="1.02" height="12" fill="#2a1a4a"/><rect x="5" y="16" width="1.02" height="12" fill="#2a1a4a"/><rect x="6" y="17" width="1.02" height="11" fill="#2a1a4a"/><rect x="7" y="17" width="1.02" height="11" fill="#2a1a4a"/><rect x="8" y="16" width="1.02" height="12" fill="#2a1a4a"/><rect x="9" y="17" width="1.02" height="11" fill="#2a1a4a"/><rect x="10" y="18" width="1.02" height="10" fill="#2a1a4a"/><rect x="11" y="17" width="1.02" height="11" fill="#2a1a4a"/><rect x="12" y="18" width="1.02" height="10" fill="#2a1a4a"/><rect x="13" y="19" width="1.02" height="9" fill="#2a1a4a"/><rect x="14" y="19" width="1.02" height="9" fill="#2a1a4a"/><rect x="15" y="18" width="1.02" height="10" fill="#2a1a4a"/><rect x="16" y="18" width="1.02" height="10" fill="#2a1a4a"/><rect x="17" y="17" width="1.02" height="11" fill="#2a1a4a"/><rect x="18" y="17" width="1.02" height="11" fill="#2a1a4a"/><rect x="19" y="16" width="1.02" height="12" fill="#2a1a4a"/><rect x="20" y="16" width="1.02" height="12" fill="#2a1a4a"/><rect x="21" y="15" width="1.02" height="13" fill="#2a1a4a"/><rect x="22" y="15" width="1.02" height="13" fill="#2a1a4a"/><rect x="23" y="14" width="1.02" height="14" fill="#2a1a4a"/><rect x="24" y="13" width="1.02" height="15" fill="#2a1a4a"/><rect x="25" y="14" width="1.02" height="14" fill="#2a1a4a"/><rect x="26" y="15" width="1.02" height="13" fill="#2a1a4a"/><rect x="27" y="15" width="1.02" height="13" fill="#2a1a4a"/><rect x="28" y="14" width="1.02" height="14" fill="#2a1a4a"/><rect x="29" y="14" width="1.02" height="14" fill="#2a1a4a"/><rect x="30" y="13" width="1.02" height="15" fill="#2a1a4a"/><rect x="31" y="13" width="1.02" height="15" fill="#2a1a4a"/><rect x="32" y="13" width="1.02" height="15" fill="#2a1a4a"/><rect x="33" y="14" width="1.02" height="14" fill="#2a1a4a"/><rect x="34" y="15" width="1.02" height="13" fill="#2a1a4a"/><rect x="35" y="15" width="1.02" height="13" fill="#2a1a4a"/><rect x="36" y="15" width="1.02" height="13" fill="#2a1a4a"/><rect x="37" y="14" width="1.02" height="14" fill="#2a1a4a"/><rect x="38" y="15" width="1.02" height="13" fill="#2a1a4a"/><rect x="39" y="15" width="1.02" height="13" fill="#2a1a4a"/><rect x="40" y="14" width="1.02" height="14" fill="#2a1a4a"/><rect x="41" y="13" width="1.02" height="15" fill="#2a1a4a"/><rect x="42" y="12" width="1.02" height="16" fill="#2a1a4a"/><rect x="43" y="12" width="1.02" height="16" fill="#2a1a4a"/><rect x="44" y="11" width="1.02" height="17" fill="#2a1a4a"/><rect x="45" y="11" width="1.02" height="17" fill="#2a1a4a"/><rect x="46" y="11" width="1.02" height="17" fill="#2a1a4a"/><rect x="47" y="11" width="1.02" height="17" fill="#2a1a4a"/><rect x="48" y="11" width="1.02" height="17" fill="#2a1a4a"/><rect x="49" y="12" width="1.02" height="16" fill="#2a1a4a"/><rect x="50" y="12" width="1.02" height="16" fill="#2a1a4a"/><rect x="51" y="12" width="1.02" height="16" fill="#2a1a4a"/><rect x="52" y="13" width="1.02" height="15" fill="#2a1a4a"/><rect x="53" y="13" width="1.02" height="15" fill="#2a1a4a"/><rect x="54" y="13" width="1.02" height="15" fill="#2a1a4a"/><rect x="55" y="13" width="1.02" height="15" fill="#2a1a4a"/><rect x="56" y="13" width="1.02" height="15" fill="#2a1a4a"/><rect x="57" y="13" width="1.02" height="15" fill="#2a1a4a"/><rect x="58" y="12" width="1.02" height="16" fill="#2a1a4a"/><rect x="59" y="11" width="1.02" height="17" fill="#2a1a4a"/><rect x="60" y="11" width="1.02" height="17" fill="#2a1a4a"/><rect x="61" y="11" width="1.02" height="17" fill="#2a1a4a"/><rect x="62" y="11" width="1.02" height="17" fill="#2a1a4a"/><rect x="63" y="11" width="1.02" height="17" fill="#2a1a4a"/><rect x="0" y="22" width="1.02" height="6" fill="#0a0612"/><rect x="0" y="22" width="1.02" height="1" fill="#5b3a8f"/><rect x="1" y="22" width="1.02" height="6" fill="#0a0612"/><rect x="1" y="22" width="1.02" height="1" fill="#5b3a8f"/><rect x="2" y="22" width="1.02" height="6" fill="#0a0612"/><rect x="2" y="22" width="1.02" height="1" fill="#5b3a8f"/><rect x="3" y="22" width="1.02" height="6" fill="#0a0612"/><rect x="3" y="22" width="1.02" height="1" fill="#5b3a8f"/><rect x="4" y="22" width="1.02" height="6" fill="#0a0612"/><rect x="4" y="22" width="1.02" height="1" fill="#5b3a8f"/><rect x="5" y="22" width="1.02" height="6" fill="#0a0612"/><rect x="5" y="22" width="1.02" height="1" fill="#5b3a8f"/><rect x="6" y="22" width="1.02" height="6" fill="#0a0612"/><rect x="6" y="22" width="1.02" height="1" fill="#5b3a8f"/><rect x="7" y="21" width="1.02" height="7" fill="#0a0612"/><rect x="7" y="21" width="1.02" height="1" fill="#5b3a8f"/><rect x="8" y="20" width="1.02" height="8" fill="#0a0612"/><rect x="8" y="20" width="1.02" height="1" fill="#5b3a8f"/><rect x="9" y="20" width="1.02" height="8" fill="#0a0612"/><rect x="9" y="20" width="1.02" height="1" fill="#5b3a8f"/><rect x="10" y="20" width="1.02" height="8" fill="#0a0612"/><rect x="10" y="20" width="1.02" height="1" fill="#5b3a8f"/><rect x="11" y="21" width="1.02" height="7" fill="#0a0612"/><rect x="11" y="21" width="1.02" height="1" fill="#5b3a8f"/><rect x="12" y="21" width="1.02" height="7" fill="#0a0612"/><rect x="12" y="21" width="1.02" height="1" fill="#5b3a8f"/><rect x="13" y="20" width="1.02" height="8" fill="#0a0612"/><rect x="13" y="20" width="1.02" height="1" fill="#5b3a8f"/><rect x="14" y="20" width="1.02" height="8" fill="#0a0612"/><rect x="14" y="20" width="1.02" height="1" fill="#5b3a8f"/><rect x="15" y="20" width="1.02" height="8" fill="#0a0612"/><rect x="15" y="20" width="1.02" height="1" fill="#5b3a8f"/><rect x="16" y="20" width="1.02" height="8" fill="#0a0612"/><rect x="16" y="20" width="1.02" height="1" fill="#5b3a8f"/><rect x="17" y="20" width="1.02" height="8" fill="#0a0612"/><rect x="17" y="20" width="1.02" height="1" fill="#5b3a8f"/><rect x="18" y="21" width="1.02" height="7" fill="#0a0612"/><rect x="18" y="21" width="1.02" height="1" fill="#5b3a8f"/><rect x="19" y="21" width="1.02" height="7" fill="#0a0612"/><rect x="19" y="21" width="1.02" height="1" fill="#5b3a8f"/><rect x="20" y="20" width="1.02" height="8" fill="#0a0612"/><rect x="20" y="20" width="1.02" height="1" fill="#5b3a8f"/><rect x="21" y="20" width="1.02" height="8" fill="#0a0612"/><rect x="21" y="20" width="1.02" height="1" fill="#5b3a8f"/><rect x="22" y="20" width="1.02" height="8" fill="#0a0612"/><rect x="22" y="20" width="1.02" height="1" fill="#5b3a8f"/><rect x="23" y="20" width="1.02" height="8" fill="#0a0612"/><rect x="23" y="20" width="1.02" height="1" fill="#5b3a8f"/><rect x="24" y="20" width="1.02" height="8" fill="#0a0612"/><rect x="24" y="20" width="1.02" height="1" fill="#5b3a8f"/><rect x="25" y="20" width="1.02" height="8" fill="#0a0612"/><rect x="25" y="20" width="1.02" height="1" fill="#5b3a8f"/><rect x="26" y="20" width="1.02" height="8" fill="#0a0612"/><rect x="26" y="20" width="1.02" height="1" fill="#5b3a8f"/><rect x="27" y="20" width="1.02" height="8" fill="#0a0612"/><rect x="27" y="20" width="1.02" height="1" fill="#5b3a8f"/><rect x="28" y="21" width="1.02" height="7" fill="#0a0612"/><rect x="28" y="21" width="1.02" height="1" fill="#5b3a8f"/><rect x="29" y="21" width="1.02" height="7" fill="#0a0612"/><rect x="29" y="21" width="1.02" height="1" fill="#5b3a8f"/><rect x="30" y="21" width="1.02" height="7" fill="#0a0612"/><rect x="30" y="21" width="1.02" height="1" fill="#5b3a8f"/><rect x="31" y="20" width="1.02" height="8" fill="#0a0612"/><rect x="31" y="20" width="1.02" height="1" fill="#5b3a8f"/><rect x="32" y="20" width="1.02" height="8" fill="#0a0612"/><rect x="32" y="20" width="1.02" height="1" fill="#5b3a8f"/><rect x="33" y="21" width="1.02" height="7" fill="#0a0612"/><rect x="33" y="21" width="1.02" height="1" fill="#5b3a8f"/><rect x="34" y="21" width="1.02" height="7" fill="#0a0612"/><rect x="34" y="21" width="1.02" height="1" fill="#5b3a8f"/><rect x="35" y="20" width="1.02" height="8" fill="#0a0612"/><rect x="35" y="20" width="1.02" height="1" fill="#5b3a8f"/><rect x="36" y="20" width="1.02" height="8" fill="#0a0612"/><rect x="36" y="20" width="1.02" height="1" fill="#5b3a8f"/><rect x="37" y="21" width="1.02" height="7" fill="#0a0612"/><rect x="37" y="21" width="1.02" height="1" fill="#5b3a8f"/><rect x="38" y="21" width="1.02" height="7" fill="#0a0612"/><rect x="38" y="21" width="1.02" height="1" fill="#5b3a8f"/><rect x="39" y="21" width="1.02" height="7" fill="#0a0612"/><rect x="39" y="21" width="1.02" height="1" fill="#5b3a8f"/><rect x="40" y="22" width="1.02" height="6" fill="#0a0612"/><rect x="40" y="22" width="1.02" height="1" fill="#5b3a8f"/><rect x="41" y="22" width="1.02" height="6" fill="#0a0612"/><rect x="41" y="22" width="1.02" height="1" fill="#5b3a8f"/><rect x="42" y="23" width="1.02" height="5" fill="#0a0612"/><rect x="42" y="23" width="1.02" height="1" fill="#5b3a8f"/><rect x="43" y="23" width="1.02" height="5" fill="#0a0612"/><rect x="43" y="23" width="1.02" height="1" fill="#5b3a8f"/><rect x="44" y="24" width="1.02" height="4" fill="#0a0612"/><rect x="44" y="24" width="1.02" height="1" fill="#5b3a8f"/><rect x="45" y="24" width="1.02" height="4" fill="#0a0612"/><rect x="45" y="24" width="1.02" height="1" fill="#5b3a8f"/><rect x="46" y="24" width="1.02" height="4" fill="#0a0612"/><rect x="46" y="24" width="1.02" height="1" fill="#5b3a8f"/><rect x="47" y="24" width="1.02" height="4" fill="#0a0612"/><rect x="47" y="24" width="1.02" height="1" fill="#5b3a8f"/><rect x="48" y="24" width="1.02" height="4" fill="#0a0612"/><rect x="48" y="24" width="1.02" height="1" fill="#5b3a8f"/><rect x="49" y="23" width="1.02" height="5" fill="#0a0612"/><rect x="49" y="23" width="1.02" height="1" fill="#5b3a8f"/><rect x="50" y="23" width="1.02" height="5" fill="#0a0612"/><rect x="50" y="23" width="1.02" height="1" fill="#5b3a8f"/><rect x="51" y="23" width="1.02" height="5" fill="#0a0612"/><rect x="51" y="23" width="1.02" height="1" fill="#5b3a8f"/><rect x="52" y="23" width="1.02" height="5" fill="#0a0612"/><rect x="52" y="23" width="1.02" height="1" fill="#5b3a8f"/><rect x="53" y="22" width="1.02" height="6" fill="#0a0612"/><rect x="53" y="22" width="1.02" height="1" fill="#5b3a8f"/><rect x="54" y="22" width="1.02" height="6" fill="#0a0612"/><rect x="54" y="22" width="1.02" height="1" fill="#5b3a8f"/><rect x="55" y="23" width="1.02" height="5" fill="#0a0612"/><rect x="55" y="23" width="1.02" height="1" fill="#5b3a8f"/><rect x="56" y="23" width="1.02" height="5" fill="#0a0612"/><rect x="56" y="23" width="1.02" height="1" fill="#5b3a8f"/><rect x="57" y="23" width="1.02" height="5" fill="#0a0612"/><rect x="57" y="23" width="1.02" height="1" fill="#5b3a8f"/><rect x="58" y="22" width="1.02" height="6" fill="#0a0612"/><rect x="58" y="22" width="1.02" height="1" fill="#5b3a8f"/><rect x="59" y="23" width="1.02" height="5" fill="#0a0612"/><rect x="59" y="23" width="1.02" height="1" fill="#5b3a8f"/><rect x="60" y="22" width="1.02" height="6" fill="#0a0612"/><rect x="60" y="22" width="1.02" height="1" fill="#5b3a8f"/><rect x="61" y="22" width="1.02" height="6" fill="#0a0612"/><rect x="61" y="22" width="1.02" height="1" fill="#5b3a8f"/><rect x="62" y="22" width="1.02" height="6" fill="#0a0612"/><rect x="62" y="22" width="1.02" height="1" fill="#5b3a8f"/><rect x="63" y="23" width="1.02" height="5" fill="#0a0612"/><rect x="63" y="23" width="1.02" height="1" fill="#5b3a8f"/></svg><div class="tags"><span class="fj-badge fj-badge--neutral" style="background:var(--overlay)">Forge</span></div></div><div class="fj-card__body"><div><div class="fj-title">Oblyvium RP</div><div class="fj-meta">Servidor · 1.20.1</div></div><div class="fj-data"><span>186 mods</span><span>4,2 GB</span><span>312 h</span></div><button class="fj-play" style="height:36px;min-width:0;width:100%;font-size:13px" type="button"><span><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg> Jogar</span></button></div></article>
- <article class="fj-card"><div class="fj-scene"><svg viewBox="0 0 64 28" preserveAspectRatio="xMidYMid slice" shape-rendering="crispEdges" aria-hidden="true"><rect width="64" height="28" fill="#120806"/><rect y="12" width="64" height="16" fill="#3a170b"/><rect x="20" y="10" width="0.6" height="0.6" fill="#fde68a" opacity=".7"/><rect x="59" y="8" width="0.6" height="0.6" fill="#fde68a" opacity=".7"/><rect x="56" y="8" width="0.6" height="0.6" fill="#fde68a" opacity=".7"/><rect x="29" y="9" width="0.6" height="0.6" fill="#fde68a" opacity=".7"/><rect x="55" y="1" width="0.6" height="0.6" fill="#fde68a" opacity=".7"/><rect x="24" y="2" width="0.6" height="0.6" fill="#fde68a" opacity=".7"/><rect x="52" y="2" width="0.6" height="0.6" fill="#fde68a" opacity=".7"/><rect x="57" y="4" width="0.6" height="0.6" fill="#fde68a" opacity=".7"/><rect x="28" y="6" width="0.6" height="0.6" fill="#fde68a" opacity=".7"/><rect x="11" y="2" width="0.6" height="0.6" fill="#fde68a" opacity=".7"/><rect x="47" y="0" width="0.6" height="0.6" fill="#fde68a" opacity=".7"/><rect x="39" y="8" width="0.6" height="0.6" fill="#fde68a" opacity=".7"/><rect x="46" y="8" width="0.6" height="0.6" fill="#fde68a" opacity=".7"/><rect x="44" y="1" width="0.6" height="0.6" fill="#fde68a" opacity=".7"/><rect x="31" y="0" width="0.6" height="0.6" fill="#fde68a" opacity=".7"/><rect x="38" y="1" width="0.6" height="0.6" fill="#fde68a" opacity=".7"/><rect x="32" y="6" width="0.6" height="0.6" fill="#fde68a" opacity=".7"/><rect x="15" y="7" width="0.6" height="0.6" fill="#fde68a" opacity=".7"/><rect x="50" y="4" width="5" height="5" fill="#fde68a"/><rect x="49" y="5" width="7" height="3" fill="#fde68a"/><rect x="0" y="14" width="1.02" height="14" fill="#4a1d0c"/><rect x="1" y="15" width="1.02" height="13" fill="#4a1d0c"/><rect x="2" y="15" width="1.02" height="13" fill="#4a1d0c"/><rect x="3" y="15" width="1.02" height="13" fill="#4a1d0c"/><rect x="4" y="16" width="1.02" height="12" fill="#4a1d0c"/><rect x="5" y="16" width="1.02" height="12" fill="#4a1d0c"/><rect x="6" y="16" width="1.02" height="12" fill="#4a1d0c"/><rect x="7" y="17" width="1.02" height="11" fill="#4a1d0c"/><rect x="8" y="17" width="1.02" height="11" fill="#4a1d0c"/><rect x="9" y="17" width="1.02" height="11" fill="#4a1d0c"/><rect x="10" y="17" width="1.02" height="11" fill="#4a1d0c"/><rect x="11" y="18" width="1.02" height="10" fill="#4a1d0c"/><rect x="12" y="17" width="1.02" height="11" fill="#4a1d0c"/><rect x="13" y="17" width="1.02" height="11" fill="#4a1d0c"/><rect x="14" y="17" width="1.02" height="11" fill="#4a1d0c"/><rect x="15" y="18" width="1.02" height="10" fill="#4a1d0c"/><rect x="16" y="19" width="1.02" height="9" fill="#4a1d0c"/><rect x="17" y="19" width="1.02" height="9" fill="#4a1d0c"/><rect x="18" y="19" width="1.02" height="9" fill="#4a1d0c"/><rect x="19" y="19" width="1.02" height="9" fill="#4a1d0c"/><rect x="20" y="19" width="1.02" height="9" fill="#4a1d0c"/><rect x="21" y="19" width="1.02" height="9" fill="#4a1d0c"/><rect x="22" y="19" width="1.02" height="9" fill="#4a1d0c"/><rect x="23" y="19" width="1.02" height="9" fill="#4a1d0c"/><rect x="24" y="18" width="1.02" height="10" fill="#4a1d0c"/><rect x="25" y="17" width="1.02" height="11" fill="#4a1d0c"/><rect x="26" y="16" width="1.02" height="12" fill="#4a1d0c"/><rect x="27" y="15" width="1.02" height="13" fill="#4a1d0c"/><rect x="28" y="15" width="1.02" height="13" fill="#4a1d0c"/><rect x="29" y="15" width="1.02" height="13" fill="#4a1d0c"/><rect x="30" y="16" width="1.02" height="12" fill="#4a1d0c"/><rect x="31" y="16" width="1.02" height="12" fill="#4a1d0c"/><rect x="32" y="17" width="1.02" height="11" fill="#4a1d0c"/><rect x="33" y="17" width="1.02" height="11" fill="#4a1d0c"/><rect x="34" y="17" width="1.02" height="11" fill="#4a1d0c"/><rect x="35" y="17" width="1.02" height="11" fill="#4a1d0c"/><rect x="36" y="17" width="1.02" height="11" fill="#4a1d0c"/><rect x="37" y="17" width="1.02" height="11" fill="#4a1d0c"/><rect x="38" y="16" width="1.02" height="12" fill="#4a1d0c"/><rect x="39" y="15" width="1.02" height="13" fill="#4a1d0c"/><rect x="40" y="14" width="1.02" height="14" fill="#4a1d0c"/><rect x="41" y="14" width="1.02" height="14" fill="#4a1d0c"/><rect x="42" y="14" width="1.02" height="14" fill="#4a1d0c"/><rect x="43" y="14" width="1.02" height="14" fill="#4a1d0c"/><rect x="44" y="14" width="1.02" height="14" fill="#4a1d0c"/><rect x="45" y="14" width="1.02" height="14" fill="#4a1d0c"/><rect x="46" y="13" width="1.02" height="15" fill="#4a1d0c"/><rect x="47" y="12" width="1.02" height="16" fill="#4a1d0c"/><rect x="48" y="12" width="1.02" height="16" fill="#4a1d0c"/><rect x="49" y="13" width="1.02" height="15" fill="#4a1d0c"/><rect x="50" y="12" width="1.02" height="16" fill="#4a1d0c"/><rect x="51" y="12" width="1.02" height="16" fill="#4a1d0c"/><rect x="52" y="13" width="1.02" height="15" fill="#4a1d0c"/><rect x="53" y="12" width="1.02" height="16" fill="#4a1d0c"/><rect x="54" y="11" width="1.02" height="17" fill="#4a1d0c"/><rect x="55" y="11" width="1.02" height="17" fill="#4a1d0c"/><rect x="56" y="11" width="1.02" height="17" fill="#4a1d0c"/><rect x="57" y="11" width="1.02" height="17" fill="#4a1d0c"/><rect x="58" y="11" width="1.02" height="17" fill="#4a1d0c"/><rect x="59" y="11" width="1.02" height="17" fill="#4a1d0c"/><rect x="60" y="11" width="1.02" height="17" fill="#4a1d0c"/><rect x="61" y="11" width="1.02" height="17" fill="#4a1d0c"/><rect x="62" y="12" width="1.02" height="16" fill="#4a1d0c"/><rect x="63" y="11" width="1.02" height="17" fill="#4a1d0c"/><rect x="0" y="22" width="1.02" height="6" fill="#0f0603"/><rect x="0" y="22" width="1.02" height="1" fill="#b45309"/><rect x="1" y="22" width="1.02" height="6" fill="#0f0603"/><rect x="1" y="22" width="1.02" height="1" fill="#b45309"/><rect x="2" y="21" width="1.02" height="7" fill="#0f0603"/><rect x="2" y="21" width="1.02" height="1" fill="#b45309"/><rect x="3" y="21" width="1.02" height="7" fill="#0f0603"/><rect x="3" y="21" width="1.02" height="1" fill="#b45309"/><rect x="4" y="21" width="1.02" height="7" fill="#0f0603"/><rect x="4" y="21" width="1.02" height="1" fill="#b45309"/><rect x="5" y="21" width="1.02" height="7" fill="#0f0603"/><rect x="5" y="21" width="1.02" height="1" fill="#b45309"/><rect x="6" y="21" width="1.02" height="7" fill="#0f0603"/><rect x="6" y="21" width="1.02" height="1" fill="#b45309"/><rect x="7" y="21" width="1.02" height="7" fill="#0f0603"/><rect x="7" y="21" width="1.02" height="1" fill="#b45309"/><rect x="8" y="21" width="1.02" height="7" fill="#0f0603"/><rect x="8" y="21" width="1.02" height="1" fill="#b45309"/><rect x="9" y="21" width="1.02" height="7" fill="#0f0603"/><rect x="9" y="21" width="1.02" height="1" fill="#b45309"/><rect x="10" y="20" width="1.02" height="8" fill="#0f0603"/><rect x="10" y="20" width="1.02" height="1" fill="#b45309"/><rect x="11" y="21" width="1.02" height="7" fill="#0f0603"/><rect x="11" y="21" width="1.02" height="1" fill="#b45309"/><rect x="12" y="21" width="1.02" height="7" fill="#0f0603"/><rect x="12" y="21" width="1.02" height="1" fill="#b45309"/><rect x="13" y="22" width="1.02" height="6" fill="#0f0603"/><rect x="13" y="22" width="1.02" height="1" fill="#b45309"/><rect x="14" y="22" width="1.02" height="6" fill="#0f0603"/><rect x="14" y="22" width="1.02" height="1" fill="#b45309"/><rect x="15" y="22" width="1.02" height="6" fill="#0f0603"/><rect x="15" y="22" width="1.02" height="1" fill="#b45309"/><rect x="16" y="22" width="1.02" height="6" fill="#0f0603"/><rect x="16" y="22" width="1.02" height="1" fill="#b45309"/><rect x="17" y="22" width="1.02" height="6" fill="#0f0603"/><rect x="17" y="22" width="1.02" height="1" fill="#b45309"/><rect x="18" y="22" width="1.02" height="6" fill="#0f0603"/><rect x="18" y="22" width="1.02" height="1" fill="#b45309"/><rect x="19" y="22" width="1.02" height="6" fill="#0f0603"/><rect x="19" y="22" width="1.02" height="1" fill="#b45309"/><rect x="20" y="21" width="1.02" height="7" fill="#0f0603"/><rect x="20" y="21" width="1.02" height="1" fill="#b45309"/><rect x="21" y="22" width="1.02" height="6" fill="#0f0603"/><rect x="21" y="22" width="1.02" height="1" fill="#b45309"/><rect x="22" y="23" width="1.02" height="5" fill="#0f0603"/><rect x="22" y="23" width="1.02" height="1" fill="#b45309"/><rect x="23" y="23" width="1.02" height="5" fill="#0f0603"/><rect x="23" y="23" width="1.02" height="1" fill="#b45309"/><rect x="24" y="22" width="1.02" height="6" fill="#0f0603"/><rect x="24" y="22" width="1.02" height="1" fill="#b45309"/><rect x="25" y="21" width="1.02" height="7" fill="#0f0603"/><rect x="25" y="21" width="1.02" height="1" fill="#b45309"/><rect x="26" y="22" width="1.02" height="6" fill="#0f0603"/><rect x="26" y="22" width="1.02" height="1" fill="#b45309"/><rect x="27" y="23" width="1.02" height="5" fill="#0f0603"/><rect x="27" y="23" width="1.02" height="1" fill="#b45309"/><rect x="28" y="23" width="1.02" height="5" fill="#0f0603"/><rect x="28" y="23" width="1.02" height="1" fill="#b45309"/><rect x="29" y="23" width="1.02" height="5" fill="#0f0603"/><rect x="29" y="23" width="1.02" height="1" fill="#b45309"/><rect x="30" y="23" width="1.02" height="5" fill="#0f0603"/><rect x="30" y="23" width="1.02" height="1" fill="#b45309"/><rect x="31" y="23" width="1.02" height="5" fill="#0f0603"/><rect x="31" y="23" width="1.02" height="1" fill="#b45309"/><rect x="32" y="23" width="1.02" height="5" fill="#0f0603"/><rect x="32" y="23" width="1.02" height="1" fill="#b45309"/><rect x="33" y="22" width="1.02" height="6" fill="#0f0603"/><rect x="33" y="22" width="1.02" height="1" fill="#b45309"/><rect x="34" y="23" width="1.02" height="5" fill="#0f0603"/><rect x="34" y="23" width="1.02" height="1" fill="#b45309"/><rect x="35" y="24" width="1.02" height="4" fill="#0f0603"/><rect x="35" y="24" width="1.02" height="1" fill="#b45309"/><rect x="36" y="24" width="1.02" height="4" fill="#0f0603"/><rect x="36" y="24" width="1.02" height="1" fill="#b45309"/><rect x="37" y="24" width="1.02" height="4" fill="#0f0603"/><rect x="37" y="24" width="1.02" height="1" fill="#b45309"/><rect x="38" y="24" width="1.02" height="4" fill="#0f0603"/><rect x="38" y="24" width="1.02" height="1" fill="#b45309"/><rect x="39" y="24" width="1.02" height="4" fill="#0f0603"/><rect x="39" y="24" width="1.02" height="1" fill="#b45309"/><rect x="40" y="23" width="1.02" height="5" fill="#0f0603"/><rect x="40" y="23" width="1.02" height="1" fill="#b45309"/><rect x="41" y="22" width="1.02" height="6" fill="#0f0603"/><rect x="41" y="22" width="1.02" height="1" fill="#b45309"/><rect x="42" y="22" width="1.02" height="6" fill="#0f0603"/><rect x="42" y="22" width="1.02" height="1" fill="#b45309"/><rect x="43" y="22" width="1.02" height="6" fill="#0f0603"/><rect x="43" y="22" width="1.02" height="1" fill="#b45309"/><rect x="44" y="22" width="1.02" height="6" fill="#0f0603"/><rect x="44" y="22" width="1.02" height="1" fill="#b45309"/><rect x="45" y="21" width="1.02" height="7" fill="#0f0603"/><rect x="45" y="21" width="1.02" height="1" fill="#b45309"/><rect x="46" y="21" width="1.02" height="7" fill="#0f0603"/><rect x="46" y="21" width="1.02" height="1" fill="#b45309"/><rect x="47" y="22" width="1.02" height="6" fill="#0f0603"/><rect x="47" y="22" width="1.02" height="1" fill="#b45309"/><rect x="48" y="22" width="1.02" height="6" fill="#0f0603"/><rect x="48" y="22" width="1.02" height="1" fill="#b45309"/><rect x="49" y="21" width="1.02" height="7" fill="#0f0603"/><rect x="49" y="21" width="1.02" height="1" fill="#b45309"/><rect x="50" y="20" width="1.02" height="8" fill="#0f0603"/><rect x="50" y="20" width="1.02" height="1" fill="#b45309"/><rect x="51" y="21" width="1.02" height="7" fill="#0f0603"/><rect x="51" y="21" width="1.02" height="1" fill="#b45309"/><rect x="52" y="22" width="1.02" height="6" fill="#0f0603"/><rect x="52" y="22" width="1.02" height="1" fill="#b45309"/><rect x="53" y="22" width="1.02" height="6" fill="#0f0603"/><rect x="53" y="22" width="1.02" height="1" fill="#b45309"/><rect x="54" y="22" width="1.02" height="6" fill="#0f0603"/><rect x="54" y="22" width="1.02" height="1" fill="#b45309"/><rect x="55" y="23" width="1.02" height="5" fill="#0f0603"/><rect x="55" y="23" width="1.02" height="1" fill="#b45309"/><rect x="56" y="23" width="1.02" height="5" fill="#0f0603"/><rect x="56" y="23" width="1.02" height="1" fill="#b45309"/><rect x="57" y="22" width="1.02" height="6" fill="#0f0603"/><rect x="57" y="22" width="1.02" height="1" fill="#b45309"/><rect x="58" y="21" width="1.02" height="7" fill="#0f0603"/><rect x="58" y="21" width="1.02" height="1" fill="#b45309"/><rect x="59" y="20" width="1.02" height="8" fill="#0f0603"/><rect x="59" y="20" width="1.02" height="1" fill="#b45309"/><rect x="60" y="20" width="1.02" height="8" fill="#0f0603"/><rect x="60" y="20" width="1.02" height="1" fill="#b45309"/><rect x="61" y="20" width="1.02" height="8" fill="#0f0603"/><rect x="61" y="20" width="1.02" height="1" fill="#b45309"/><rect x="62" y="20" width="1.02" height="8" fill="#0f0603"/><rect x="62" y="20" width="1.02" height="1" fill="#b45309"/><rect x="63" y="21" width="1.02" height="7" fill="#0f0603"/><rect x="63" y="21" width="1.02" height="1" fill="#b45309"/></svg><div class="tags"><span class="fj-badge fj-badge--neutral" style="background:var(--overlay)">NeoForge</span><span class="fj-badge fj-badge--warning">atualização</span></div></div><div class="fj-card__body"><div><div class="fj-title">Create: Engenharia</div><div class="fj-meta">Modrinth · 1.21.1</div></div><div class="fj-data"><span>142 mods</span><span>3,1 GB</span><span>48 h</span></div><button class="fj-play" style="height:36px;min-width:0;width:100%;font-size:13px" type="button"><span><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg> Jogar</span></button></div></article>
+ <article class="fj-card"><div class="fj-scene"><svg viewBox="0 0 64 28" preserveAspectRatio="xMidYMid slice" shape-rendering="crispEdges" aria-hidden="true"><rect width="64" height="28" fill="#030305d9"/><rect y="12" width="64" height="16" fill="#030305d9"/><rect x="34" y="5" width="0.6" height="0.6" fill="#030305d9" opacity=".7"/><rect x="26" y="1" width="0.6" height="0.6" fill="#030305d9" opacity=".7"/><rect x="28" y="10" width="0.6" height="0.6" fill="#030305d9" opacity=".7"/><rect x="55" y="0" width="0.6" height="0.6" fill="#030305d9" opacity=".7"/><rect x="57" y="4" width="0.6" height="0.6" fill="#030305d9" opacity=".7"/><rect x="56" y="10" width="0.6" height="0.6" fill="#030305d9" opacity=".7"/><rect x="16" y="3" width="0.6" height="0.6" fill="#030305d9" opacity=".7"/><rect x="43" y="7" width="0.6" height="0.6" fill="#030305d9" opacity=".7"/><rect x="28" y="2" width="0.6" height="0.6" fill="#030305d9" opacity=".7"/><rect x="14" y="10" width="0.6" height="0.6" fill="#030305d9" opacity=".7"/><rect x="15" y="10" width="0.6" height="0.6" fill="#030305d9" opacity=".7"/><rect x="15" y="8" width="0.6" height="0.6" fill="#030305d9" opacity=".7"/><rect x="48" y="2" width="0.6" height="0.6" fill="#030305d9" opacity=".7"/><rect x="13" y="9" width="0.6" height="0.6" fill="#030305d9" opacity=".7"/><rect x="10" y="6" width="0.6" height="0.6" fill="#030305d9" opacity=".7"/><rect x="26" y="8" width="0.6" height="0.6" fill="#030305d9" opacity=".7"/><rect x="33" y="5" width="0.6" height="0.6" fill="#030305d9" opacity=".7"/><rect x="38" y="6" width="0.6" height="0.6" fill="#030305d9" opacity=".7"/><rect x="50" y="4" width="5" height="5" fill="#030305d9"/><rect x="49" y="5" width="7" height="3" fill="#030305d9"/><rect x="0" y="15" width="1.02" height="13" fill="#030305d9"/><rect x="1" y="15" width="1.02" height="13" fill="#030305d9"/><rect x="2" y="15" width="1.02" height="13" fill="#030305d9"/><rect x="3" y="16" width="1.02" height="12" fill="#030305d9"/><rect x="4" y="16" width="1.02" height="12" fill="#030305d9"/><rect x="5" y="16" width="1.02" height="12" fill="#030305d9"/><rect x="6" y="17" width="1.02" height="11" fill="#030305d9"/><rect x="7" y="17" width="1.02" height="11" fill="#030305d9"/><rect x="8" y="16" width="1.02" height="12" fill="#030305d9"/><rect x="9" y="17" width="1.02" height="11" fill="#030305d9"/><rect x="10" y="18" width="1.02" height="10" fill="#030305d9"/><rect x="11" y="17" width="1.02" height="11" fill="#030305d9"/><rect x="12" y="18" width="1.02" height="10" fill="#030305d9"/><rect x="13" y="19" width="1.02" height="9" fill="#030305d9"/><rect x="14" y="19" width="1.02" height="9" fill="#030305d9"/><rect x="15" y="18" width="1.02" height="10" fill="#030305d9"/><rect x="16" y="18" width="1.02" height="10" fill="#030305d9"/><rect x="17" y="17" width="1.02" height="11" fill="#030305d9"/><rect x="18" y="17" width="1.02" height="11" fill="#030305d9"/><rect x="19" y="16" width="1.02" height="12" fill="#030305d9"/><rect x="20" y="16" width="1.02" height="12" fill="#030305d9"/><rect x="21" y="15" width="1.02" height="13" fill="#030305d9"/><rect x="22" y="15" width="1.02" height="13" fill="#030305d9"/><rect x="23" y="14" width="1.02" height="14" fill="#030305d9"/><rect x="24" y="13" width="1.02" height="15" fill="#030305d9"/><rect x="25" y="14" width="1.02" height="14" fill="#030305d9"/><rect x="26" y="15" width="1.02" height="13" fill="#030305d9"/><rect x="27" y="15" width="1.02" height="13" fill="#030305d9"/><rect x="28" y="14" width="1.02" height="14" fill="#030305d9"/><rect x="29" y="14" width="1.02" height="14" fill="#030305d9"/><rect x="30" y="13" width="1.02" height="15" fill="#030305d9"/><rect x="31" y="13" width="1.02" height="15" fill="#030305d9"/><rect x="32" y="13" width="1.02" height="15" fill="#030305d9"/><rect x="33" y="14" width="1.02" height="14" fill="#030305d9"/><rect x="34" y="15" width="1.02" height="13" fill="#030305d9"/><rect x="35" y="15" width="1.02" height="13" fill="#030305d9"/><rect x="36" y="15" width="1.02" height="13" fill="#030305d9"/><rect x="37" y="14" width="1.02" height="14" fill="#030305d9"/><rect x="38" y="15" width="1.02" height="13" fill="#030305d9"/><rect x="39" y="15" width="1.02" height="13" fill="#030305d9"/><rect x="40" y="14" width="1.02" height="14" fill="#030305d9"/><rect x="41" y="13" width="1.02" height="15" fill="#030305d9"/><rect x="42" y="12" width="1.02" height="16" fill="#030305d9"/><rect x="43" y="12" width="1.02" height="16" fill="#030305d9"/><rect x="44" y="11" width="1.02" height="17" fill="#030305d9"/><rect x="45" y="11" width="1.02" height="17" fill="#030305d9"/><rect x="46" y="11" width="1.02" height="17" fill="#030305d9"/><rect x="47" y="11" width="1.02" height="17" fill="#030305d9"/><rect x="48" y="11" width="1.02" height="17" fill="#030305d9"/><rect x="49" y="12" width="1.02" height="16" fill="#030305d9"/><rect x="50" y="12" width="1.02" height="16" fill="#030305d9"/><rect x="51" y="12" width="1.02" height="16" fill="#030305d9"/><rect x="52" y="13" width="1.02" height="15" fill="#030305d9"/><rect x="53" y="13" width="1.02" height="15" fill="#030305d9"/><rect x="54" y="13" width="1.02" height="15" fill="#030305d9"/><rect x="55" y="13" width="1.02" height="15" fill="#030305d9"/><rect x="56" y="13" width="1.02" height="15" fill="#030305d9"/><rect x="57" y="13" width="1.02" height="15" fill="#030305d9"/><rect x="58" y="12" width="1.02" height="16" fill="#030305d9"/><rect x="59" y="11" width="1.02" height="17" fill="#030305d9"/><rect x="60" y="11" width="1.02" height="17" fill="#030305d9"/><rect x="61" y="11" width="1.02" height="17" fill="#030305d9"/><rect x="62" y="11" width="1.02" height="17" fill="#030305d9"/><rect x="63" y="11" width="1.02" height="17" fill="#030305d9"/><rect x="0" y="22" width="1.02" height="6" fill="#030305d9"/><rect x="0" y="22" width="1.02" height="1" fill="#030305d9"/><rect x="1" y="22" width="1.02" height="6" fill="#030305d9"/><rect x="1" y="22" width="1.02" height="1" fill="#030305d9"/><rect x="2" y="22" width="1.02" height="6" fill="#030305d9"/><rect x="2" y="22" width="1.02" height="1" fill="#030305d9"/><rect x="3" y="22" width="1.02" height="6" fill="#030305d9"/><rect x="3" y="22" width="1.02" height="1" fill="#030305d9"/><rect x="4" y="22" width="1.02" height="6" fill="#030305d9"/><rect x="4" y="22" width="1.02" height="1" fill="#030305d9"/><rect x="5" y="22" width="1.02" height="6" fill="#030305d9"/><rect x="5" y="22" width="1.02" height="1" fill="#030305d9"/><rect x="6" y="22" width="1.02" height="6" fill="#030305d9"/><rect x="6" y="22" width="1.02" height="1" fill="#030305d9"/><rect x="7" y="21" width="1.02" height="7" fill="#030305d9"/><rect x="7" y="21" width="1.02" height="1" fill="#030305d9"/><rect x="8" y="20" width="1.02" height="8" fill="#030305d9"/><rect x="8" y="20" width="1.02" height="1" fill="#030305d9"/><rect x="9" y="20" width="1.02" height="8" fill="#030305d9"/><rect x="9" y="20" width="1.02" height="1" fill="#030305d9"/><rect x="10" y="20" width="1.02" height="8" fill="#030305d9"/><rect x="10" y="20" width="1.02" height="1" fill="#030305d9"/><rect x="11" y="21" width="1.02" height="7" fill="#030305d9"/><rect x="11" y="21" width="1.02" height="1" fill="#030305d9"/><rect x="12" y="21" width="1.02" height="7" fill="#030305d9"/><rect x="12" y="21" width="1.02" height="1" fill="#030305d9"/><rect x="13" y="20" width="1.02" height="8" fill="#030305d9"/><rect x="13" y="20" width="1.02" height="1" fill="#030305d9"/><rect x="14" y="20" width="1.02" height="8" fill="#030305d9"/><rect x="14" y="20" width="1.02" height="1" fill="#030305d9"/><rect x="15" y="20" width="1.02" height="8" fill="#030305d9"/><rect x="15" y="20" width="1.02" height="1" fill="#030305d9"/><rect x="16" y="20" width="1.02" height="8" fill="#030305d9"/><rect x="16" y="20" width="1.02" height="1" fill="#030305d9"/><rect x="17" y="20" width="1.02" height="8" fill="#030305d9"/><rect x="17" y="20" width="1.02" height="1" fill="#030305d9"/><rect x="18" y="21" width="1.02" height="7" fill="#030305d9"/><rect x="18" y="21" width="1.02" height="1" fill="#030305d9"/><rect x="19" y="21" width="1.02" height="7" fill="#030305d9"/><rect x="19" y="21" width="1.02" height="1" fill="#030305d9"/><rect x="20" y="20" width="1.02" height="8" fill="#030305d9"/><rect x="20" y="20" width="1.02" height="1" fill="#030305d9"/><rect x="21" y="20" width="1.02" height="8" fill="#030305d9"/><rect x="21" y="20" width="1.02" height="1" fill="#030305d9"/><rect x="22" y="20" width="1.02" height="8" fill="#030305d9"/><rect x="22" y="20" width="1.02" height="1" fill="#030305d9"/><rect x="23" y="20" width="1.02" height="8" fill="#030305d9"/><rect x="23" y="20" width="1.02" height="1" fill="#030305d9"/><rect x="24" y="20" width="1.02" height="8" fill="#030305d9"/><rect x="24" y="20" width="1.02" height="1" fill="#030305d9"/><rect x="25" y="20" width="1.02" height="8" fill="#030305d9"/><rect x="25" y="20" width="1.02" height="1" fill="#030305d9"/><rect x="26" y="20" width="1.02" height="8" fill="#030305d9"/><rect x="26" y="20" width="1.02" height="1" fill="#030305d9"/><rect x="27" y="20" width="1.02" height="8" fill="#030305d9"/><rect x="27" y="20" width="1.02" height="1" fill="#030305d9"/><rect x="28" y="21" width="1.02" height="7" fill="#030305d9"/><rect x="28" y="21" width="1.02" height="1" fill="#030305d9"/><rect x="29" y="21" width="1.02" height="7" fill="#030305d9"/><rect x="29" y="21" width="1.02" height="1" fill="#030305d9"/><rect x="30" y="21" width="1.02" height="7" fill="#030305d9"/><rect x="30" y="21" width="1.02" height="1" fill="#030305d9"/><rect x="31" y="20" width="1.02" height="8" fill="#030305d9"/><rect x="31" y="20" width="1.02" height="1" fill="#030305d9"/><rect x="32" y="20" width="1.02" height="8" fill="#030305d9"/><rect x="32" y="20" width="1.02" height="1" fill="#030305d9"/><rect x="33" y="21" width="1.02" height="7" fill="#030305d9"/><rect x="33" y="21" width="1.02" height="1" fill="#030305d9"/><rect x="34" y="21" width="1.02" height="7" fill="#030305d9"/><rect x="34" y="21" width="1.02" height="1" fill="#030305d9"/><rect x="35" y="20" width="1.02" height="8" fill="#030305d9"/><rect x="35" y="20" width="1.02" height="1" fill="#030305d9"/><rect x="36" y="20" width="1.02" height="8" fill="#030305d9"/><rect x="36" y="20" width="1.02" height="1" fill="#030305d9"/><rect x="37" y="21" width="1.02" height="7" fill="#030305d9"/><rect x="37" y="21" width="1.02" height="1" fill="#030305d9"/><rect x="38" y="21" width="1.02" height="7" fill="#030305d9"/><rect x="38" y="21" width="1.02" height="1" fill="#030305d9"/><rect x="39" y="21" width="1.02" height="7" fill="#030305d9"/><rect x="39" y="21" width="1.02" height="1" fill="#030305d9"/><rect x="40" y="22" width="1.02" height="6" fill="#030305d9"/><rect x="40" y="22" width="1.02" height="1" fill="#030305d9"/><rect x="41" y="22" width="1.02" height="6" fill="#030305d9"/><rect x="41" y="22" width="1.02" height="1" fill="#030305d9"/><rect x="42" y="23" width="1.02" height="5" fill="#030305d9"/><rect x="42" y="23" width="1.02" height="1" fill="#030305d9"/><rect x="43" y="23" width="1.02" height="5" fill="#030305d9"/><rect x="43" y="23" width="1.02" height="1" fill="#030305d9"/><rect x="44" y="24" width="1.02" height="4" fill="#030305d9"/><rect x="44" y="24" width="1.02" height="1" fill="#030305d9"/><rect x="45" y="24" width="1.02" height="4" fill="#030305d9"/><rect x="45" y="24" width="1.02" height="1" fill="#030305d9"/><rect x="46" y="24" width="1.02" height="4" fill="#030305d9"/><rect x="46" y="24" width="1.02" height="1" fill="#030305d9"/><rect x="47" y="24" width="1.02" height="4" fill="#030305d9"/><rect x="47" y="24" width="1.02" height="1" fill="#030305d9"/><rect x="48" y="24" width="1.02" height="4" fill="#030305d9"/><rect x="48" y="24" width="1.02" height="1" fill="#030305d9"/><rect x="49" y="23" width="1.02" height="5" fill="#030305d9"/><rect x="49" y="23" width="1.02" height="1" fill="#030305d9"/><rect x="50" y="23" width="1.02" height="5" fill="#030305d9"/><rect x="50" y="23" width="1.02" height="1" fill="#030305d9"/><rect x="51" y="23" width="1.02" height="5" fill="#030305d9"/><rect x="51" y="23" width="1.02" height="1" fill="#030305d9"/><rect x="52" y="23" width="1.02" height="5" fill="#030305d9"/><rect x="52" y="23" width="1.02" height="1" fill="#030305d9"/><rect x="53" y="22" width="1.02" height="6" fill="#030305d9"/><rect x="53" y="22" width="1.02" height="1" fill="#030305d9"/><rect x="54" y="22" width="1.02" height="6" fill="#030305d9"/><rect x="54" y="22" width="1.02" height="1" fill="#030305d9"/><rect x="55" y="23" width="1.02" height="5" fill="#030305d9"/><rect x="55" y="23" width="1.02" height="1" fill="#030305d9"/><rect x="56" y="23" width="1.02" height="5" fill="#030305d9"/><rect x="56" y="23" width="1.02" height="1" fill="#030305d9"/><rect x="57" y="23" width="1.02" height="5" fill="#030305d9"/><rect x="57" y="23" width="1.02" height="1" fill="#030305d9"/><rect x="58" y="22" width="1.02" height="6" fill="#030305d9"/><rect x="58" y="22" width="1.02" height="1" fill="#030305d9"/><rect x="59" y="23" width="1.02" height="5" fill="#030305d9"/><rect x="59" y="23" width="1.02" height="1" fill="#030305d9"/><rect x="60" y="22" width="1.02" height="6" fill="#030305d9"/><rect x="60" y="22" width="1.02" height="1" fill="#030305d9"/><rect x="61" y="22" width="1.02" height="6" fill="#030305d9"/><rect x="61" y="22" width="1.02" height="1" fill="#030305d9"/><rect x="62" y="22" width="1.02" height="6" fill="#030305d9"/><rect x="62" y="22" width="1.02" height="1" fill="#030305d9"/><rect x="63" y="23" width="1.02" height="5" fill="#030305d9"/><rect x="63" y="23" width="1.02" height="1" fill="#030305d9"/></svg><div class="tags"><span class="fj-badge fj-badge--neutral" style="background:var(--overlay)">Forge</span></div></div><div class="fj-card__body"><div><div class="fj-title">Oblyvium RP</div><div class="fj-meta">Servidor · 1.20.1</div></div><div class="fj-data"><span>186 mods</span><span>4,2 GB</span><span>312 h</span></div><button class="fj-play" style="height:36px;min-width:0;width:100%;font-size:13px" type="button"><span><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg> Jogar</span></button></div></article>
+ <article class="fj-card"><div class="fj-scene"><svg viewBox="0 0 64 28" preserveAspectRatio="xMidYMid slice" shape-rendering="crispEdges" aria-hidden="true"><rect width="64" height="28" fill="#030305d9"/><rect y="12" width="64" height="16" fill="#030305d9"/><rect x="20" y="10" width="0.6" height="0.6" fill="#030305d9" opacity=".7"/><rect x="59" y="8" width="0.6" height="0.6" fill="#030305d9" opacity=".7"/><rect x="56" y="8" width="0.6" height="0.6" fill="#030305d9" opacity=".7"/><rect x="29" y="9" width="0.6" height="0.6" fill="#030305d9" opacity=".7"/><rect x="55" y="1" width="0.6" height="0.6" fill="#030305d9" opacity=".7"/><rect x="24" y="2" width="0.6" height="0.6" fill="#030305d9" opacity=".7"/><rect x="52" y="2" width="0.6" height="0.6" fill="#030305d9" opacity=".7"/><rect x="57" y="4" width="0.6" height="0.6" fill="#030305d9" opacity=".7"/><rect x="28" y="6" width="0.6" height="0.6" fill="#030305d9" opacity=".7"/><rect x="11" y="2" width="0.6" height="0.6" fill="#030305d9" opacity=".7"/><rect x="47" y="0" width="0.6" height="0.6" fill="#030305d9" opacity=".7"/><rect x="39" y="8" width="0.6" height="0.6" fill="#030305d9" opacity=".7"/><rect x="46" y="8" width="0.6" height="0.6" fill="#030305d9" opacity=".7"/><rect x="44" y="1" width="0.6" height="0.6" fill="#030305d9" opacity=".7"/><rect x="31" y="0" width="0.6" height="0.6" fill="#030305d9" opacity=".7"/><rect x="38" y="1" width="0.6" height="0.6" fill="#030305d9" opacity=".7"/><rect x="32" y="6" width="0.6" height="0.6" fill="#030305d9" opacity=".7"/><rect x="15" y="7" width="0.6" height="0.6" fill="#030305d9" opacity=".7"/><rect x="50" y="4" width="5" height="5" fill="#030305d9"/><rect x="49" y="5" width="7" height="3" fill="#030305d9"/><rect x="0" y="14" width="1.02" height="14" fill="#030305d9"/><rect x="1" y="15" width="1.02" height="13" fill="#030305d9"/><rect x="2" y="15" width="1.02" height="13" fill="#030305d9"/><rect x="3" y="15" width="1.02" height="13" fill="#030305d9"/><rect x="4" y="16" width="1.02" height="12" fill="#030305d9"/><rect x="5" y="16" width="1.02" height="12" fill="#030305d9"/><rect x="6" y="16" width="1.02" height="12" fill="#030305d9"/><rect x="7" y="17" width="1.02" height="11" fill="#030305d9"/><rect x="8" y="17" width="1.02" height="11" fill="#030305d9"/><rect x="9" y="17" width="1.02" height="11" fill="#030305d9"/><rect x="10" y="17" width="1.02" height="11" fill="#030305d9"/><rect x="11" y="18" width="1.02" height="10" fill="#030305d9"/><rect x="12" y="17" width="1.02" height="11" fill="#030305d9"/><rect x="13" y="17" width="1.02" height="11" fill="#030305d9"/><rect x="14" y="17" width="1.02" height="11" fill="#030305d9"/><rect x="15" y="18" width="1.02" height="10" fill="#030305d9"/><rect x="16" y="19" width="1.02" height="9" fill="#030305d9"/><rect x="17" y="19" width="1.02" height="9" fill="#030305d9"/><rect x="18" y="19" width="1.02" height="9" fill="#030305d9"/><rect x="19" y="19" width="1.02" height="9" fill="#030305d9"/><rect x="20" y="19" width="1.02" height="9" fill="#030305d9"/><rect x="21" y="19" width="1.02" height="9" fill="#030305d9"/><rect x="22" y="19" width="1.02" height="9" fill="#030305d9"/><rect x="23" y="19" width="1.02" height="9" fill="#030305d9"/><rect x="24" y="18" width="1.02" height="10" fill="#030305d9"/><rect x="25" y="17" width="1.02" height="11" fill="#030305d9"/><rect x="26" y="16" width="1.02" height="12" fill="#030305d9"/><rect x="27" y="15" width="1.02" height="13" fill="#030305d9"/><rect x="28" y="15" width="1.02" height="13" fill="#030305d9"/><rect x="29" y="15" width="1.02" height="13" fill="#030305d9"/><rect x="30" y="16" width="1.02" height="12" fill="#030305d9"/><rect x="31" y="16" width="1.02" height="12" fill="#030305d9"/><rect x="32" y="17" width="1.02" height="11" fill="#030305d9"/><rect x="33" y="17" width="1.02" height="11" fill="#030305d9"/><rect x="34" y="17" width="1.02" height="11" fill="#030305d9"/><rect x="35" y="17" width="1.02" height="11" fill="#030305d9"/><rect x="36" y="17" width="1.02" height="11" fill="#030305d9"/><rect x="37" y="17" width="1.02" height="11" fill="#030305d9"/><rect x="38" y="16" width="1.02" height="12" fill="#030305d9"/><rect x="39" y="15" width="1.02" height="13" fill="#030305d9"/><rect x="40" y="14" width="1.02" height="14" fill="#030305d9"/><rect x="41" y="14" width="1.02" height="14" fill="#030305d9"/><rect x="42" y="14" width="1.02" height="14" fill="#030305d9"/><rect x="43" y="14" width="1.02" height="14" fill="#030305d9"/><rect x="44" y="14" width="1.02" height="14" fill="#030305d9"/><rect x="45" y="14" width="1.02" height="14" fill="#030305d9"/><rect x="46" y="13" width="1.02" height="15" fill="#030305d9"/><rect x="47" y="12" width="1.02" height="16" fill="#030305d9"/><rect x="48" y="12" width="1.02" height="16" fill="#030305d9"/><rect x="49" y="13" width="1.02" height="15" fill="#030305d9"/><rect x="50" y="12" width="1.02" height="16" fill="#030305d9"/><rect x="51" y="12" width="1.02" height="16" fill="#030305d9"/><rect x="52" y="13" width="1.02" height="15" fill="#030305d9"/><rect x="53" y="12" width="1.02" height="16" fill="#030305d9"/><rect x="54" y="11" width="1.02" height="17" fill="#030305d9"/><rect x="55" y="11" width="1.02" height="17" fill="#030305d9"/><rect x="56" y="11" width="1.02" height="17" fill="#030305d9"/><rect x="57" y="11" width="1.02" height="17" fill="#030305d9"/><rect x="58" y="11" width="1.02" height="17" fill="#030305d9"/><rect x="59" y="11" width="1.02" height="17" fill="#030305d9"/><rect x="60" y="11" width="1.02" height="17" fill="#030305d9"/><rect x="61" y="11" width="1.02" height="17" fill="#030305d9"/><rect x="62" y="12" width="1.02" height="16" fill="#030305d9"/><rect x="63" y="11" width="1.02" height="17" fill="#030305d9"/><rect x="0" y="22" width="1.02" height="6" fill="#030305d9"/><rect x="0" y="22" width="1.02" height="1" fill="#030305d9"/><rect x="1" y="22" width="1.02" height="6" fill="#030305d9"/><rect x="1" y="22" width="1.02" height="1" fill="#030305d9"/><rect x="2" y="21" width="1.02" height="7" fill="#030305d9"/><rect x="2" y="21" width="1.02" height="1" fill="#030305d9"/><rect x="3" y="21" width="1.02" height="7" fill="#030305d9"/><rect x="3" y="21" width="1.02" height="1" fill="#030305d9"/><rect x="4" y="21" width="1.02" height="7" fill="#030305d9"/><rect x="4" y="21" width="1.02" height="1" fill="#030305d9"/><rect x="5" y="21" width="1.02" height="7" fill="#030305d9"/><rect x="5" y="21" width="1.02" height="1" fill="#030305d9"/><rect x="6" y="21" width="1.02" height="7" fill="#030305d9"/><rect x="6" y="21" width="1.02" height="1" fill="#030305d9"/><rect x="7" y="21" width="1.02" height="7" fill="#030305d9"/><rect x="7" y="21" width="1.02" height="1" fill="#030305d9"/><rect x="8" y="21" width="1.02" height="7" fill="#030305d9"/><rect x="8" y="21" width="1.02" height="1" fill="#030305d9"/><rect x="9" y="21" width="1.02" height="7" fill="#030305d9"/><rect x="9" y="21" width="1.02" height="1" fill="#030305d9"/><rect x="10" y="20" width="1.02" height="8" fill="#030305d9"/><rect x="10" y="20" width="1.02" height="1" fill="#030305d9"/><rect x="11" y="21" width="1.02" height="7" fill="#030305d9"/><rect x="11" y="21" width="1.02" height="1" fill="#030305d9"/><rect x="12" y="21" width="1.02" height="7" fill="#030305d9"/><rect x="12" y="21" width="1.02" height="1" fill="#030305d9"/><rect x="13" y="22" width="1.02" height="6" fill="#030305d9"/><rect x="13" y="22" width="1.02" height="1" fill="#030305d9"/><rect x="14" y="22" width="1.02" height="6" fill="#030305d9"/><rect x="14" y="22" width="1.02" height="1" fill="#030305d9"/><rect x="15" y="22" width="1.02" height="6" fill="#030305d9"/><rect x="15" y="22" width="1.02" height="1" fill="#030305d9"/><rect x="16" y="22" width="1.02" height="6" fill="#030305d9"/><rect x="16" y="22" width="1.02" height="1" fill="#030305d9"/><rect x="17" y="22" width="1.02" height="6" fill="#030305d9"/><rect x="17" y="22" width="1.02" height="1" fill="#030305d9"/><rect x="18" y="22" width="1.02" height="6" fill="#030305d9"/><rect x="18" y="22" width="1.02" height="1" fill="#030305d9"/><rect x="19" y="22" width="1.02" height="6" fill="#030305d9"/><rect x="19" y="22" width="1.02" height="1" fill="#030305d9"/><rect x="20" y="21" width="1.02" height="7" fill="#030305d9"/><rect x="20" y="21" width="1.02" height="1" fill="#030305d9"/><rect x="21" y="22" width="1.02" height="6" fill="#030305d9"/><rect x="21" y="22" width="1.02" height="1" fill="#030305d9"/><rect x="22" y="23" width="1.02" height="5" fill="#030305d9"/><rect x="22" y="23" width="1.02" height="1" fill="#030305d9"/><rect x="23" y="23" width="1.02" height="5" fill="#030305d9"/><rect x="23" y="23" width="1.02" height="1" fill="#030305d9"/><rect x="24" y="22" width="1.02" height="6" fill="#030305d9"/><rect x="24" y="22" width="1.02" height="1" fill="#030305d9"/><rect x="25" y="21" width="1.02" height="7" fill="#030305d9"/><rect x="25" y="21" width="1.02" height="1" fill="#030305d9"/><rect x="26" y="22" width="1.02" height="6" fill="#030305d9"/><rect x="26" y="22" width="1.02" height="1" fill="#030305d9"/><rect x="27" y="23" width="1.02" height="5" fill="#030305d9"/><rect x="27" y="23" width="1.02" height="1" fill="#030305d9"/><rect x="28" y="23" width="1.02" height="5" fill="#030305d9"/><rect x="28" y="23" width="1.02" height="1" fill="#030305d9"/><rect x="29" y="23" width="1.02" height="5" fill="#030305d9"/><rect x="29" y="23" width="1.02" height="1" fill="#030305d9"/><rect x="30" y="23" width="1.02" height="5" fill="#030305d9"/><rect x="30" y="23" width="1.02" height="1" fill="#030305d9"/><rect x="31" y="23" width="1.02" height="5" fill="#030305d9"/><rect x="31" y="23" width="1.02" height="1" fill="#030305d9"/><rect x="32" y="23" width="1.02" height="5" fill="#030305d9"/><rect x="32" y="23" width="1.02" height="1" fill="#030305d9"/><rect x="33" y="22" width="1.02" height="6" fill="#030305d9"/><rect x="33" y="22" width="1.02" height="1" fill="#030305d9"/><rect x="34" y="23" width="1.02" height="5" fill="#030305d9"/><rect x="34" y="23" width="1.02" height="1" fill="#030305d9"/><rect x="35" y="24" width="1.02" height="4" fill="#030305d9"/><rect x="35" y="24" width="1.02" height="1" fill="#030305d9"/><rect x="36" y="24" width="1.02" height="4" fill="#030305d9"/><rect x="36" y="24" width="1.02" height="1" fill="#030305d9"/><rect x="37" y="24" width="1.02" height="4" fill="#030305d9"/><rect x="37" y="24" width="1.02" height="1" fill="#030305d9"/><rect x="38" y="24" width="1.02" height="4" fill="#030305d9"/><rect x="38" y="24" width="1.02" height="1" fill="#030305d9"/><rect x="39" y="24" width="1.02" height="4" fill="#030305d9"/><rect x="39" y="24" width="1.02" height="1" fill="#030305d9"/><rect x="40" y="23" width="1.02" height="5" fill="#030305d9"/><rect x="40" y="23" width="1.02" height="1" fill="#030305d9"/><rect x="41" y="22" width="1.02" height="6" fill="#030305d9"/><rect x="41" y="22" width="1.02" height="1" fill="#030305d9"/><rect x="42" y="22" width="1.02" height="6" fill="#030305d9"/><rect x="42" y="22" width="1.02" height="1" fill="#030305d9"/><rect x="43" y="22" width="1.02" height="6" fill="#030305d9"/><rect x="43" y="22" width="1.02" height="1" fill="#030305d9"/><rect x="44" y="22" width="1.02" height="6" fill="#030305d9"/><rect x="44" y="22" width="1.02" height="1" fill="#030305d9"/><rect x="45" y="21" width="1.02" height="7" fill="#030305d9"/><rect x="45" y="21" width="1.02" height="1" fill="#030305d9"/><rect x="46" y="21" width="1.02" height="7" fill="#030305d9"/><rect x="46" y="21" width="1.02" height="1" fill="#030305d9"/><rect x="47" y="22" width="1.02" height="6" fill="#030305d9"/><rect x="47" y="22" width="1.02" height="1" fill="#030305d9"/><rect x="48" y="22" width="1.02" height="6" fill="#030305d9"/><rect x="48" y="22" width="1.02" height="1" fill="#030305d9"/><rect x="49" y="21" width="1.02" height="7" fill="#030305d9"/><rect x="49" y="21" width="1.02" height="1" fill="#030305d9"/><rect x="50" y="20" width="1.02" height="8" fill="#030305d9"/><rect x="50" y="20" width="1.02" height="1" fill="#030305d9"/><rect x="51" y="21" width="1.02" height="7" fill="#030305d9"/><rect x="51" y="21" width="1.02" height="1" fill="#030305d9"/><rect x="52" y="22" width="1.02" height="6" fill="#030305d9"/><rect x="52" y="22" width="1.02" height="1" fill="#030305d9"/><rect x="53" y="22" width="1.02" height="6" fill="#030305d9"/><rect x="53" y="22" width="1.02" height="1" fill="#030305d9"/><rect x="54" y="22" width="1.02" height="6" fill="#030305d9"/><rect x="54" y="22" width="1.02" height="1" fill="#030305d9"/><rect x="55" y="23" width="1.02" height="5" fill="#030305d9"/><rect x="55" y="23" width="1.02" height="1" fill="#030305d9"/><rect x="56" y="23" width="1.02" height="5" fill="#030305d9"/><rect x="56" y="23" width="1.02" height="1" fill="#030305d9"/><rect x="57" y="22" width="1.02" height="6" fill="#030305d9"/><rect x="57" y="22" width="1.02" height="1" fill="#030305d9"/><rect x="58" y="21" width="1.02" height="7" fill="#030305d9"/><rect x="58" y="21" width="1.02" height="1" fill="#030305d9"/><rect x="59" y="20" width="1.02" height="8" fill="#030305d9"/><rect x="59" y="20" width="1.02" height="1" fill="#030305d9"/><rect x="60" y="20" width="1.02" height="8" fill="#030305d9"/><rect x="60" y="20" width="1.02" height="1" fill="#030305d9"/><rect x="61" y="20" width="1.02" height="8" fill="#030305d9"/><rect x="61" y="20" width="1.02" height="1" fill="#030305d9"/><rect x="62" y="20" width="1.02" height="8" fill="#030305d9"/><rect x="62" y="20" width="1.02" height="1" fill="#030305d9"/><rect x="63" y="21" width="1.02" height="7" fill="#030305d9"/><rect x="63" y="21" width="1.02" height="1" fill="#030305d9"/></svg><div class="tags"><span class="fj-badge fj-badge--neutral" style="background:var(--overlay)">NeoForge</span><span class="fj-badge fj-badge--warning">atualização</span></div></div><div class="fj-card__body"><div><div class="fj-title">Create: Engenharia</div><div class="fj-meta">Modrinth · 1.21.1</div></div><div class="fj-data"><span>142 mods</span><span>3,1 GB</span><span>48 h</span></div><button class="fj-play" style="height:36px;min-width:0;width:100%;font-size:13px" type="button"><span><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg> Jogar</span></button></div></article>
 </div>
 
 </div>

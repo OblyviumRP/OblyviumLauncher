@@ -168,9 +168,8 @@ ipcMain.handle(SHELL_OPCODE.TRASH_ITEM, async (event, ...args) => {
     }
 })
 
-// Disable hardware acceleration.
-// https://electronjs.org/docs/tutorial/offscreen-rendering
-app.disableHardwareAcceleration()
+// GPU ligada: sem ela o Chromium compõe tudo por software e o parallax e o desfoque do Início
+// caem para ~30 fps. Se a placa estiver na lista de bloqueio, o Chromium volta ao software sozinho.
 
 
 const REDIRECT_URI_PREFIX = 'https://login.microsoftonline.com/common/oauth2/nativeclient?'
