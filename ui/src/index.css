@@ -8,51 +8,51 @@
 /* Tokens Forja (mesmos nomes de app/assets/css/forja.css e DESIGN.md). Mude o valor, nunca o nome. */
 :root {
   color-scheme: dark;
-  --background: #060509;
+  --background: #030305;
   --foreground: #ececf5;
-  --card: #0e0c16;
+  --card: #0e0e13;
   --surface: #0e0c16;
-  --surface-2: #15131f;
-  --popover: #15131f;
-  --sidebar: #0a0810;
-  --accent: #221d30;
-  --muted-foreground: #a69cb7;
-  --muted-2: #9487aa;
-  --border: #221d30;
-  --border-2: #3d3154;
-  --input-border: #796b91;
+  --surface-2: #18181e;
+  --popover: #18181e;
+  --sidebar: #09090d;
+  --accent: #24242c;
+  --muted-foreground: #babac2;
+  --muted-2: #aaaab2;
+  --border: #282830;
+  --border-2: #36363f;
+  --input-border: #71717b;
   --ring: #c4b5fd;
   --primary: #8b5cf6;
   --primary-light: #a78bfa;
   --primary-fill: #7c3aed;
   --fj-primary-hover: #6d28d9;
-  --primary-soft: #1d142e;
-  --primary-line: #513781;
-  --primary-fg: #c4b5fd;
-  --success-soft: #0c2119;
-  --success-line: #245c43;
-  --success-fg: #86efac;
-  --warning-soft: #281e0e;
-  --warning-line: #72511f;
-  --warning-fg: #fcd34d;
-  --info-soft: #0b1a2c;
-  --info-line: #25507c;
-  --info-fg: #93c5fd;
-  --danger-soft: #2a101b;
-  --danger-line: #793048;
+  --primary-soft: #8b5cf61f;
+  --primary-line: #8b5cf64d;
+  --primary-fg: #a78bfa;
+  --success-soft: #34d3991f;
+  --success-line: #34d3994d;
+  --success-fg: #6ee7b7;
+  --warning-soft: #facc151f;
+  --warning-line: #facc154d;
+  --warning-fg: #fde047;
+  --info-soft: #38bdf81f;
+  --info-line: #38bdf84d;
+  --info-fg: #7dd3fc;
+  --danger-soft: #f43f5e1f;
+  --danger-line: #f43f5e4d;
   --danger-fg: #fda4af;
   --ember: #f59e0b;
-  --ember-soft: #2a1a06;
-  --ember-line: #7a4a0f;
-  --ember-fg: #fcd34d;
-  --fj-overlay: #060509d9;
+  --ember-soft: #f59e0b1f;
+  --ember-line: #f59e0b4d;
+  --ember-fg: #fb923c;
+  --fj-overlay: #030305d9;
   --fj-scene-glow: #1c1236;
-  --shadow-dialog: 0 24px 80px #030207b3;
-  --shadow-popover: 0 12px 32px #03020799;
+  --shadow-dialog: 0 20px 50px #000000b3;
+  --shadow-popover: 0 8px 24px #00000080;
   --dur-fast: 120ms;
   --dur-base: 180ms;
   --dur-slow: 280ms;
-  --ease-forja: cubic-bezier(.22, 1, .36, 1);
+  --ease-forja: cubic-bezier(.2, .8, .2, 1);
 }
 
 @theme inline {
@@ -195,21 +195,11 @@
 .prose-forja table { width: 100%; border-collapse: collapse; }
 .prose-forja th, .prose-forja td { border: 1px solid var(--border); padding: 4px 8px; text-align: left; }
 
-/*
- * Transição em pixels (dither) da arte para o fundo: a parte de baixo vira
- * xadrez de pixels antes de sumir, como em pixel art. Usado no Início.
- */
-.fj-dither-fade {
+/* Camada do RealmScene: sobra 24px de cada lado para o deslocamento não mostrar a borda.
+   O deslocamento vem do realm-scene.tsx, que não roda com prefers-reduced-motion. */
+.fj-parallax {
   position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: var(--background);
-  -webkit-mask-image:
-    linear-gradient(to top, #000 0%, #000 34%, transparent 62%),
-    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8'><rect width='4' height='4'/><rect x='4' y='4' width='4' height='4'/></svg>");
-  -webkit-mask-composite: source-in;
-  mask-image:
-    linear-gradient(to top, #000 0%, #000 34%, transparent 62%),
-    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8'><rect width='4' height='4'/><rect x='4' y='4' width='4' height='4'/></svg>");
-  mask-composite: intersect;
+  inset: -24px;
+  will-change: transform;
+  transform-origin: bottom;
 }

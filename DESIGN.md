@@ -2,6 +2,7 @@
 
 Fonte das decisões visuais do site público, do portal do jogador e do painel da staff.
 Os valores vivem em `src/app/globals.css`; este arquivo explica **o que usar e por quê**.
+Referência pública: https://oblyvium.com.br/marca (marca 2.0.0, lida dos tokens no ar).
 Histórico: Forja (2026-09-23, specs em `docs/superpowers/specs/2026-09-23-forja-*`) e Forja refinada
 (2026-10-12, `docs/superpowers/specs/2026-10-12-forja-refinada-rebranding.md`).
 
@@ -23,30 +24,31 @@ Regra de ouro: **mude o VALOR do token, nunca o nome.** Tokens novos ganham pref
 
 | Papel | Token | Valor | Uso |
 |---|---|---|---|
-| Fundo | `--background` | `#060509` | página |
-| Cartão | `--card` / `--surface` | `#0e0c16` | cartões, painéis |
-| Elevado | `--popover` / `--surface-2` | `#15131f` | popover, menu, cabeçalho de tabela |
-| Lateral | `--sidebar` | `#0a0810` | sidebar, topbar, fundo de input |
-| Destaque | `--accent` | `#221d30` | hover sobre cartão |
+| Fundo | `--background` | `#030305` | página |
+| Cartão | `--card` / `--surface` | `#0e0e13` | cartões, painéis |
+| Elevado | `--popover` / `--surface-2` | `#18181e` | popover, menu, cabeçalho de tabela |
+| Lateral | `--sidebar` | `#09090d` | sidebar, topbar, fundo de input |
+| Destaque | `--accent` | `#24242c` | hover sobre cartão |
 | Texto | `--foreground` | `#ececf5` | texto principal |
-| Texto secundário | `--muted-foreground` | `#a69cb7` | descrições (7,44:1 sobre card) |
-| Metadado | `--muted-2` | `#9487aa` | datas, contagens (5,82:1 sobre card) |
-| Borda | `--border` | `#221d30` | divisórias discretas |
-| Borda 2 | `--border-2` | `#3d3154` | separações nítidas, hover de menu/popover |
-| Borda de controle | `--input-border` | `#796b91` | inputs, selects, checkbox (3,99:1) |
+| Texto secundário | `--muted-foreground` | `#babac2` | descrições |
+| Metadado | `--muted-2` | `#aaaab2` | datas, contagens |
+| Borda | `--border` | `#282830` | divisórias discretas |
+| Borda 2 | `--border-2` | `#36363f` | separações nítidas, hover de menu/popover |
+| Borda de controle | `--input-border` | `#71717b` | inputs, selects, checkbox |
 | Foco | `--ring` | `#c4b5fd` | anel de foco (10,5:1) |
 | Violeta | `--primary` / `--primary-light` | `#8b5cf6` / `#a78bfa` | marcas, links, ícone ativo |
 | Botão primário | `--primary-fill` | `#7c3aed` | fundo com texto branco (5,70:1) |
 | Brasa | `--ember` | `#f59e0b` | urgência, prioridade máxima, CTA raro |
 
 Estados semânticos têm três tokens cada, **fundo / borda / texto**: `--{tom}-soft`, `--{tom}-line`, `--{tom}-fg`,
-para `primary`, `success`, `warning`, `info`, `danger` e `ember`.
+para `primary`, `success`, `warning`, `info`, `danger` e `ember`. Na marca 2.0.0 o fundo e a borda são a cor do tom
+em 12% e 30% de opacidade (`#8b5cf61f`, `#8b5cf64d`).
 
 ### Site público (`--color-site-*`)
 
 Os nomes vêm da fase medieval, os valores são violeta: `pergaminho` = texto claro, `ouro` = acento violeta claro
-(`#a78bfa`), `lacre` = preenchimento dos botões (`#7c3aed`). Fundos: `site-bg` `#07060d`, `site-band`,
-`site-surface`. Textos: `site-title`, `site-text` (`#cbd5e1`), `site-muted` (`#94a3b8`).
+(`#a78bfa`), `lacre` = preenchimento dos botões (`#7c3aed`). Fundos: `site-bg` `#060608`, `site-band`,
+`site-surface`. Textos: `site-title`, `site-text` (`#cbd5e1`), `site-muted` (`#abb8c9`).
 
 ## Tipografia
 
@@ -108,10 +110,10 @@ Nada de texto abaixo de 11px.
 
 ## Regras que já custaram bug
 
-- **Hover:** nunca `--surface-2` sobre cartão ou popover (1,06:1, igual ao popover). Use `bg-accent` sobre cartão e
+- **Hover:** nunca `--surface-2` sobre cartão ou popover (1,09:1). Use `bg-accent` sobre cartão e
   `bg-border-2` em menu, popover e botão ghost.
 - `--color-input` é a cor de **borda** (o shadcn usa `border-input`); o fundo do campo é `bg-input-fill`.
-- Texto violeta em popover: `text-primary-light` (o `primary` dá 4,33:1).
+- Texto violeta em popover: `text-primary-light` (o `primary` dá 4,17:1).
 - `--ease-out` colide com o do Tailwind 4: use `--ease-forja`.
 - Em `globals.css`, fora de `@layer` só ficam `:root` e `@keyframes`. Seletor solto vence todo utilitário do Tailwind.
 - Imagem estática que o site público precisa servir vai na **raiz** de `public/`; em subpasta, o proxy bloqueia
@@ -119,7 +121,7 @@ Nada de texto abaixo de 11px.
 
 ## Movimento
 
-- Durações `--dur-fast` 120ms, `--dur-base` 180ms, `--dur-slow` 280ms; curva `--ease-forja`.
+- Durações `--dur-fast` 120ms, `--dur-base` 180ms, `--dur-slow` 280ms; curva `--ease-forja` (`cubic-bezier(.2, .8, .2, 1)`).
 - `prefers-reduced-motion` desliga as animações (o spinner segue, mais lento).
 - O site tem **"Pausar animações"** (`SceneFooter`, WCAG 2.2.2): marca o `<html>` com `data-site-motion="paused"` e
   congela o que tem `data-motion-pausable`. Animação nova do cenário deve morar dentro de um contêiner pausável;

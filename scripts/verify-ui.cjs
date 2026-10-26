@@ -26,7 +26,6 @@ process.env.ELECTRON_IS_DEV = '1'
 process.env.OBLYVIUM_NOTIFICATIONS_URL = 'http://127.0.0.1:9/notifications.json'
 process.env.OBLYVIUM_CHANGELOG_URL = 'http://127.0.0.1:9/changelog.json'
 app.setPath('userData', path.join(runProfile, 'userData'))
-app.disableHardwareAcceleration()
 
 const preload = path.join(output, 'preload.cjs')
 fs.writeFileSync(preload, `
@@ -150,7 +149,16 @@ app.whenReady().then(async () => {
         assert.match(await text(), /Renderizador\s+OpenGL/, 'ficha do servidor')
         assert.match(await text(), /Versão\s+1\.20\.1 · Forge/, 'versão na ficha')
         assert.ok(await run(`!!document.querySelector('main [aria-hidden] svg, main [aria-hidden] img')`), 'arte no Início')
-        assert.ok(await run(`!!document.querySelector('.fj-dither-fade')`), 'transição em pixels')
+        assert.ok(await run(`!!document.querySelector('main .backdrop-blur-md')`), 'desfoque no pé da arte')
+        // Sem background na distribuição: cenário do site em camadas, e o parallax segue o ponteiro.
+        assert.equal(await run(`[...document.querySelectorAll('.fj-parallax img')].filter(i => i.complete && i.naturalWidth > 0).length`), 8, 'oito camadas do cenário')
+        assert.match(await text(), /Arte conceitual, não é uma captura do servidor/)
+        win.webContents.sendInputEvent({ type: 'mouseMove', x: 100, y: 120 }) // fora da barra de título, que é área de arrastar
+        await pause(900)
+        const shifts = await run(`[...document.querySelectorAll('.fj-parallax')].map(l => new DOMMatrix(getComputedStyle(l).transform).m41)`)
+        assert.ok(shifts[0] > 0 && shifts[shifts.length - 1] > shifts[0] * 5, 'parallax: o primeiro plano anda mais que o céu: ' + shifts)
+        win.webContents.sendInputEvent({ type: 'mouseMove', x: 550, y: 350 })
+        await pause(900)
         // Só o perfil padrão: o seletor de perfis não aparece.
         assert.equal(await run(`document.querySelectorAll('main [role=radiogroup]').length`), 0, 'sem seletor de perfis')
         await noOverflow('início')
