@@ -20,6 +20,7 @@ const {
     extractJdk
 } = require('helios-core/java')
 
+const AuthManager = require('../authmanager')
 const ConfigManager = require('../configmanager')
 const ContentManager = require('../contentmanager')
 const DiscordWrapper = require('../discordwrapper')
@@ -364,6 +365,10 @@ async function launch(handlers){
         const { distro, serv, gameDir, configKey } = await prepareFiles(h)
 
         h.onStatus(q('landing.dlAsync.preparingToLaunch'))
+        // O token do Minecraft vence em 24h; sem renovar aqui o jogo abre com ele vencido e o servidor recusa ("Invalid session").
+        if(!await AuthManager.validateSelected()){
+            throw new LaunchError(q('landing.launch.failureTitle'), 'A sessão da conta expirou. Entre de novo com a Microsoft para jogar.')
+        }
         const modLoaderData = await new DistributionIndexProcessor(ConfigManager.getCommonDirectory(), distro, serv.rawServer.id).loadModLoaderVersionJson(serv)
         const versionData = await new MojangIndexProcessor(ConfigManager.getCommonDirectory(), serv.rawServer.minecraftVersion).getVersionJson()
 

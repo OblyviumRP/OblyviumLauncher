@@ -276,7 +276,7 @@ app.whenReady().then(async () => {
             await shot(name)
         }
 
-        // Trocar de servidor pelo Início ("Outros servidores"); servidor sem mods não tem a aba.
+        // Trocar de servidor pelo Início ("Modpacks"); servidor sem mods não tem a aba.
         await go('#/')
         await click('button[aria-label="Jogar em Eventos"]')
         await pause(600)
