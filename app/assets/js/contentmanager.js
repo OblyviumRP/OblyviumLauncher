@@ -10,6 +10,7 @@ const fs                = require('fs-extra')
 const path              = require('path')
 const { LoggerUtil }    = require('helios-core')
 const Modrinth          = require('./modrinth')
+const { VERSION_FILE }  = require('./servermigration')
 
 const logger = LoggerUtil.getLogger('ContentManager')
 
@@ -248,6 +249,35 @@ exports.updateFile = async function(gameDir, type, fileName, newVersion) {
         await exports.setActiveShader(gameDir, next)
     }
     return next
+}
+
+/**
+ * Mods are built for one Minecraft version and crash the game on another, so
+ * when the server moves to a new version the mods the profile added are
+ * disabled; the player turns them back on once updated. The version last
+ * prepared is kept in the game folder.
+ *
+ * @returns {Promise<string[]>} File names of the mods disabled.
+ */
+exports.disableModsOnVersionChange = async function(gameDir, minecraftVersion) {
+    const file = path.join(gameDir, VERSION_FILE)
+    const previous = await fs.pathExists(file) ? (await fs.readFile(file, 'utf8')).trim() : null
+    const disabled = []
+    if(previous != null && previous !== minecraftVersion) {
+        for(const f of await exports.listFiles(gameDir, 'mod')) {
+            if(!f.enabled) {
+                continue
+            }
+            try {
+                await exports.setEnabled(gameDir, 'mod', f.fileName, false)
+                disabled.push(f.fileName)
+            } catch(err) {
+                logger.warn(`Could not disable ${f.fileName} after the Minecraft version changed.`, err)
+            }
+        }
+    }
+    await fs.outputFile(file, minecraftVersion)
+    return disabled
 }
 
 async function listAll(gameDir) {
