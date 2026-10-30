@@ -5,8 +5,8 @@ import { useShallow } from 'zustand/react/shallow'
 import { backend, type ServerInfo } from '@/backend'
 import { PlayButton } from '@/components/shared/play-button'
 import { ProfileIcon, profileLabel } from '@/components/shared/profile-icon'
-import { RealmScene } from '@/components/shared/realm-scene'
 import { hasRealArt, ServerArt, ServerIcon } from '@/components/shared/server-art'
+import jormungandr from '@/assets/scene/jormungandr.webp'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Tooltip } from '@/components/ui/tooltip'
@@ -34,7 +34,7 @@ function Art({ server }: { server: ServerInfo }) {
         exit={{ opacity: 0 }}
         transition={{ duration: 0.5 }}
       >
-        {hasRealArt(server) ? <ServerArt server={server} className="absolute inset-0 size-full" /> : <RealmScene className="absolute inset-x-0 top-0 h-[80%]" />}
+        {hasRealArt(server) ? <ServerArt server={server} className="absolute inset-0 size-full" /> : <img src={jormungandr} alt="" className="absolute inset-x-0 top-0 h-[80%] w-full object-cover" />}
         {/* Desfoque do site (o vidro do cabeçalho do oblyvium.com.br), entrando aos poucos no pé da arte. */}
         <div className="absolute inset-0 bg-background/85 backdrop-blur-md [mask-image:linear-gradient(to_top,#000_30%,transparent_70%)] supports-[not(backdrop-filter:blur(0))]:bg-background" />
         <div className="absolute inset-0 bg-[linear-gradient(to_top,var(--background)_26%,transparent_44%)]" />

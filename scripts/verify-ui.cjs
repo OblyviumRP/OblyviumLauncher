@@ -150,15 +150,9 @@ app.whenReady().then(async () => {
         assert.match(await text(), /Versão\s+1\.20\.1 · Forge/, 'versão na ficha')
         assert.ok(await run(`!!document.querySelector('main [aria-hidden] svg, main [aria-hidden] img')`), 'arte no Início')
         assert.ok(await run(`!!document.querySelector('main .backdrop-blur-md')`), 'desfoque no pé da arte')
-        // Sem background na distribuição: cenário do site em camadas, e o parallax segue o ponteiro.
-        assert.equal(await run(`[...document.querySelectorAll('.fj-parallax img')].filter(i => i.complete && i.naturalWidth > 0).length`), 8, 'oito camadas do cenário')
+        // Sem background na distribuição: a arte da Jörmungandr.
+        assert.ok(await run(`[...document.querySelectorAll('main [aria-hidden] img')].some(i => i.src.includes('jormungandr') && i.complete && i.naturalWidth > 0)`), 'arte da Jörmungandr')
         assert.match(await text(), /Arte conceitual, não é uma captura do servidor/)
-        win.webContents.sendInputEvent({ type: 'mouseMove', x: 100, y: 120 }) // fora da barra de título, que é área de arrastar
-        await pause(900)
-        const shifts = await run(`[...document.querySelectorAll('.fj-parallax')].map(l => new DOMMatrix(getComputedStyle(l).transform).m41)`)
-        assert.ok(shifts[0] > 0 && shifts[shifts.length - 1] > shifts[0] * 5, 'parallax: o primeiro plano anda mais que o céu: ' + shifts)
-        win.webContents.sendInputEvent({ type: 'mouseMove', x: 550, y: 350 })
-        await pause(900)
         // Só o perfil padrão: o seletor de perfis não aparece.
         assert.equal(await run(`document.querySelectorAll('main [role=radiogroup]').length`), 0, 'sem seletor de perfis')
         await noOverflow('início')

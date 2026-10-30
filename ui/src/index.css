@@ -195,11 +195,3 @@
 .prose-forja table { width: 100%; border-collapse: collapse; }
 .prose-forja th, .prose-forja td { border: 1px solid var(--border); padding: 4px 8px; text-align: left; }
 
-/* Camada do RealmScene: sobra 24px de cada lado para o deslocamento não mostrar a borda.
-   O deslocamento vem do realm-scene.tsx, que não roda com prefers-reduced-motion. */
-.fj-parallax {
-  position: absolute;
-  inset: -24px;
-  will-change: transform;
-  transform-origin: bottom;
-}
