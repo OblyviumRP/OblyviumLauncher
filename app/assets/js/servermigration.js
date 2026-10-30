@@ -25,6 +25,14 @@ function compareVersions(a, b) {
     return 0
 }
 
+function nextFree(base) {
+    let dir = base
+    for(let i = 2; fs.existsSync(dir); i++) {
+        dir = `${base}-${i}`
+    }
+    return dir
+}
+
 function renameKey(obj, from, to) {
     if(obj != null && Object.prototype.hasOwnProperty.call(obj, from)) {
         obj[to] = obj[from]
@@ -36,7 +44,10 @@ function renameKey(obj, from, to) {
  * For each fixed id in the distribution, take the newest "<id>-<version>" the
  * player has played and move it over: every profile's game folder, the
  * profiles, Java, game and optional-mod settings, and the selected server.
- * Skipped once the fixed id has a game folder or profiles of its own.
+ * Skipped once the fixed id has a game folder made by this launcher (it has
+ * VERSION_FILE) or profiles of its own. A folder without VERSION_FILE was made
+ * by an older launcher that already saw the fixed id: it is kept beside, as
+ * "<id>.antes-da-migracao", and the player's real folder takes its place.
  *
  * Each moved folder gets VERSION_FILE with the old Minecraft version (the id
  * suffix), so mods added for it are disabled if the server moved on.
@@ -51,7 +62,8 @@ exports.migrateVersionedIds = function(config, serverIds, instanceDir) {
     const done = []
     for(const to of serverIds) {
         const own = store[to]?.list
-        if(fs.existsSync(path.join(instanceDir, to)) || (Array.isArray(own) && own.some(p => p?.id !== Profiles.DEFAULT_ID))) {
+        const target = path.join(instanceDir, to)
+        if(fs.existsSync(path.join(target, exports.VERSION_FILE)) || (Array.isArray(own) && own.some(p => p?.id !== Profiles.DEFAULT_ID))) {
             continue
         }
         const from = Object.keys(store)
@@ -65,7 +77,11 @@ exports.migrateVersionedIds = function(config, serverIds, instanceDir) {
         const profiles = Profiles.listProfiles(store, from.id)
 
         const moved = []
+        const aside = fs.existsSync(target) ? nextFree(`${target}.antes-da-migracao`) : null
         try {
+            if(aside != null) {
+                fs.renameSync(target, aside)
+            }
             for(const p of profiles) {
                 const src = Profiles.gameDir(instanceDir, from.id, p.id)
                 const dst = Profiles.gameDir(instanceDir, to, p.id)
@@ -78,6 +94,9 @@ exports.migrateVersionedIds = function(config, serverIds, instanceDir) {
             // A folder in use (game still open) cannot be renamed: undo and try again next time.
             for(const [src, dst] of moved.reverse()) {
                 fs.renameSync(dst, src)
+            }
+            if(aside != null && fs.existsSync(aside)) {
+                fs.renameSync(aside, target)
             }
             throw err
         }

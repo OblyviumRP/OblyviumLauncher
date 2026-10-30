@@ -54,12 +54,23 @@ test('leva a versão mais nova para o id fixo com perfis, Java, configs e servid
     await fs.remove(dir)
 })
 
-test('não mexe quando o id fixo já tem pasta, nem enquanto o painel ainda usa ids com versão', async () => {
-    const dir = await setup(['oblyvium-26.3/mods/meu.jar', 'oblyvium/options.txt'])
+test('não mexe quando o id fixo já tem pasta deste launcher, nem enquanto o painel ainda usa ids com versão', async () => {
+    const dir = await setup(['oblyvium-26.3/mods/meu.jar', `oblyvium/${VERSION_FILE}`])
     const config = { profiles: { 'oblyvium-26.3': profiles('padrao') }, javaConfig: {}, gameConfig: {}, modConfigurations: [] }
     assert.deepEqual(migrateVersionedIds(config, ['oblyvium'], dir), [])
     assert.deepEqual(migrateVersionedIds(config, ['oblyvium-26.3'], dir), [])
     assert.ok(await fs.pathExists(path.join(dir, 'oblyvium-26.3', 'mods', 'meu.jar')))
+    await fs.remove(dir)
+})
+
+test('pasta do id fixo criada por um launcher antigo fica ao lado e a do jogador assume', async () => {
+    const dir = await setup(['oblyvium-26.3/mods/meu.jar', 'oblyvium/options.txt', 'oblyvium.antes-da-migracao/x'])
+    const config = { selectedServer: 'oblyvium', profiles: { 'oblyvium-26.3': profiles('padrao'), oblyvium: profiles('padrao') }, javaConfig: {}, gameConfig: {}, modConfigurations: [] }
+    assert.deepEqual(migrateVersionedIds(config, ['oblyvium'], dir), [{ from: 'oblyvium-26.3', to: 'oblyvium' }])
+    assert.ok(await fs.pathExists(path.join(dir, 'oblyvium', 'mods', 'meu.jar')))
+    assert.ok(await fs.pathExists(path.join(dir, 'oblyvium.antes-da-migracao-2', 'options.txt')))
+    assert.equal(await fs.readFile(path.join(dir, 'oblyvium', VERSION_FILE), 'utf8'), '26.3')
+    assert.deepEqual(migrateVersionedIds(config, ['oblyvium'], dir), [])
     await fs.remove(dir)
 })
 
