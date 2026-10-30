@@ -120,6 +120,7 @@ export type LaunchHandlers = {
   onStatus: (text: string) => void
   onProgress: (p: LaunchProgress) => void
   onBlocked: (items: { title: string; type: ContentType }[]) => void
+  onModsDisabled: (fileNames: string[]) => void
   onLog: (line: { stream: 'stdout' | 'stderr'; line: string }) => void
   onStarted: () => void
   onExit: (r: { code: number | null; started: boolean; crashReport: string | null }) => void
@@ -200,7 +201,7 @@ export interface Backend {
   // Jogo
   launch(h: LaunchHandlers): Promise<boolean>
   stop(): void
-  verifyFiles(h: Pick<LaunchHandlers, 'onStatus' | 'onProgress'>): Promise<boolean>
+  verifyFiles(h: Pick<LaunchHandlers, 'onStatus' | 'onProgress' | 'onModsDisabled'>): Promise<boolean>
 
   // Conteúdo do perfil
   listContent(serverId: string, profileId: string, type: ContentType): Promise<ContentFile[]>

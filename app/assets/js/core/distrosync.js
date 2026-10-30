@@ -210,6 +210,7 @@ function ensureJavaSettings(distro){
 
 /** Everything the launcher does after (re)loading the distribution. */
 function syncDistribution(distro){
+    managers().ConfigManager.migrateServerIds(distro.servers.map(s => s.rawServer.id))
     syncModConfigurations(distro)
     ensureJavaSettings(distro)
 }

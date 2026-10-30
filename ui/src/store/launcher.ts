@@ -9,6 +9,13 @@ import { backend, UserError, type AccountInfo, type FeedItem, type LogLine, type
 
 export type LaunchState = 'idle' | 'preparing' | 'running' | 'crashed'
 
+/** O servidor mudou de versão do Minecraft e os mods do perfil foram desativados. */
+function warnModsDisabled(notify: (n: Omit<Notice, 'id' | 'at' | 'read'>) => void, fileNames: string[]) {
+  const names = fileNames.join(', ')
+  toast.warning(t('Mods desativados pela nova versão do Minecraft'), { description: names })
+  notify({ title: t('Mods desativados pela nova versão do Minecraft'), body: t('Reative em Mods quando tiverem versão nova: {names}', { names }), tone: 'warning', href: '/perfil?aba=conteudo' })
+}
+
 export type Task = {
   id: string
   title: string
@@ -273,6 +280,7 @@ export const useLauncher = create<State>()(
               toast.warning(t('Conteúdo bloqueado foi desativado'), { description: names })
               get().notify({ title: t('Conteúdo bloqueado pela staff'), body: t('Desativado neste perfil: {names}', { names }), tone: 'warning', href: '/perfil?aba=conteudo' })
             },
+            onModsDisabled: (fileNames) => warnModsDisabled(get().notify, fileNames),
             onLog: ({ stream, line }) => {
               if (!filesDone) {
                 filesDone = true
@@ -334,6 +342,7 @@ export const useLauncher = create<State>()(
           await backend().verifyFiles({
             onStatus: (text) => get().patchTask(taskId, { detail: text }),
             onProgress: ({ percent }) => get().patchTask(taskId, { progress: percent }),
+            onModsDisabled: (fileNames) => warnModsDisabled(get().notify, fileNames),
           })
           get().patchTask(taskId, { status: 'done', progress: 100, detail: t('Arquivos verificados'), finishedAt: Date.now() })
           toast.success(t('Arquivos verificados'), { description: t('Tudo pronto para jogar.') })

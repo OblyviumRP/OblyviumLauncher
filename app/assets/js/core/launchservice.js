@@ -281,6 +281,14 @@ async function prepareFiles(h){
             // Already gone.
         }
     }
+    try {
+        const disabled = await ContentManager.disableModsOnVersionChange(gameDir, serv.rawServer.minecraftVersion)
+        if(disabled.length > 0){
+            h.onModsDisabled(disabled)
+        }
+    } catch(err){
+        logger.warn('Could not check the profile mods against the Minecraft version.', err)
+    }
     await disableBlockedContent(serv, gameDir, h)
     return { distro, serv, profile, gameDir, configKey }
 }
@@ -290,6 +298,7 @@ function handlersWithDefaults(h){
         onStatus: noop,
         onProgress: noop,
         onBlocked: noop,
+        onModsDisabled: noop,
         onLog: noop,
         onStarted: noop,
         onExit: noop,
@@ -338,7 +347,7 @@ async function newestCrashReport(gameDir, since){
  * Throws a LaunchError (title, desc) for anything the player should see.
  *
  * @param {object} handlers onStatus(text), onProgress({phase, percent}),
- * askDownloadJava({major}), onBlocked(items), onLog({stream, line}),
+ * askDownloadJava({major}), onBlocked(items), onModsDisabled(fileNames), onLog({stream, line}),
  * onStarted(), onExit({code, started, crashReport}).
  * @returns {Promise<boolean>} False when nothing was started (busy, or Java declined).
  */

@@ -32,6 +32,8 @@ LangLoader.setupLanguage()
 function onDistroLoad(data){
     if(data != null){
 
+        ConfigManager.migrateServerIds(data.servers.map(s => s.rawServer.id))
+
         // Resolve the selected server if its value has yet to be set.
         if(ConfigManager.getSelectedServer() == null || data.getServerById(ConfigManager.getSelectedServer()) == null){
 

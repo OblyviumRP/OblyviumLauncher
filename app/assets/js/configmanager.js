@@ -4,6 +4,7 @@ const os   = require('os')
 const path = require('path')
 
 const LegacyMigration = require('./legacymigration')
+const ServerMigration = require('./servermigration')
 
 const logger = LoggerUtil.getLogger('ConfigManager')
 
@@ -293,6 +294,25 @@ exports.getCommonDirectory = function(){
  */
 exports.getInstanceDirectory = function(){
     return path.join(exports.getDataDirectory(), 'instances')
+}
+
+/**
+ * Move servers that used to carry the Minecraft version in their id to their
+ * fixed id (see servermigration.js). Must run before anything drops the
+ * settings of ids missing from the distribution. Saves when something moved.
+ *
+ * @param {string[]} serverIds Server ids in the distribution.
+ */
+exports.migrateServerIds = function(serverIds){
+    try {
+        const done = ServerMigration.migrateVersionedIds(config, serverIds, exports.getInstanceDirectory())
+        if(done.length > 0){
+            done.forEach(({ from, to }) => logger.info(`Moved ${from} to ${to}.`))
+            exports.save()
+        }
+    } catch(err){
+        logger.warn('Could not move a versioned server to its fixed id, will retry on the next load.', err)
+    }
 }
 
 /**

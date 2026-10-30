@@ -157,3 +157,18 @@ test('dois arquivos idênticos bloqueados aparecem os dois no findBlocked', asyn
     const blocked = await Content.findBlocked(dir, new Set(['sodium']))
     assert.deepEqual(blocked.map(b => b.fileName).sort(), ['sodium-1.0.jar', 'sodium-copia.jar'])
 })
+
+test('troca de versão do Minecraft desativa os mods do perfil, só uma vez', async () => {
+    const dir = await gameDir({ 'mods/a.jar': 'a', 'mods/b.jar.disabled': 'b', '.versao-minecraft': '26.2' })
+    assert.deepEqual(await Content.disableModsOnVersionChange(dir, '26.3'), ['a.jar'])
+    assert.deepEqual((await fs.readdir(path.join(dir, 'mods'))).sort(), ['a.jar.disabled', 'b.jar.disabled'])
+    await fs.rename(path.join(dir, 'mods', 'a.jar.disabled'), path.join(dir, 'mods', 'a.jar'))
+    assert.deepEqual(await Content.disableModsOnVersionChange(dir, '26.3'), [])
+    assert.ok(await fs.pathExists(path.join(dir, 'mods', 'a.jar')))
+})
+
+test('sem versão anotada (primeira vez) os mods ficam como estão', async () => {
+    const dir = await gameDir({ 'mods/a.jar': 'a' })
+    assert.deepEqual(await Content.disableModsOnVersionChange(dir, '26.3'), [])
+    assert.equal(await fs.readFile(path.join(dir, '.versao-minecraft'), 'utf8'), '26.3')
+})

@@ -11,8 +11,10 @@ function file(id, filePath) {
     return { id, name: id, type: 'File', artifact: { size: 1, url: `https://x/${id}`, MD5: '0'.repeat(32), path: filePath } }
 }
 
-test('isPlayerSetting cobre só o que o jogador muda no jogo', () => {
+test('isPlayerSetting cobre as configs do jogador e deixa de fora a arte do pack', () => {
     assert.equal(isPlayerSetting('options.txt'), true)
+    assert.equal(isPlayerSetting('servers.dat'), true)
+    assert.equal(isPlayerSetting('config/bettercombat/client.json5'), true)
     assert.equal(isPlayerSetting('config/sodium-options.json'), true)
     assert.equal(isPlayerSetting('config\\iris.properties'), true)
     assert.equal(isPlayerSetting('config/fancymenu/assets/oblyvium/fundo_menu.png'), false)
@@ -25,6 +27,7 @@ test('reparo não sobrescreve configs que o jogador já tem, mas baixa as que fa
     const gameDir = path.join(instanceDir, 'srv')
     await fs.outputFile(path.join(gameDir, 'options.txt'), 'lang:pt_br\n')
     await fs.outputFile(path.join(gameDir, 'config', 'sodium-options.json'), '{}')
+    await fs.outputFile(path.join(gameDir, 'config', 'bettercombat', 'client.json5'), '{}')
     await fs.outputFile(path.join(gameDir, 'config', 'fancymenu', 'fundo.png'), 'velho')
     await fs.outputFile(path.join(gameDir, 'resourcepacks', 'pack.zip'), 'velho')
 
@@ -36,6 +39,7 @@ test('reparo não sobrescreve configs que o jogador já tem, mas baixa as que fa
                 file('options', 'options.txt'),
                 file('sodium', 'config/sodium-options.json'),
                 file('iris', 'config/iris.properties'),
+                file('combat', 'config/bettercombat/client.json5'),
                 file('menu', 'config/fancymenu/fundo.png'),
                 file('pack', 'resourcepacks/pack.zip')
             ]
