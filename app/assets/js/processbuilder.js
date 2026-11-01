@@ -63,6 +63,12 @@ class ProcessBuilder {
         this.llPath = null
     }
     
+    fixedJvmOptions(){
+        const flags = this.server.effectiveJavaOptions.suggestedMajor >= 25 ? JVM_OPTIONS_JAVA_25 : []
+        const agent = path.join(this.gameDir, 'sentinel', 'sentinel-agent.jar')
+        return fs.existsSync(agent) ? [...flags, `-javaagent:${agent}`] : flags
+    }
+
     /**
      * Convienence method to run the functions typically used to build a process.
      */
@@ -398,7 +404,7 @@ class ProcessBuilder {
         }
         args.push('-Xmx' + ConfigManager.getMaxRAM(this.configKey))
         args.push('-Xms' + ConfigManager.getMaxRAM(this.configKey))
-        args = args.concat(this.server.effectiveJavaOptions.suggestedMajor >= 25 ? JVM_OPTIONS_JAVA_25 : [])
+        args = args.concat(this.fixedJvmOptions())
         args.push('-Djava.library.path=' + tempNativePath)
 
         // Main Java Class
@@ -449,7 +455,7 @@ class ProcessBuilder {
         }
         args.push('-Xmx' + ConfigManager.getMaxRAM(this.configKey))
         args.push('-Xms' + ConfigManager.getMaxRAM(this.configKey))
-        args = args.concat(this.server.effectiveJavaOptions.suggestedMajor >= 25 ? JVM_OPTIONS_JAVA_25 : [])
+        args = args.concat(this.fixedJvmOptions())
 
         // Main Java Class
         args.push(this.modManifest.mainClass)

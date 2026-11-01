@@ -28,6 +28,7 @@ const { DistroAPI } = require('../distromanager')
 const { GAME_OPCODE } = require('../ipcconstants')
 const Lang = require('../langloader')
 const Modrinth = require('../modrinth')
+const Sentinel = require('../sentinel')
 const ProcessBuilder = require('../processbuilder')
 const ProfileManager = require('../profilemanager')
 const DistroSync = require('./distrosync')
@@ -381,10 +382,16 @@ async function launch(handlers){
         const modLoaderData = await new DistributionIndexProcessor(ConfigManager.getCommonDirectory(), distro, serv.rawServer.id).loadModLoaderVersionJson(serv)
         const versionData = await new MojangIndexProcessor(ConfigManager.getCommonDirectory(), serv.rawServer.minecraftVersion).getVersionJson()
 
+        const ticket = await Sentinel.requestTicket(account).catch(err => {
+            logger.warn('Ticket de entrada não emitido.', err)
+            return null
+        })
+
         h.onStatus(q('landing.dlAsync.launchingGame'))
         const pb = new ProcessBuilder(serv, versionData, modLoaderData, account, appVersion(), { gameDir, configKey })
         const startedAt = Date.now()
         const proc = pb.build()
+        proc.stdin.end(ticket ? `${ticket.ticket}\n${ticket.key}\n` : '')
         running.add(proc)
 
         let started = false
