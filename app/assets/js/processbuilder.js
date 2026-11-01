@@ -13,7 +13,7 @@ const ConfigManager            = require('./configmanager')
 const logger = LoggerUtil.getLogger('ProcessBuilder')
 
 /** JVM flags for Java 25 and newer. Fixed in the launcher: players cannot edit them. */
-const JVM_OPTIONS_JAVA_25 = ['-XX:+UseCompactObjectHeaders']
+const JVM_OPTIONS_JAVA_25 = ['-XX:+UseCompactObjectHeaders', '-XX:+DisableAttachMechanism', '-XX:-EnableDynamicAgentLoading']
 
 /**
  * The launcher environment without the variables the JVM reads extra options
