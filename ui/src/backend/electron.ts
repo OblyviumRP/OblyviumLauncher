@@ -883,6 +883,10 @@ export function createElectronBackend(): Backend {
         ipcRenderer.send('autoUpdateAction', 'checkForUpdate')
       })
     },
+    downloadUpdate() {
+      if (isDev) return
+      ipcRenderer.send('autoUpdateAction', 'downloadUpdate')
+    },
     installUpdate() {
       if (LaunchService.isBusy() || LaunchService.isRunning()) {
         throw new UserError('Jogo aberto', 'Feche o jogo antes de instalar a atualização.')

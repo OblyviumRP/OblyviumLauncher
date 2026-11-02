@@ -30,7 +30,7 @@
 * Supports all of our servers.
   * Switch between server configurations with ease.
   * View the player count of the selected server.
-* Automatic updates. That's right, the launcher updates itself.
+* Updates with one click. When a new version is out, Play asks the player to update; nothing is installed without that click.
 *  View the status of Mojang's services.
 
 This is not an exhaustive list. Download and install the launcher to gauge all it can do!

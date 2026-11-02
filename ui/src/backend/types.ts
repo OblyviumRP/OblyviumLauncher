@@ -257,6 +257,7 @@ export interface Backend {
   onUpdate(cb: (e: UpdateEvent) => void): void
   checkForUpdate(): void
   checkForUpdateNow(): Promise<'none' | 'update' | 'error'>
+  downloadUpdate(): void
   installUpdate(): void
   changelog(): Promise<ChangelogRelease | null>
   openExternal(url: string): void
