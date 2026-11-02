@@ -275,6 +275,12 @@ export function createMockBackend(): Backend {
         system: { os: 'Windows 11 Pro 10.0.26300 (x64)', java: '25.0.1', totalRamMb: 16384, maxRamMb: 6144, mods: ['fabric-api 0.130.0', 'sodium 0.7.0'], gpus: [{ name: 'NVIDIA GeForce RTX 3060', vendor: 'NVIDIA', driver: '32.0.15.6094' }] },
       }
     },
+    async pendingCrashReport() {
+      return null
+    },
+    async memoryWarning() {
+      return null
+    },
     async sendCrashReport() {
       await wait(600)
     },

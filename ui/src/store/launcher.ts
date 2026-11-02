@@ -152,6 +152,10 @@ export const useLauncher = create<State>()(
         get().refreshServers()
         get().refreshAccounts()
         set({ boot: { phase: 'ready', firstLaunch: res.firstLaunch } })
+        void b
+          .pendingCrashReport()
+          .then((crash) => crash && !get().crash && set({ crash }))
+          .catch(() => undefined)
 
         b.onWindowMaximized((maximized) => set({ windowMaximized: maximized }))
         let announced = ''
@@ -289,6 +293,18 @@ export const useLauncher = create<State>()(
         if (!s.accountId) {
           toast.warning(t('Entre em uma conta'), { description: t('Adicione uma conta para jogar.') })
           return
+        }
+        const low = s.serverId ? await backend().memoryWarning(s.serverId, s.profileId).catch(() => null) : null
+        if (low) {
+          const gb = (mb: number) => `${(mb / 1024).toFixed(1).replace('.', ',')} GB`
+          const go = await get().confirm({
+            title: t('Memória do PC quase cheia'),
+            body: t('O Windows tem {free} livres e o jogo precisa de {need}. Feche programas pesados antes de jogar, senão o jogo e o launcher podem fechar sozinhos.', { free: gb(low.freeMb), need: gb(low.needMb) }),
+            confirm: t('Jogar mesmo assim'),
+            cancel: t('Cancelar'),
+            tone: 'danger',
+          })
+          if (!go) return
         }
         set((st) => ({ launch: { ...st.launch, state: 'preparing', status: t('Procurando atualização do launcher…'), progress: null } }))
         const check = await backend().checkForUpdateNow()

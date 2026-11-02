@@ -165,4 +165,64 @@ async function send(report){
     }
 }
 
-module.exports = { collect, send, redactor, modsFromLog, javaFrom, ramMb, tailLines, gpusFrom }
+const PENDING_MAX_AGE_MS = 24 * 60 * 60 * 1000
+const SEEN_FILE = 'crash-visto'
+const MEMORY_MARGIN_MB = 2048
+
+async function subdirs(dir){
+    try {
+        return (await fs.readdir(dir, { withFileTypes: true })).filter(d => d.isDirectory()).map(d => path.join(dir, d.name))
+    } catch {
+        return []
+    }
+}
+
+async function gameDirs(instanceDir){
+    const profiles = path.join(instanceDir, '.perfis')
+    const dirs = (await subdirs(instanceDir)).filter(d => d !== profiles)
+    for(const p of await subdirs(profiles)){
+        dirs.push(...await subdirs(p))
+    }
+    return dirs
+}
+
+async function pendingHsErr(instanceDir, seenMs, now = Date.now()){
+    const since = Math.max(seenMs ?? 0, now - PENDING_MAX_AGE_MS)
+    let best = null
+    for(const gameDir of await gameDirs(instanceDir)){
+        const file = await newestHsErr(gameDir, since + 2000)
+        if(file == null) continue
+        const mtime = (await fs.stat(file)).mtimeMs
+        if(mtime > since && (best == null || mtime > best.mtime)){
+            best = { gameDir, serverId: path.basename(gameDir), file, mtime }
+        }
+    }
+    return best
+}
+
+async function readSeen(launcherDir){
+    try {
+        const n = Number((await fs.readFile(path.join(launcherDir, SEEN_FILE), 'utf8')).trim())
+        return Number.isFinite(n) ? n : null
+    } catch {
+        return null
+    }
+}
+
+async function writeSeen(launcherDir, ms = Date.now()){
+    try {
+        await fs.outputFile(path.join(launcherDir, SEEN_FILE), String(ms))
+    } catch {
+        return
+    }
+}
+
+function lowMemory(info, maxRamMb){
+    const freeKb = info?.swapFree ?? info?.free
+    if(!Number.isFinite(freeKb) || !(maxRamMb > 0)) return null
+    const freeMb = Math.floor(freeKb / 1024)
+    const needMb = maxRamMb + MEMORY_MARGIN_MB
+    return freeMb < needMb ? { freeMb, needMb } : null
+}
+
+module.exports = { collect, send, redactor, modsFromLog, javaFrom, ramMb, tailLines, gpusFrom, pendingHsErr, readSeen, writeSeen, lowMemory }

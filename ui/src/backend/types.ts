@@ -209,6 +209,8 @@ export interface Backend {
   launch(h: LaunchHandlers): Promise<boolean>
   stop(): void
   prepareCrashReport(): Promise<CrashDraft | null>
+  pendingCrashReport(): Promise<CrashDraft | null>
+  memoryWarning(serverId: string, profileId: string): Promise<{ freeMb: number; needMb: number } | null>
   sendCrashReport(draft: CrashDraft, description: string): Promise<void>
   verifyFiles(h: Pick<LaunchHandlers, 'onStatus' | 'onProgress' | 'onModsDisabled'>): Promise<boolean>
 
