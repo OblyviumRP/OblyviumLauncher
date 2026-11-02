@@ -44,7 +44,8 @@ export type Ask = { title: string; body: string; confirm: string; cancel?: strin
 
 type Update =
   | { state: 'idle' | 'checking' | 'none' }
-  | { state: 'available'; version: string; percent: number }
+  | { state: 'available'; version: string }
+  | { state: 'downloading'; version: string; percent: number }
   | { state: 'ready'; version: string }
   | { state: 'error'; message: string }
 
@@ -75,6 +76,7 @@ type State = {
   selectProfile: (id: string) => void
   selectAccount: (id: string) => Promise<void>
   bumpContent: () => void
+  updateLauncher: () => void
   launchGame: () => Promise<void>
   stopGame: () => void
   verifyFiles: () => Promise<void>
@@ -148,26 +150,33 @@ export const useLauncher = create<State>()(
         set({ boot: { phase: 'ready', firstLaunch: res.firstLaunch } })
 
         b.onWindowMaximized((maximized) => set({ windowMaximized: maximized }))
+        let announced = ''
         b.onUpdate((e) => {
-
+          const cur = get().update
+          if (cur.state === 'downloading' && (e.kind === 'checking' || e.kind === 'available' || e.kind === 'none')) return
           if (e.kind === 'checking') set({ update: { state: 'checking' } })
           else if (e.kind === 'none') set({ update: { state: 'none' } })
           else if (e.kind === 'available') {
-            set({ update: { state: 'available', version: e.version, percent: 0 } })
-            get().addTask({ id: 'launcher-update', title: `Launcher ${e.version}`, detail: t('Baixando atualização'), progress: 0, kind: 'update' })
+            set({ update: { state: 'available', version: e.version } })
+            if (announced !== e.version) {
+              announced = e.version
+              get().notify({ title: t('Atualização {v} disponível', { v: e.version }), body: t('Atualize o launcher para jogar.'), tone: 'primary', href: '/configuracoes?aba=sobre' })
+            }
           } else if (e.kind === 'progress') {
-            const u = get().update
-            if (u.state === 'available') set({ update: { ...u, percent: e.percent } })
+            if (cur.state === 'downloading') set({ update: { ...cur, percent: e.percent } })
             get().patchTask('launcher-update', { progress: e.percent })
           } else if (e.kind === 'ready') {
             set({ update: { state: 'ready', version: e.version } })
+            get().patchTask('launcher-update', { status: 'done', progress: 100, detail: t('Pronta para instalar'), finishedAt: Date.now() })
             try {
               b.installUpdate()
-              return
-            } catch {}
-            get().patchTask('launcher-update', { status: 'done', progress: 100, detail: t('Pronta para instalar'), finishedAt: Date.now() })
-            get().notify({ title: t('Atualização {v} pronta', { v: e.version }), body: t('Reinicie o launcher para instalar.'), tone: 'primary', href: '/configuracoes?aba=sobre' })
-          } else if (e.kind === 'error') set({ update: { state: 'error', message: e.message } })
+            } catch (err) {
+              get().showError(err)
+            }
+          } else if (e.kind === 'error') {
+            if (cur.state === 'downloading') get().patchTask('launcher-update', { status: 'error', detail: t('Falha no download'), finishedAt: Date.now() })
+            set({ update: { state: 'error', message: e.message } })
+          }
         })
 
         const poll = async () => {
@@ -238,20 +247,41 @@ export const useLauncher = create<State>()(
 
       bumpContent: () => set((s) => ({ contentRev: s.contentRev + 1 })),
 
+      updateLauncher: () => {
+        const u = get().update
+        if (u.state === 'ready') {
+          try {
+            backend().installUpdate()
+          } catch (err) {
+            get().showError(err)
+          }
+          return
+        }
+        if (u.state !== 'available') return
+        set({ update: { state: 'downloading', version: u.version, percent: 0 } })
+        get().addTask({ id: 'launcher-update', title: `Launcher ${u.version}`, detail: t('Baixando atualização'), progress: 0, kind: 'update' })
+        backend().downloadUpdate()
+      },
+
       launchGame: async () => {
         const s = get()
         if (isBusy(s.launch.state)) return
-        if (s.update.state === 'available') {
+        const askUpdate = async () => {
+          const u = get().update
+          if (u.state !== 'available' && u.state !== 'ready') return
+          const ok = await get().confirm({
+            title: t('Atualize o launcher para jogar'),
+            body: t('A versão {v} do launcher é obrigatória para entrar no servidor. Ao atualizar, o launcher baixa a versão nova e reabre.', { v: u.version }),
+            confirm: t('Atualizar'),
+            cancel: t('Agora não'),
+          })
+          if (ok) get().updateLauncher()
+        }
+        if (s.update.state === 'downloading') {
           toast(t('Atualizando o launcher'), { description: t('Aguarde o download terminar para jogar.') })
           return
         }
-        if (s.update.state === 'ready') {
-          try {
-            return backend().installUpdate()
-          } catch (err) {
-            return get().showError(err)
-          }
-        }
+        if (s.update.state === 'available' || s.update.state === 'ready') return askUpdate()
         if (!s.accountId) {
           toast.warning(t('Entre em uma conta'), { description: t('Adicione uma conta para jogar.') })
           return
@@ -260,8 +290,7 @@ export const useLauncher = create<State>()(
         const check = await backend().checkForUpdateNow()
         if (check === 'update') {
           set((st) => ({ launch: { ...st.launch, state: 'idle', status: '', progress: null } }))
-          toast(t('Atualizando o launcher'), { description: t('A versão nova está baixando e o launcher reabre sozinho.') })
-          return
+          return askUpdate()
         }
         const serv = s.servers.find((x) => x.id === s.serverId)
         const taskId = get().addTask({ title: t('{name} · arquivos do jogo', { name: serv?.name ?? '' }), detail: t('Preparando'), progress: null, kind: 'game' })
@@ -309,13 +338,6 @@ export const useLauncher = create<State>()(
               toast.success(t('{name} aberto', { name: serv?.name ?? 'Minecraft' }))
             },
             onExit: ({ code, started: wasStarted, crashReport }) => {
-              if (get().update.state === 'ready') {
-                setTimeout(() => {
-                  try {
-                    backend().installUpdate()
-                  } catch {}
-                }, 3000)
-              }
               const crashed = code !== 0 && code != null
               set((st) => ({
                 launch: { ...st.launch, state: crashed ? 'crashed' : 'idle', status: '', progress: null, code, crashReport },

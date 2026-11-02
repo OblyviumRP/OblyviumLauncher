@@ -419,6 +419,7 @@ export function createMockBackend(): Backend {
     async checkForUpdateNow() {
       return 'none' as const
     },
+    downloadUpdate() {},
     installUpdate() {},
     changelog: async () => null,
     openExternal(url) {

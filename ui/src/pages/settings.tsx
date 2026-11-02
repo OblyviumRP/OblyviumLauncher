@@ -180,7 +180,8 @@ function About() {
       </div>
       <div className="flex flex-wrap items-center gap-3 rounded-md border border-border bg-surface-2 p-3">
         <span className="min-w-48 flex-1 text-sm">
-          {update.state === 'available' && t('Baixando a versão {v}… {p}%', { v: update.version, p: update.percent })}
+          {update.state === 'available' && t('A versão {v} está disponível. Atualize para jogar.', { v: update.version })}
+          {update.state === 'downloading' && t('Baixando a versão {v}… {p}%', { v: update.version, p: update.percent })}
           {update.state === 'ready' && t('A versão {v} está pronta para instalar.', { v: update.version })}
           {update.state === 'none' && t('Você está na versão mais recente.')}
           {update.state === 'checking' && t('Verificando atualizações…')}
@@ -188,19 +189,11 @@ function About() {
           {update.state === 'idle' && (b.isDev ? t('Atualizações automáticas ficam desligadas no modo de desenvolvimento.') : t('O launcher verifica atualizações sozinho a cada 30 minutos.'))}
         </span>
         {update.state === 'ready' ? (
-          <Button
-            onClick={() => {
-              try {
-                b.installUpdate()
-              } catch (err) {
-                useLauncher.getState().showError(err)
-              }
-            }}
-          >
-            {t('Reiniciar e instalar')}
-          </Button>
+          <Button onClick={() => useLauncher.getState().updateLauncher()}>{t('Reiniciar e instalar')}</Button>
+        ) : update.state === 'available' ? (
+          <Button onClick={() => useLauncher.getState().updateLauncher()}>{t('Atualizar')}</Button>
         ) : (
-          <Button variant="secondary" onClick={() => b.checkForUpdate()} disabled={checking || b.isDev || update.state === 'available'}>
+          <Button variant="secondary" onClick={() => b.checkForUpdate()} disabled={checking || b.isDev || update.state === 'downloading'}>
             <RefreshCw className={checking ? 'animate-spin' : undefined} /> {t('Verificar agora')}
           </Button>
         )}

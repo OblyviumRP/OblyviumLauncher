@@ -26,12 +26,10 @@ function initAutoUpdater(event, data) {
         // autoUpdater.allowPrerelease = true
     }
 
+    autoUpdater.autoDownload = false
+    autoUpdater.autoInstallOnAppQuit = false
     if(isDev){
-        autoUpdater.autoInstallOnAppQuit = false
         autoUpdater.updateConfigPath = path.join(__dirname, 'dev-app-update.yml')
-    }
-    if(process.platform === 'darwin'){
-        autoUpdater.autoDownload = false
     }
     autoUpdater.on('update-available', (info) => {
         event.sender.send('autoUpdateNotification', 'update-available', info)
@@ -63,6 +61,12 @@ ipcMain.on('autoUpdateAction', (event, arg, data) => {
             break
         case 'checkForUpdate':
             autoUpdater.checkForUpdates()
+                .catch(err => {
+                    event.sender.send('autoUpdateNotification', 'realerror', err)
+                })
+            break
+        case 'downloadUpdate':
+            autoUpdater.downloadUpdate()
                 .catch(err => {
                     event.sender.send('autoUpdateNotification', 'realerror', err)
                 })
