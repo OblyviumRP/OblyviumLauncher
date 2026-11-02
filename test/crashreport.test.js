@@ -71,3 +71,31 @@ test('gpusFrom pega nome, fabricante e driver e ignora o render por software', (
     ])
     assert.deepStrictEqual(CrashReport.gpusFrom(null), [])
 })
+
+test('crash pendente: hs_err mais novo das instâncias e perfis, depois do visto', async () => {
+    const { pendingHsErr, readSeen, writeSeen } = CrashReport
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'crash-pendente-'))
+    try {
+        const now = Date.now()
+        const put = (dir, name, ageMs) => {
+            fs.mkdirSync(dir, { recursive: true })
+            const f = path.join(dir, name)
+            fs.writeFileSync(f, '# insufficient memory')
+            const t = (now - ageMs) / 1000
+            fs.utimesSync(f, t, t)
+        }
+        const inst = path.join(root, 'instances')
+        put(path.join(inst, 'oblyvium-26.3'), 'hs_err_pid1.log', 60 * 60 * 1000)
+        put(path.join(inst, '.perfis', 'pvp', 'oblyviumvulkan-26.3'), 'hs_err_pid2.log', 10 * 60 * 1000)
+        put(path.join(inst, 'velho'), 'hs_err_pid3.log', 3 * 24 * 60 * 60 * 1000)
+        const found = await pendingHsErr(inst, null, now)
+        assert.strictEqual(found.serverId, 'oblyviumvulkan-26.3')
+        assert.strictEqual(path.basename(found.file), 'hs_err_pid2.log')
+        assert.strictEqual(await pendingHsErr(inst, now - 5 * 60 * 1000, now), null)
+        assert.strictEqual(await readSeen(root), null)
+        await writeSeen(root, 1234)
+        assert.strictEqual(await readSeen(root), 1234)
+    } finally {
+        fs.rmSync(root, { recursive: true, force: true })
+    }
+})

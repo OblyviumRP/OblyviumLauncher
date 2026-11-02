@@ -127,8 +127,9 @@ Build for a specific platform.
 Builds for macOS may not work on Windows/Linux and vice-versa.
 
 Every `npm run dist` generates a new release key (`scripts/release-key.cjs`) and compiles the native module from the
-private OblyviumSentinel repository (cloned next to the launcher, or `OBLYVIUM_SENTINEL_DIR`) with node-gyp, so
-Windows needs the Visual Studio Build Tools (C++). The key stays in `.release-key.json` (ignored by git), and
+private VacOblyvium repository (cloned next to the launcher, or `OBLYVIUM_VAC_DIR`) with node-gyp, so Windows needs the
+Visual Studio Build Tools (C++). Build `agent/` and `mod/` of VacOblyvium first (`./gradlew build`): their jars are
+sealed into `app/assets/native/vac.bin`, opened by the native module only when the game starts. The key stays in `.release-key.json` (ignored by git), and
 `scripts/publish-update.cjs` registers it on the website before uploading the installer: the website refuses a Windows
 `latest.yml` without it.
 

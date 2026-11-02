@@ -70,7 +70,6 @@ export function CrashReportDialog() {
               </li>
               <li>{t('Modpack {pack}, {n} mods, código de saída {code}, versão do launcher e seu nick', { pack: crash.serverId, n: crash.system.mods.length, code: crash.code })}</li>
             </ul>
-            <span className="text-xs text-muted-2">{t('O token da sua conta e o nome do seu usuário do Windows são tirados dos arquivos antes de enviar.')}</span>
           </div>
           <div className="flex justify-end gap-2">
             <Button variant="secondary" disabled={sending} onClick={close}>

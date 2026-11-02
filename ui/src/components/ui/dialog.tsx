@@ -22,6 +22,7 @@ export function DialogContent({
           'fixed left-1/2 top-1/2 z-50 flex max-h-[85vh] w-[calc(100vw-32px)] max-w-lg -translate-x-1/2 -translate-y-1/2 animate-[dialog-in_var(--dur-slow)_var(--ease-forja)] flex-col gap-4 overflow-y-auto rounded-lg border border-border-2 bg-card p-5 shadow-dialog',
           className,
         )}
+        onInteractOutside={(e) => e.preventDefault()}
         {...props}
       >
         <div className="flex items-start justify-between gap-4">

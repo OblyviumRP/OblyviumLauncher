@@ -9,6 +9,7 @@ const os                    = require('os')
 const path                  = require('path')
 
 const ConfigManager            = require('./configmanager')
+const Vac                      = require('./vac')
 
 const logger = LoggerUtil.getLogger('ProcessBuilder')
 
@@ -63,10 +64,11 @@ class ProcessBuilder {
         this.llPath = null
     }
     
-    fixedJvmOptions(){
+    fixedJvmOptions(tempNativePath){
         const flags = this.server.effectiveJavaOptions.suggestedMajor >= 25 ? JVM_OPTIONS_JAVA_25 : []
-        const agent = path.join(this.gameDir, 'sentinel', 'sentinel-agent.jar')
-        return fs.existsSync(agent) ? [...flags, `-javaagent:${agent}`] : flags
+        fs.removeSync(path.join(this.gameDir, 'sentinel'))
+        const vac = Vac.unpackVac(tempNativePath)
+        return vac ? [...flags, `-javaagent:${vac.agent}`, `-Dfabric.addMods=${vac.mod}`] : flags
     }
 
     /**
@@ -404,7 +406,7 @@ class ProcessBuilder {
         }
         args.push('-Xmx' + ConfigManager.getMaxRAM(this.configKey))
         args.push('-Xms' + ConfigManager.getMaxRAM(this.configKey))
-        args = args.concat(this.fixedJvmOptions())
+        args = args.concat(this.fixedJvmOptions(tempNativePath))
         args.push('-Djava.library.path=' + tempNativePath)
 
         // Main Java Class
@@ -455,7 +457,7 @@ class ProcessBuilder {
         }
         args.push('-Xmx' + ConfigManager.getMaxRAM(this.configKey))
         args.push('-Xms' + ConfigManager.getMaxRAM(this.configKey))
-        args = args.concat(this.fixedJvmOptions())
+        args = args.concat(this.fixedJvmOptions(tempNativePath))
 
         // Main Java Class
         args.push(this.modManifest.mainClass)

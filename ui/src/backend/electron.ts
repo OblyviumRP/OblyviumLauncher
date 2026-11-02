@@ -43,6 +43,7 @@ const remote = req('@electron/remote')
 const mod = (name: string) => req(path.join(appRoot, 'app', 'assets', 'js', name))
 
 const ConfigManager = mod('configmanager')
+const Memory = mod('memory')
 const AuthManager = mod('authmanager')
 const AuthManagerOffline = req(path.join(appRoot, 'app', 'assets', 'extension', 'offline', 'authmanagerOffline'))
 const { DistroAPI } = mod('distromanager')
@@ -430,6 +431,33 @@ export function createElectronBackend(): Backend {
       const gpuDevices = await ipcRenderer.invoke(SHELL_OPCODE.GPU_INFO).catch(() => [])
       const { files, system } = await CrashReport.collect({ gameDir: e.gameDir, crashReport: e.crashReport, startedAt: e.startedAt, maxRam, secrets: [e.accessToken], gpuDevices })
       return { serverId: e.serverId, code: e.code, files, system } as CrashDraft
+    },
+    async pendingCrashReport() {
+      const dir = ConfigManager.getLauncherDirectory()
+      const seen = await CrashReport.readSeen(dir)
+      const found = await CrashReport.pendingHsErr(ConfigManager.getInstanceDirectory(), seen)
+      if (found == null) return null
+      const gpuDevices = await ipcRenderer.invoke(SHELL_OPCODE.GPU_INFO).catch(() => [])
+      const acc = ConfigManager.getSelectedAccount()
+      let maxRam: string | null = null
+      try {
+        maxRam = ConfigManager.getMaxRAM(found.serverId)
+      } catch {
+        maxRam = null
+      }
+      const { files, system } = await CrashReport.collect({ gameDir: found.gameDir, crashReport: null, startedAt: found.mtime - 60_000, maxRam, secrets: [acc?.accessToken], gpuDevices })
+      return { serverId: found.serverId, code: -1, files, system } as CrashDraft
+    },
+    async dismissCrashReport() {
+      await CrashReport.writeSeen(ConfigManager.getLauncherDirectory())
+    },
+    async memoryWarning(serverId: string, profileId: string) {
+      try {
+        const maxRam = CrashReport.ramMb(ConfigManager.getMaxRAM(configKey(serverId, profileId)))
+        return await Memory.memoryWarning(w.process.getSystemMemoryInfo(), maxRam)
+      } catch {
+        return null
+      }
     },
     async sendCrashReport(draft: CrashDraft, description: string) {
       const acc = ConfigManager.getSelectedAccount()
