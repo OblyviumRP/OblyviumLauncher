@@ -478,5 +478,7 @@ export const es: Record<string, string> = {
   "Quer enviar um relatório para a staff? Nada sai do seu computador sem você clicar em Enviar.": "¿Quieres enviar un informe al staff? Nada sale de tu computadora sin que hagas clic en Enviar.",
   "Relatório enviado": "Informe enviado",
   "Relatório não enviado": "Informe no enviado",
+  "Placa de vídeo: {gpus}": "Tarjeta de video: {gpus}",
+  "não identificada": "no identificada",
   "Sistema: {os} · Java {java} · RAM {max} MB de {total} MB": "Sistema: {os} · Java {java} · RAM {max} MB de {total} MB",
 }

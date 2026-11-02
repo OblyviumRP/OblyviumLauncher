@@ -158,6 +158,14 @@ ipcMain.on(WINDOW_OPCODE.MAXIMIZE, () => {
     }
 })
 
+ipcMain.handle(SHELL_OPCODE.GPU_INFO, async () => {
+    try {
+        return (await app.getGPUInfo('basic')).gpuDevice ?? []
+    } catch {
+        return []
+    }
+})
+
 ipcMain.handle(SHELL_OPCODE.TRASH_ITEM, async (event, ...args) => {
     try {
         await shell.trashItem(args[0])

@@ -24,7 +24,8 @@ exports.MSFT_ERROR = {
 }
 
 exports.SHELL_OPCODE = {
-    TRASH_ITEM: 'TRASH_ITEM'
+    TRASH_ITEM: 'TRASH_ITEM',
+    GPU_INFO: 'GPU_INFO'
 }
 
 exports.GAME_OPCODE = {
