@@ -118,7 +118,7 @@ export type CrashDraft = {
   serverId: string
   code: number
   files: { name: string; content: string }[]
-  system: { os: string; java: string; totalRamMb: number; maxRamMb: number; mods: string[] }
+  system: { os: string; java: string; totalRamMb: number; maxRamMb: number; mods: string[]; gpus: { name: string; vendor: string; driver: string }[] }
 }
 
 export type LaunchProgress = { phase: 'verify' | 'download' | 'java'; percent: number }

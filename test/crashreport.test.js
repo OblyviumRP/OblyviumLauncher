@@ -58,3 +58,16 @@ test('collect junta crash report, hs_err e o fim do latest.log', async () => {
         await fs.remove(dir)
     }
 })
+
+test('gpusFrom pega nome, fabricante e driver e ignora o render por software', () => {
+    const gpus = CrashReport.gpusFrom([
+        { vendorId: 0x10de, deviceId: 0x2d83, deviceString: 'NVIDIA GeForce RTX 5050', driverVersion: '32.0.16.1742' },
+        { vendorId: 0x1414, deviceId: 0x8c, deviceString: 'Microsoft Basic Render Driver', driverVersion: '10.0' },
+        { vendorId: 0x1002, deviceId: 0x73bf }
+    ])
+    assert.deepStrictEqual(gpus, [
+        { name: 'NVIDIA GeForce RTX 5050', vendor: 'NVIDIA', driver: '32.0.16.1742' },
+        { name: '0x1002:0x73bf', vendor: 'AMD', driver: '' }
+    ])
+    assert.deepStrictEqual(CrashReport.gpusFrom(null), [])
+})

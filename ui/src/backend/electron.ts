@@ -54,7 +54,7 @@ const RichText = mod('richtext')
 const Notifications = mod('notifications')
 const Changelog = mod('changelog')
 const isDev: boolean = mod('isdev')
-const { MSFT_OPCODE, MSFT_REPLY_TYPE, MSFT_ERROR, WINDOW_OPCODE } = mod('ipcconstants')
+const { MSFT_OPCODE, MSFT_REPLY_TYPE, MSFT_ERROR, WINDOW_OPCODE, SHELL_OPCODE } = mod('ipcconstants')
 const DistroSync = mod('core/distrosync')
 const LaunchService = mod('core/launchservice')
 const CrashReport = mod('crashreport')
@@ -427,7 +427,8 @@ export function createElectronBackend(): Backend {
       } catch {
         maxRam = null
       }
-      const { files, system } = await CrashReport.collect({ gameDir: e.gameDir, crashReport: e.crashReport, startedAt: e.startedAt, maxRam, secrets: [e.accessToken] })
+      const gpuDevices = await ipcRenderer.invoke(SHELL_OPCODE.GPU_INFO).catch(() => [])
+      const { files, system } = await CrashReport.collect({ gameDir: e.gameDir, crashReport: e.crashReport, startedAt: e.startedAt, maxRam, secrets: [e.accessToken], gpuDevices })
       return { serverId: e.serverId, code: e.code, files, system } as CrashDraft
     },
     async sendCrashReport(draft: CrashDraft, description: string) {

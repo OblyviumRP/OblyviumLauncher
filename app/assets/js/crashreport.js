@@ -96,7 +96,25 @@ function ramMb(value){
     return m[2].toUpperCase() === 'G' ? Number(m[1]) * 1024 : Number(m[1])
 }
 
-async function collect({ gameDir, crashReport, startedAt, maxRam, secrets = [] }){
+const GPU_VENDORS = { 0x10de: 'NVIDIA', 0x1002: 'AMD', 0x1022: 'AMD', 0x8086: 'Intel', 0x106b: 'Apple', 0x5143: 'Qualcomm', 0x13b5: 'ARM', 0x1414: 'Microsoft' }
+
+function hex(n){
+    return `0x${Number(n).toString(16).padStart(4, '0')}`
+}
+
+function gpusFrom(devices){
+    if(!Array.isArray(devices)) return []
+    return devices
+        .filter(d => d != null && d.vendorId !== 0x1414)
+        .slice(0, 8)
+        .map(d => ({
+            name: String(d.deviceString || `${hex(d.vendorId)}:${hex(d.deviceId)}`).slice(0, 200),
+            vendor: String(GPU_VENDORS[d.vendorId] ?? d.driverVendor ?? hex(d.vendorId)).slice(0, 120),
+            driver: String(d.driverVersion ?? '').slice(0, 120)
+        }))
+}
+
+async function collect({ gameDir, crashReport, startedAt, maxRam, secrets = [], gpuDevices = [] }){
     const redact = redactor(secrets)
     const files = []
     const raw = []
@@ -126,7 +144,8 @@ async function collect({ gameDir, crashReport, startedAt, maxRam, secrets = [] }
             java: javaFrom(raw),
             totalRamMb: Math.round(os.totalmem() / 1048576),
             maxRamMb: ramMb(maxRam),
-            mods: log != null ? modsFromLog(log) : []
+            mods: log != null ? modsFromLog(log) : [],
+            gpus: gpusFrom(gpuDevices)
         }
     }
 }
@@ -146,4 +165,4 @@ async function send(report){
     }
 }
 
-module.exports = { collect, send, redactor, modsFromLog, javaFrom, ramMb, tailLines }
+module.exports = { collect, send, redactor, modsFromLog, javaFrom, ramMb, tailLines, gpusFrom }

@@ -63,6 +63,11 @@ export function CrashReportDialog() {
                   total: crash.system.totalRamMb,
                 })}
               </li>
+              <li>
+                {t('Placa de vídeo: {gpus}', {
+                  gpus: crash.system.gpus.length ? crash.system.gpus.map((g) => `${g.name} (driver ${g.driver || '?'})`).join(', ') : t('não identificada'),
+                })}
+              </li>
               <li>{t('Modpack {pack}, {n} mods, código de saída {code}, versão do launcher e seu nick', { pack: crash.serverId, n: crash.system.mods.length, code: crash.code })}</li>
             </ul>
             <span className="text-xs text-muted-2">{t('O token da sua conta e o nome do seu usuário do Windows são tirados dos arquivos antes de enviar.')}</span>
