@@ -472,7 +472,7 @@ export const en: Record<string, string> = {
   "Modpack {pack}, {n} mods, código de saída {code}, versão do launcher e seu nick": "Modpack {pack}, {n} mods, exit code {code}, launcher version and your nickname",
   "Não enviar": "Don't send",
   "Memória do PC quase cheia": "PC memory almost full",
-  "O Windows tem {free} livres e o jogo precisa de {need}. Feche programas pesados antes de jogar, senão o jogo e o launcher podem fechar sozinhos.": "Windows has {free} free and the game needs {need}. Close heavy programs before playing, or the game and the launcher may close on their own.",
+  "O Windows tem {free} livres e o jogo precisa de {need}. Feche programas pesados ou diminua a RAM do jogo nas configurações do modpack, senão o jogo e o launcher podem fechar sozinhos.": "Windows has {free} free and the game needs {need}. Close heavy programs or lower the game RAM in the modpack settings, or the game and the launcher may close on their own.",
   "Jogar mesmo assim": "Play anyway",
   "O jogo fechou com erro": "The game closed with an error",
   "O que vai junto:": "What gets sent:",

@@ -167,7 +167,6 @@ async function send(report){
 
 const PENDING_MAX_AGE_MS = 24 * 60 * 60 * 1000
 const SEEN_FILE = 'crash-visto'
-const MEMORY_MARGIN_MB = 2048
 
 async function subdirs(dir){
     try {
@@ -217,12 +216,4 @@ async function writeSeen(launcherDir, ms = Date.now()){
     }
 }
 
-function lowMemory(info, maxRamMb){
-    const freeKb = info?.swapFree ?? info?.free
-    if(!Number.isFinite(freeKb) || !(maxRamMb > 0)) return null
-    const freeMb = Math.floor(freeKb / 1024)
-    const needMb = maxRamMb + MEMORY_MARGIN_MB
-    return freeMb < needMb ? { freeMb, needMb } : null
-}
-
-module.exports = { collect, send, redactor, modsFromLog, javaFrom, ramMb, tailLines, gpusFrom, pendingHsErr, readSeen, writeSeen, lowMemory }
+module.exports = { collect, send, redactor, modsFromLog, javaFrom, ramMb, tailLines, gpusFrom, pendingHsErr, readSeen, writeSeen }

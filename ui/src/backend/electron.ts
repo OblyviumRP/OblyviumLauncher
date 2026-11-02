@@ -43,6 +43,7 @@ const remote = req('@electron/remote')
 const mod = (name: string) => req(path.join(appRoot, 'app', 'assets', 'js', name))
 
 const ConfigManager = mod('configmanager')
+const Memory = mod('memory')
 const AuthManager = mod('authmanager')
 const AuthManagerOffline = req(path.join(appRoot, 'app', 'assets', 'extension', 'offline', 'authmanagerOffline'))
 const { DistroAPI } = mod('distromanager')
@@ -453,7 +454,7 @@ export function createElectronBackend(): Backend {
     async memoryWarning(serverId: string, profileId: string) {
       try {
         const maxRam = CrashReport.ramMb(ConfigManager.getMaxRAM(configKey(serverId, profileId)))
-        return CrashReport.lowMemory(w.process.getSystemMemoryInfo(), maxRam)
+        return await Memory.memoryWarning(w.process.getSystemMemoryInfo(), maxRam)
       } catch {
         return null
       }

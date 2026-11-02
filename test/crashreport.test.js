@@ -99,13 +99,3 @@ test('crash pendente: hs_err mais novo das instâncias e perfis, depois do visto
         fs.rmSync(root, { recursive: true, force: true })
     }
 })
-
-test('memória baixa: compara o commit livre com a RAM do jogo mais folga', () => {
-    const { lowMemory } = CrashReport
-    const gb = n => n * 1024 * 1024
-    assert.deepStrictEqual(lowMemory({ swapFree: gb(4), free: gb(10) }, 4096), { freeMb: 4096, needMb: 6144 })
-    assert.strictEqual(lowMemory({ swapFree: gb(7), free: gb(1) }, 4096), null)
-    assert.strictEqual(lowMemory({ free: gb(3) }, 4096).freeMb, 3072)
-    assert.strictEqual(lowMemory({}, 4096), null)
-    assert.strictEqual(lowMemory({ swapFree: gb(1) }, 0), null)
-})

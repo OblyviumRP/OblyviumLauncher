@@ -299,7 +299,7 @@ export const useLauncher = create<State>()(
           const gb = (mb: number) => `${(mb / 1024).toFixed(1).replace('.', ',')} GB`
           const go = await get().confirm({
             title: t('Memória do PC quase cheia'),
-            body: t('O Windows tem {free} livres e o jogo precisa de {need}. Feche programas pesados antes de jogar, senão o jogo e o launcher podem fechar sozinhos.', { free: gb(low.freeMb), need: gb(low.needMb) }),
+            body: t('O Windows tem {free} livres e o jogo precisa de {need}. Feche programas pesados ou diminua a RAM do jogo nas configurações do modpack, senão o jogo e o launcher podem fechar sozinhos.', { free: gb(low.freeMb), need: gb(low.needMb) }),
             confirm: t('Jogar mesmo assim'),
             cancel: t('Cancelar'),
             tone: 'danger',
