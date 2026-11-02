@@ -19,6 +19,7 @@ const path = require('path')
 
 const CHUNK_BYTES = 8 * 1024 * 1024
 const RETRIES = 3
+const DEFAULT_KEY_FILE = path.join(__dirname, '..', '.release-key.json')
 
 /** File names listed under `files:` in an electron-builder latest*.yml. */
 function feedFiles(yml){
@@ -113,10 +114,43 @@ async function sendFile({ baseUrl, key, distDir, name, log = console.log }){
     }
 }
 
-async function publish({ distDir, feed, baseUrl, key, log = console.log }){
+function feedVersion(yml){
+    const m = /^version:\s*['"]?([^'"\s]+)/m.exec(yml)
+    if(!m) throw new Error('latest.yml without version')
+    return m[1]
+}
+
+async function registerReleaseKey({ baseUrl, key, distDir, feed, keyFile = DEFAULT_KEY_FILE, log = console.log }){
+    if(feed !== 'latest.yml') return
+    const version = feedVersion(fs.readFileSync(path.join(distDir, feed), 'utf8'))
+    if(!fs.existsSync(keyFile)) throw new Error(`${keyFile} not found: build with npm run dist:win`)
+    const release = JSON.parse(fs.readFileSync(keyFile, 'utf8'))
+    if(release.version !== version) throw new Error(`Release key is for ${release.version}, latest.yml is ${version}: rebuild`)
+    const res = await fetch(`${baseUrl}/api/ci/launcher/release-key`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Launcher ${key}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ version, key: release.key })
+    })
+    const text = await res.text()
+    let payload = null
+    try { payload = JSON.parse(text) } catch { payload = null }
+    if(res.status < 200 || res.status >= 300){
+        throw new Error(`release key: ${errorText({
+            status: res.status,
+            payload,
+            server: res.headers?.get?.('server') ?? null,
+            cfRay: res.headers?.get?.('cf-ray') ?? null,
+            snippet: payload == null ? text.replace(/\s+/g, ' ').trim().slice(0, 200) : ''
+        })}`)
+    }
+    log(`  registered release key for ${version}`)
+}
+
+async function publish({ distDir, feed, baseUrl, key, keyFile, log = console.log }){
     if(!key) throw new Error('LAUNCHER_PUBLISH_KEY is not set.')
     const plan = publishPlan(distDir, feed)
     log(`Publishing ${feed} to ${baseUrl}: ${plan.join(', ')}`)
+    await registerReleaseKey({ baseUrl, key, distDir, feed, keyFile, log })
     for(const name of plan){
         const result = await sendFile({ baseUrl, key, distDir, name, log })
         if(result === 'exists') log(`  ${name} is already on the website, skipped`)
@@ -124,7 +158,7 @@ async function publish({ distDir, feed, baseUrl, key, log = console.log }){
     log(`Published ${feed}.`)
 }
 
-module.exports = { feedFiles, publishPlan, sendFile, publish, CHUNK_BYTES }
+module.exports = { feedFiles, feedVersion, publishPlan, registerReleaseKey, sendFile, publish, CHUNK_BYTES }
 
 if(require.main === module){
     const [distDir, feed] = process.argv.slice(2)

@@ -256,6 +256,7 @@ export interface Backend {
   markFeedSeen(ids: string[]): void
   onUpdate(cb: (e: UpdateEvent) => void): void
   checkForUpdate(): void
+  checkForUpdateNow(): Promise<'none' | 'update' | 'error'>
   installUpdate(): void
   changelog(): Promise<ChangelogRelease | null>
   openExternal(url: string): void

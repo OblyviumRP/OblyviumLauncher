@@ -5,11 +5,15 @@ artifactName: 'Oblyvium-Launcher-setup-${version}.${ext}'
 copyright: 'Copyright © 2026 Oblyvium'
 
 asar: true
+asarUnpack:
+  - 'app/assets/native/*.node'
 compression: 'maximum'
 
 files:
   - '!{dist,.gitignore,.vscode,docs,dev-app-update.yml,.nvmrc,eslint.config.mjs}'
   - '!scripts/publish-update.cjs'
+  - '!scripts/release-key.cjs'
+  - '!.release-key.json'
   - '!test/**'
   # Only the built interface ships (ui/dist); its sources and tooling stay out.
   - '!ui/{src,node_modules,public,scripts}/**'

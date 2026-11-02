@@ -416,6 +416,9 @@ export function createMockBackend(): Backend {
     markFeedSeen() {},
     onUpdate() {},
     checkForUpdate() {},
+    async checkForUpdateNow() {
+      return 'none' as const
+    },
     installUpdate() {},
     changelog: async () => null,
     openExternal(url) {

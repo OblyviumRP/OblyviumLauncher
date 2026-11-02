@@ -19,6 +19,12 @@ function fakeSite({ existing = [], failOnce = {}, refuse = {} } = {}){
         req.on('data', c => chunks.push(c))
         req.on('end', () => {
             const url = new URL(req.url, 'http://x')
+            if(url.pathname === '/api/ci/launcher/release-key'){
+                requests.push({ name: 'release-key', auth: req.headers.authorization })
+                const ok = req.headers.authorization === `Launcher ${KEY}`
+                res.writeHead(ok ? 200 : 401, { 'Content-Type': 'application/json' })
+                return res.end(JSON.stringify(ok ? { data: { version: 'x' } } : { error: { code: 'UNAUTHENTICATED' } }))
+            }
             const name = decodeURIComponent(url.pathname.replace('/api/ci/launcher/updates/', ''))
             const offset = Number(url.searchParams.get('offset'))
             const total = Number(url.searchParams.get('total'))
@@ -50,6 +56,7 @@ function fakeSite({ existing = [], failOnce = {}, refuse = {} } = {}){
 }
 
 let dist
+let keyFile
 let site
 const quiet = () => {}
 
@@ -71,6 +78,8 @@ const WIN_YML = [
 
 beforeEach(() => {
     dist = fs.mkdtempSync(path.join(os.tmpdir(), 'publish-'))
+    keyFile = path.join(dist, 'release-key.json')
+    fs.writeFileSync(keyFile, JSON.stringify({ version: '2.0.5', key: 'abc' }))
 })
 afterEach(() => {
     if(site) site.server.close()
@@ -103,7 +112,7 @@ test('publish uploads in 8 MB pieces, yml last, with the key', async () => {
     site = await fakeSite()
     const big = Buffer.alloc(CHUNK_BYTES * 2 + 5, 7)
     writeDist({ 'latest.yml': WIN_YML.replace('size: 3', `size: ${big.length}`), 'Oblyvium-Launcher-setup-2.0.5.exe': big })
-    await publish({ distDir: dist, feed: 'latest.yml', baseUrl: site.baseUrl, key: KEY, log: quiet })
+    await publish({ distDir: dist, feed: 'latest.yml', baseUrl: site.baseUrl, key: KEY, log: quiet, keyFile })
 
     assert.deepStrictEqual(site.done, ['Oblyvium-Launcher-setup-2.0.5.exe', 'latest.yml'])
     assert.ok(site.received.get('Oblyvium-Launcher-setup-2.0.5.exe').equals(big))
@@ -115,7 +124,7 @@ test('publish uploads in 8 MB pieces, yml last, with the key', async () => {
 test('publish skips a file the website already has', async () => {
     site = await fakeSite({ existing: ['Oblyvium-Launcher-setup-2.0.5.exe'] })
     writeDist({ 'latest.yml': WIN_YML, 'Oblyvium-Launcher-setup-2.0.5.exe': 'exe' })
-    await publish({ distDir: dist, feed: 'latest.yml', baseUrl: site.baseUrl, key: KEY, log: quiet })
+    await publish({ distDir: dist, feed: 'latest.yml', baseUrl: site.baseUrl, key: KEY, log: quiet, keyFile })
     assert.deepStrictEqual(site.done, ['latest.yml'])
 })
 
@@ -123,7 +132,7 @@ test('publish restarts a file after a 5xx and finishes', { timeout: 20000 }, asy
     site = await fakeSite({ failOnce: { 'Oblyvium-Launcher-setup-2.0.5.exe': CHUNK_BYTES } })
     const big = Buffer.alloc(CHUNK_BYTES + 10, 1)
     writeDist({ 'latest.yml': WIN_YML, 'Oblyvium-Launcher-setup-2.0.5.exe': big })
-    await publish({ distDir: dist, feed: 'latest.yml', baseUrl: site.baseUrl, key: KEY, log: quiet })
+    await publish({ distDir: dist, feed: 'latest.yml', baseUrl: site.baseUrl, key: KEY, log: quiet, keyFile })
     assert.ok(site.received.get('Oblyvium-Launcher-setup-2.0.5.exe').equals(big))
     assert.deepStrictEqual(site.done, ['Oblyvium-Launcher-setup-2.0.5.exe', 'latest.yml'])
 })
@@ -132,7 +141,7 @@ test('publish fails with the website message when the yml is refused', async () 
     site = await fakeSite({ refuse: { 'latest.yml': 'Envie "x.exe" antes do latest.yml.' } })
     writeDist({ 'latest.yml': WIN_YML, 'Oblyvium-Launcher-setup-2.0.5.exe': 'exe' })
     await assert.rejects(
-        publish({ distDir: dist, feed: 'latest.yml', baseUrl: site.baseUrl, key: KEY, log: quiet }),
+        publish({ distDir: dist, feed: 'latest.yml', baseUrl: site.baseUrl, key: KEY, log: quiet, keyFile }),
         /latest\.yml: Envie "x\.exe" antes do latest\.yml\./
     )
 })
@@ -140,9 +149,9 @@ test('publish fails with the website message when the yml is refused', async () 
 test('publish fails on a wrong key without retrying', async () => {
     site = await fakeSite()
     writeDist({ 'latest.yml': WIN_YML, 'Oblyvium-Launcher-setup-2.0.5.exe': 'exe' })
-    await assert.rejects(publish({ distDir: dist, feed: 'latest.yml', baseUrl: site.baseUrl, key: 'errada', log: quiet }), /UNAUTHENTICATED/)
+    await assert.rejects(publish({ distDir: dist, feed: 'latest.yml', baseUrl: site.baseUrl, key: 'errada', log: quiet, keyFile }), /UNAUTHENTICATED/)
     assert.strictEqual(site.requests.length, 1)
-    await assert.rejects(publish({ distDir: dist, feed: 'latest.yml', baseUrl: site.baseUrl, key: '', log: quiet }), /LAUNCHER_PUBLISH_KEY/)
+    await assert.rejects(publish({ distDir: dist, feed: 'latest.yml', baseUrl: site.baseUrl, key: '', log: quiet, keyFile }), /LAUNCHER_PUBLISH_KEY/)
 })
 
 test('an error page that never reached the website reports server, cf-ray and body', async () => {
@@ -157,10 +166,43 @@ test('an error page that never reached the website reports server, cf-ray and bo
     try {
         writeDist({ 'latest.yml': WIN_YML, 'Oblyvium-Launcher-setup-2.0.5.exe': 'exe' })
         await assert.rejects(
-            publish({ distDir: dist, feed: 'latest.yml', baseUrl: `http://127.0.0.1:${proxy.address().port}`, key: KEY, log: quiet }),
+            publish({ distDir: dist, feed: 'latest.yml', baseUrl: `http://127.0.0.1:${proxy.address().port}`, key: KEY, log: quiet, keyFile }),
             /HTTP 403 \(server: cloudflare, cf-ray: abc123-GRU, body: <html><title>Attention Required! \| Cloudflare/
         )
     } finally {
         proxy.close()
     }
+})
+
+test('chave de release: só para latest.yml e da mesma versão', async () => {
+    const fs = require('fs')
+    const os = require('os')
+    const path = require('path')
+    const { registerReleaseKey, feedVersion } = require('../scripts/publish-update.cjs')
+    assert.strictEqual(feedVersion('version: \'3.8.0\'\nfiles: []\n'), '3.8.0')
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rk-'))
+    fs.writeFileSync(path.join(dir, 'latest.yml'), 'version: 3.8.0\n')
+    const keyFile = path.join(dir, 'k.json')
+    fs.writeFileSync(keyFile, JSON.stringify({ version: '3.7.0', key: 'x' }))
+    await assert.rejects(registerReleaseKey({ baseUrl: 'http://x', key: 'k', distDir: dir, feed: 'latest.yml', keyFile }), /rebuild/)
+    await registerReleaseKey({ baseUrl: 'http://x', key: 'k', distDir: dir, feed: 'latest-mac.yml', keyFile })
+    const calls = []
+    const realFetch = global.fetch
+    global.fetch = async (url, init) => { calls.push({ url, init }); return { ok: true, text: async () => '' } }
+    try {
+        fs.writeFileSync(keyFile, JSON.stringify({ version: '3.8.0', key: 'abc' }))
+        await registerReleaseKey({ baseUrl: 'http://x', key: 'k', distDir: dir, feed: 'latest.yml', keyFile, log: () => {} })
+    } finally {
+        global.fetch = realFetch
+    }
+    assert.strictEqual(calls[0].url, 'http://x/api/ci/launcher/release-key')
+    assert.deepStrictEqual(JSON.parse(calls[0].init.body), { version: '3.8.0', key: 'abc' })
+})
+
+test('publish registra a chave da release antes de qualquer arquivo', async () => {
+    site = await fakeSite()
+    writeDist({ 'latest.yml': WIN_YML, 'Oblyvium-Launcher-setup-2.0.5.exe': 'exe' })
+    await publish({ distDir: dist, feed: 'latest.yml', baseUrl: site.baseUrl, key: KEY, log: quiet, keyFile })
+    assert.strictEqual(site.requests[0].name, 'release-key')
+    assert.deepStrictEqual(site.done, ['Oblyvium-Launcher-setup-2.0.5.exe', 'latest.yml'])
 })

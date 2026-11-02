@@ -8,3 +8,5 @@
 /app/.mods-qa.html
 /app/.notifications-qa.html
 /app/.forja-qa.html
+/.release-key.json
+/app/assets/native/

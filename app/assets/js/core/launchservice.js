@@ -382,10 +382,19 @@ async function launch(handlers){
         const modLoaderData = await new DistributionIndexProcessor(ConfigManager.getCommonDirectory(), distro, serv.rawServer.id).loadModLoaderVersionJson(serv)
         const versionData = await new MojangIndexProcessor(ConfigManager.getCommonDirectory(), serv.rawServer.minecraftVersion).getVersionJson()
 
-        const ticket = await Sentinel.requestTicket(account).catch(err => {
+        let ticket = null
+        try {
+            ticket = await Sentinel.requestTicket(account)
+        } catch(err) {
             logger.warn('Ticket de entrada não emitido.', err)
-            return null
-        })
+            const failure = Sentinel.ticketFailure(err)
+            if(failure.code === 'LAUNCHER_DESATUALIZADO'){
+                ipcRenderer.send('autoUpdateAction', 'checkForUpdate')
+            }
+            if(process.defaultApp !== true){
+                throw new LaunchError(failure.code === 'LAUNCHER_DESATUALIZADO' ? 'Launcher desatualizado' : 'Não foi possível entrar', failure.message)
+            }
+        }
 
         h.onStatus(q('landing.dlAsync.launchingGame'))
         const pb = new ProcessBuilder(serv, versionData, modLoaderData, account, appVersion(), { gameDir, configKey })

@@ -234,6 +234,8 @@ export const en: Record<string, string> = {
   "Modpacks": "Modpacks",
   "Atualizando o launcher": "Updating the launcher",
   "Aguarde o download terminar para jogar.": "Wait for the download to finish to play.",
+  "A versão nova está baixando e o launcher reabre sozinho.": "The new version is downloading and the launcher reopens by itself.",
+  "Procurando atualização do launcher…": "Checking for launcher updates…",
   "Pacote": "Pack",
   "Pacote {v}": "Pack {v}",
   "Padrão": "Default",
