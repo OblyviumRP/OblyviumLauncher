@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 import { Outlet, useLocation } from 'react-router'
 import { Toaster } from 'sonner'
 import { AskDialog } from '@/components/shared/ask-dialog'
+import { CrashReportDialog } from '@/components/shared/crash-report-dialog'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { useLauncher } from '@/store/launcher'
 import { Sidebar } from './sidebar'
@@ -18,6 +19,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <TooltipProvider delayDuration={150} skipDelayDuration={0}>
         {children}
         <AskDialog />
+        <CrashReportDialog />
         <Toaster
           theme="dark"
           position="bottom-right"
