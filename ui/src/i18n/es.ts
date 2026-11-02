@@ -477,7 +477,6 @@ export const es: Record<string, string> = {
   "O jogo fechou com erro": "El juego se cerró con un error",
   "O que vai junto:": "Qué se envía:",
   "O que você estava fazendo quando fechou?": "¿Qué estabas haciendo cuando se cerró?",
-  "O token da sua conta e o nome do seu usuário do Windows são tirados dos arquivos antes de enviar.": "El token de tu cuenta y tu nombre de usuario de Windows se quitan de los archivos antes de enviar.",
   "Quer enviar um relatório para a staff? Nada sai do seu computador sem você clicar em Enviar.": "¿Quieres enviar un informe al staff? Nada sale de tu computadora sin que hagas clic en Enviar.",
   "Relatório enviado": "Informe enviado",
   "Relatório não enviado": "Informe no enviado",

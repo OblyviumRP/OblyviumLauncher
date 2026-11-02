@@ -477,7 +477,6 @@ export const en: Record<string, string> = {
   "O jogo fechou com erro": "The game closed with an error",
   "O que vai junto:": "What gets sent:",
   "O que você estava fazendo quando fechou?": "What were you doing when it closed?",
-  "O token da sua conta e o nome do seu usuário do Windows são tirados dos arquivos antes de enviar.": "Your account token and your Windows user name are removed from the files before sending.",
   "Quer enviar um relatório para a staff? Nada sai do seu computador sem você clicar em Enviar.": "Send a report to the staff? Nothing leaves your computer until you click Send.",
   "Relatório enviado": "Report sent",
   "Relatório não enviado": "Report not sent",
