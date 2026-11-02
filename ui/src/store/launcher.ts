@@ -444,12 +444,16 @@ export const useLauncher = create<State>()(
         get().ask?.resolve(ok)
         set({ ask: null })
       },
-      closeCrash: () => set({ crash: null }),
+      closeCrash: () => {
+        void backend().dismissCrashReport().catch(() => undefined)
+        set({ crash: null })
+      },
       sendCrash: async (description) => {
         const crash = get().crash
         if (crash == null) return false
         try {
           await backend().sendCrashReport(crash, description)
+          void backend().dismissCrashReport().catch(() => undefined)
           set({ crash: null })
           toast.success(t('Relatório enviado'), { description: t('A staff vai olhar. Obrigado!') })
           return true

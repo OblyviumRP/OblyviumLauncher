@@ -278,6 +278,7 @@ export function createMockBackend(): Backend {
     async pendingCrashReport() {
       return null
     },
+    async dismissCrashReport() {},
     async memoryWarning() {
       return null
     },

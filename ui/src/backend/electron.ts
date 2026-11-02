@@ -429,13 +429,11 @@ export function createElectronBackend(): Backend {
       }
       const gpuDevices = await ipcRenderer.invoke(SHELL_OPCODE.GPU_INFO).catch(() => [])
       const { files, system } = await CrashReport.collect({ gameDir: e.gameDir, crashReport: e.crashReport, startedAt: e.startedAt, maxRam, secrets: [e.accessToken], gpuDevices })
-      await CrashReport.writeSeen(ConfigManager.getLauncherDirectory())
       return { serverId: e.serverId, code: e.code, files, system } as CrashDraft
     },
     async pendingCrashReport() {
       const dir = ConfigManager.getLauncherDirectory()
       const seen = await CrashReport.readSeen(dir)
-      await CrashReport.writeSeen(dir)
       const found = await CrashReport.pendingHsErr(ConfigManager.getInstanceDirectory(), seen)
       if (found == null) return null
       const gpuDevices = await ipcRenderer.invoke(SHELL_OPCODE.GPU_INFO).catch(() => [])
@@ -448,6 +446,9 @@ export function createElectronBackend(): Backend {
       }
       const { files, system } = await CrashReport.collect({ gameDir: found.gameDir, crashReport: null, startedAt: found.mtime - 60_000, maxRam, secrets: [acc?.accessToken], gpuDevices })
       return { serverId: found.serverId, code: -1, files, system } as CrashDraft
+    },
+    async dismissCrashReport() {
+      await CrashReport.writeSeen(ConfigManager.getLauncherDirectory())
     },
     async memoryWarning(serverId: string, profileId: string) {
       try {
