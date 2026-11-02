@@ -234,6 +234,8 @@ export const es: Record<string, string> = {
   "Modpacks": "Modpacks",
   "Atualizando o launcher": "Actualizando el launcher",
   "Aguarde o download terminar para jogar.": "Espera a que termine la descarga para jugar.",
+  "A versão nova está baixando e o launcher reabre sozinho.": "La nueva versión se está descargando y el launcher se reabre solo.",
+  "Procurando atualização do launcher…": "Buscando actualización del launcher…",
   "Pacote": "Paquete",
   "Pacote {v}": "Paquete {v}",
   "Padrão": "Predeterminado",

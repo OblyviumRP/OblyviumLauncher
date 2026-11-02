@@ -1,6 +1,6 @@
 {
   "name": "oblyviumlauncher",
-  "version": "3.7.0",
+  "version": "3.8.0",
   "productName": "Oblyvium Launcher",
   "description": "Oblyvium Launcher",
   "author": "Oblyvium (https://github.com/OblyviumRP/)",
@@ -11,7 +11,7 @@
   "scripts": {
     "start": "electron .",
     "test": "node --test \"test/*.test.js\"",
-    "dist": "npm run ui:build && electron-builder build",
+    "dist": "node scripts/release-key.cjs && npm run ui:build && electron-builder build",
     "dist:win": "npm run dist -- -w",
     "dist:mac": "npm run dist -- -m",
     "dist:linux": "npm run dist -- -l",

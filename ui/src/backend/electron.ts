@@ -861,6 +861,28 @@ export function createElectronBackend(): Backend {
       if (isDev) return
       ipcRenderer.send('autoUpdateAction', 'checkForUpdate')
     },
+    checkForUpdateNow() {
+      if (isDev) return Promise.resolve('none' as const)
+      return new Promise<'none' | 'update' | 'error'>((resolve) => {
+        const results: Record<string, 'none' | 'update' | 'error'> = {
+          'update-not-available': 'none',
+          'update-available': 'update',
+          'update-downloaded': 'update',
+          realerror: 'error',
+        }
+        const done = (r: 'none' | 'update' | 'error') => {
+          clearTimeout(timer)
+          ipcRenderer.removeListener('autoUpdateNotification', listener)
+          resolve(r)
+        }
+        const listener = (_e: unknown, arg: string) => {
+          if (arg in results) done(results[arg])
+        }
+        const timer = setTimeout(() => done('error'), 10_000)
+        ipcRenderer.on('autoUpdateNotification', listener)
+        ipcRenderer.send('autoUpdateAction', 'checkForUpdate')
+      })
+    },
     installUpdate() {
       if (LaunchService.isBusy() || LaunchService.isRunning()) {
         throw new UserError('Jogo aberto', 'Feche o jogo antes de instalar a atualização.')

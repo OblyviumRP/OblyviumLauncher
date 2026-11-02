@@ -161,9 +161,9 @@ export const useLauncher = create<State>()(
             get().patchTask('launcher-update', { progress: e.percent })
           } else if (e.kind === 'ready') {
             set({ update: { state: 'ready', version: e.version } })
-            // Atualização obrigatória: instala na hora; com o jogo aberto, fica para o próximo Jogar.
             try {
-              return b.installUpdate()
+              b.installUpdate()
+              return
             } catch {}
             get().patchTask('launcher-update', { status: 'done', progress: 100, detail: t('Pronta para instalar'), finishedAt: Date.now() })
             get().notify({ title: t('Atualização {v} pronta', { v: e.version }), body: t('Reinicie o launcher para instalar.'), tone: 'primary', href: '/configuracoes?aba=sobre' })
@@ -256,6 +256,13 @@ export const useLauncher = create<State>()(
           toast.warning(t('Entre em uma conta'), { description: t('Adicione uma conta para jogar.') })
           return
         }
+        set((st) => ({ launch: { ...st.launch, state: 'preparing', status: t('Procurando atualização do launcher…'), progress: null } }))
+        const check = await backend().checkForUpdateNow()
+        if (check === 'update') {
+          set((st) => ({ launch: { ...st.launch, state: 'idle', status: '', progress: null } }))
+          toast(t('Atualizando o launcher'), { description: t('A versão nova está baixando e o launcher reabre sozinho.') })
+          return
+        }
         const serv = s.servers.find((x) => x.id === s.serverId)
         const taskId = get().addTask({ title: t('{name} · arquivos do jogo', { name: serv?.name ?? '' }), detail: t('Preparando'), progress: null, kind: 'game' })
         set({
@@ -302,6 +309,13 @@ export const useLauncher = create<State>()(
               toast.success(t('{name} aberto', { name: serv?.name ?? 'Minecraft' }))
             },
             onExit: ({ code, started: wasStarted, crashReport }) => {
+              if (get().update.state === 'ready') {
+                setTimeout(() => {
+                  try {
+                    backend().installUpdate()
+                  } catch {}
+                }, 3000)
+              }
               const crashed = code !== 0 && code != null
               set((st) => ({
                 launch: { ...st.launch, state: crashed ? 'crashed' : 'idle', status: '', progress: null, code, crashReport },
