@@ -107,8 +107,11 @@ function isRunning(){
     return running.size > 0
 }
 
+const stopRequested = new WeakSet()
+
 function stop(){
     for(const proc of running){
+        stopRequested.add(proc)
         proc.kill()
     }
 }
@@ -458,7 +461,7 @@ async function launch(handlers){
                 updateLauncherPresence(true)
             }
             const crashReport = code !== 0 ? await newestCrashReport(gameDir, startedAt) : null
-            h.onExit({ code, started, crashReport })
+            h.onExit({ code, started, crashReport, stoppedByPlayer: stopRequested.has(proc), gameDir, startedAt, configKey, serverId: serv.rawServer.id, accessToken: account.accessToken })
         }
         proc.on('close', code => { finish(code) })
         proc.on('error', err => {

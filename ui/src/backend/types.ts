@@ -114,6 +114,13 @@ export type ProjectDetails = {
 
 export type LogLine = { t: string; level: 'INFO' | 'WARN' | 'ERROR' | 'DEBUG'; msg: string }
 
+export type CrashDraft = {
+  serverId: string
+  code: number
+  files: { name: string; content: string }[]
+  system: { os: string; java: string; totalRamMb: number; maxRamMb: number; mods: string[] }
+}
+
 export type LaunchProgress = { phase: 'verify' | 'download' | 'java'; percent: number }
 
 export type LaunchHandlers = {
@@ -123,7 +130,7 @@ export type LaunchHandlers = {
   onModsDisabled: (fileNames: string[]) => void
   onLog: (line: { stream: 'stdout' | 'stderr'; line: string }) => void
   onStarted: () => void
-  onExit: (r: { code: number | null; started: boolean; crashReport: string | null }) => void
+  onExit: (r: { code: number | null; started: boolean; crashReport: string | null; stoppedByPlayer?: boolean }) => void
   askDownloadJava: (o: { major: number }) => Promise<boolean>
 }
 
@@ -201,6 +208,8 @@ export interface Backend {
   // Jogo
   launch(h: LaunchHandlers): Promise<boolean>
   stop(): void
+  prepareCrashReport(): Promise<CrashDraft | null>
+  sendCrashReport(draft: CrashDraft, description: string): Promise<void>
   verifyFiles(h: Pick<LaunchHandlers, 'onStatus' | 'onProgress' | 'onModsDisabled'>): Promise<boolean>
 
   // Conteúdo do perfil

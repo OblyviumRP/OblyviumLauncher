@@ -10,6 +10,7 @@ import {
   type ChangelogRelease,
   type ContentFile,
   type ContentType,
+  type CrashDraft,
   type FeedItem,
   type GameSettings,
   type LaunchHandlers,
@@ -56,6 +57,7 @@ const isDev: boolean = mod('isdev')
 const { MSFT_OPCODE, MSFT_REPLY_TYPE, MSFT_ERROR, WINDOW_OPCODE } = mod('ipcconstants')
 const DistroSync = mod('core/distrosync')
 const LaunchService = mod('core/launchservice')
+const CrashReport = mod('crashreport')
 const News = mod('core/news')
 const Skins = mod('core/skins')
 const GameSettingsCore = mod('core/gamesettings')
@@ -63,6 +65,7 @@ const { getServerStatus } = req('helios-core/mojang')
 const { validateSelectedJvm, ensureJavaDirIsRoot, javaExecFromRoot, discoverBestJvmInstallation } = req('helios-core/java')
 
 let distro: any = null
+let lastExit: any = null
 
 const SCENES: SceneKey[] = ['arcane', 'ember', 'tide', 'grove', 'dusk', 'frost']
 function sceneFor(id: string, main: boolean): SceneKey {
@@ -403,6 +406,10 @@ export function createElectronBackend(): Backend {
           onDistro: (d: any) => {
             distro = d
           },
+          onExit: (r: any) => {
+            lastExit = r
+            h.onExit({ code: r.code, started: r.started, crashReport: r.crashReport, stoppedByPlayer: r.stoppedByPlayer })
+          },
         })
       } catch (err) {
         throw asUserError(err, 'Não foi possível abrir o jogo')
@@ -410,6 +417,26 @@ export function createElectronBackend(): Backend {
     },
     stop() {
       LaunchService.stop()
+    },
+    async prepareCrashReport() {
+      const e = lastExit
+      if (e == null || e.code === 0 || e.code == null) return null
+      let maxRam: string | null = null
+      try {
+        maxRam = ConfigManager.getMaxRAM(e.configKey)
+      } catch {
+        maxRam = null
+      }
+      const { files, system } = await CrashReport.collect({ gameDir: e.gameDir, crashReport: e.crashReport, startedAt: e.startedAt, maxRam, secrets: [e.accessToken] })
+      return { serverId: e.serverId, code: e.code, files, system } as CrashDraft
+    },
+    async sendCrashReport(draft: CrashDraft, description: string) {
+      const acc = ConfigManager.getSelectedAccount()
+      try {
+        await CrashReport.send({ nick: acc?.displayName ?? 'desconhecido', serverId: draft.serverId, exitCode: draft.code, description, system: draft.system, files: draft.files })
+      } catch (err) {
+        throw new UserError('Relatório não enviado', err instanceof Error ? err.message : String(err))
+      }
     },
     async verifyFiles(h) {
       try {

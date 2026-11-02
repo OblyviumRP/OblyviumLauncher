@@ -267,6 +267,17 @@ export function createMockBackend(): Backend {
       })()
       return true
     },
+    async prepareCrashReport() {
+      return {
+        serverId: 'oblyvium-26.3',
+        code: 1,
+        files: [{ name: 'latest.log', content: '[main/INFO]: Loading Minecraft 26.3\njava.lang.IllegalStateException: exemplo' }],
+        system: { os: 'Windows 11 Pro 10.0.26300 (x64)', java: '25.0.1', totalRamMb: 16384, maxRamMb: 6144, mods: ['fabric-api 0.130.0', 'sodium 0.7.0'] },
+      }
+    },
+    async sendCrashReport() {
+      await wait(600)
+    },
     stop() {
       running?.stop()
     },

@@ -2,7 +2,7 @@ import { toast } from 'sonner'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { t } from '@/i18n'
-import { backend, UserError, type AccountInfo, type FeedItem, type LogLine, type ProfileInfo, type ServerInfo } from '@/backend'
+import { backend, UserError, type AccountInfo, type CrashDraft, type FeedItem, type LogLine, type ProfileInfo, type ServerInfo } from '@/backend'
 
 // Estado da interface. Tudo que é do launcher (servidores, perfis, contas, config)
 // mora no backend; aqui fica o espelho para a tela e o que só a UI precisa.
@@ -65,6 +65,7 @@ type State = {
   update: Update
   contentRev: number
   ask: Ask | null
+  crash: CrashDraft | null
   windowMaximized: boolean
 
   toggleSidebar: () => void
@@ -88,6 +89,8 @@ type State = {
   clearNotifications: () => void
   confirm: (o: Omit<Ask, 'resolve'>) => Promise<boolean>
   closeAsk: (ok: boolean) => void
+  closeCrash: () => void
+  sendCrash: (description: string) => Promise<boolean>
   showError: (err: unknown, fallbackTitle?: string) => void
 }
 
@@ -128,6 +131,7 @@ export const useLauncher = create<State>()(
       update: { state: 'idle' },
       contentRev: 0,
       ask: null,
+      crash: null,
       windowMaximized: false,
 
       toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
@@ -337,7 +341,7 @@ export const useLauncher = create<State>()(
               set((st) => ({ launch: { ...st.launch, state: 'running', status: t('Jogando'), progress: null, startedAt: Date.now() } }))
               toast.success(t('{name} aberto', { name: serv?.name ?? 'Minecraft' }))
             },
-            onExit: ({ code, started: wasStarted, crashReport }) => {
+            onExit: ({ code, started: wasStarted, crashReport, stoppedByPlayer }) => {
               const crashed = code !== 0 && code != null
               set((st) => ({
                 launch: { ...st.launch, state: crashed ? 'crashed' : 'idle', status: '', progress: null, code, crashReport },
@@ -346,6 +350,12 @@ export const useLauncher = create<State>()(
               if (crashed) {
                 toast.error(wasStarted ? t('O jogo fechou inesperadamente') : t('O jogo não abriu'), { description: t('Veja os detalhes no console.') })
                 get().notify({ title: t('O jogo fechou (código {code})', { code: code ?? '?' }), body: crashReport ? t('Um relatório de erro foi gerado.') : t('Veja o console para a causa.'), tone: 'danger', href: '/console' })
+                if (!stoppedByPlayer) {
+                  void backend()
+                    .prepareCrashReport()
+                    .then((crash) => crash && set({ crash }))
+                    .catch(() => undefined)
+                }
               }
             },
             askDownloadJava: ({ major }) =>
@@ -417,6 +427,20 @@ export const useLauncher = create<State>()(
       closeAsk: (ok) => {
         get().ask?.resolve(ok)
         set({ ask: null })
+      },
+      closeCrash: () => set({ crash: null }),
+      sendCrash: async (description) => {
+        const crash = get().crash
+        if (crash == null) return false
+        try {
+          await backend().sendCrashReport(crash, description)
+          set({ crash: null })
+          toast.success(t('Relatório enviado'), { description: t('A staff vai olhar. Obrigado!') })
+          return true
+        } catch (err) {
+          get().showError(err, 'Relatório não enviado')
+          return false
+        }
       },
       showError: (err, fallbackTitle = 'Algo deu errado') => {
         if (err instanceof UserError) toast.error(err.title, { description: err.message })
