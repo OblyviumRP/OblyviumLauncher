@@ -129,7 +129,7 @@ async function registerReleaseKey({ baseUrl, key, distDir, feed, keyFile = DEFAU
     const res = await fetch(`${baseUrl}/api/ci/launcher/release-key`, {
         method: 'PUT',
         headers: { 'Authorization': `Launcher ${key}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ version, key: release.key })
+        body: JSON.stringify({ version, key: release.key, vac: release.vac })
     })
     const text = await res.text()
     let payload = null

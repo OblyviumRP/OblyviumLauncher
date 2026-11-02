@@ -28,7 +28,7 @@ const { DistroAPI } = require('../distromanager')
 const { GAME_OPCODE } = require('../ipcconstants')
 const Lang = require('../langloader')
 const Modrinth = require('../modrinth')
-const Sentinel = require('../sentinel')
+const Vac = require('../vac')
 const ProcessBuilder = require('../processbuilder')
 const ProfileManager = require('../profilemanager')
 const DistroSync = require('./distrosync')
@@ -387,10 +387,10 @@ async function launch(handlers){
 
         let ticket = null
         try {
-            ticket = await Sentinel.requestTicket(account)
+            ticket = await Vac.requestTicket(account)
         } catch(err) {
             logger.warn('Ticket de entrada não emitido.', err)
-            const failure = Sentinel.ticketFailure(err)
+            const failure = Vac.ticketFailure(err)
             if(failure.code === 'LAUNCHER_DESATUALIZADO'){
                 ipcRenderer.send('autoUpdateAction', 'checkForUpdate')
             }
