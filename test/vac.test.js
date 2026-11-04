@@ -24,6 +24,7 @@ test('falha de ticket vira motivo para o jogador', () => {
     const { ticketFailure } = require('../app/assets/js/vac')
     const http = (statusCode, error) => ({ response: { statusCode, body: { error } } })
     assert.strictEqual(ticketFailure(new Error('ECONNREFUSED')).code, 'REDE')
+    assert.strictEqual(ticketFailure(Object.assign(new Error('spawn reg ENOENT'), { code: 'IDENTIFICACAO' })).code, 'IDENTIFICACAO')
     assert.strictEqual(ticketFailure(http(426, { code: 'LAUNCHER_DESATUALIZADO', message: 'x' })).code, 'LAUNCHER_DESATUALIZADO')
     assert.strictEqual(ticketFailure(http(403, { code: 'FORBIDDEN', message: 'x' })).message, 'Entre de novo com a Microsoft para jogar.')
     assert.strictEqual(ticketFailure(http(429, { code: 'RATE_LIMITED', message: 'Aguarde um minuto.' })).message, 'Aguarde um minuto.')
