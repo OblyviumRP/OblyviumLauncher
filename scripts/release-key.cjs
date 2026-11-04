@@ -35,7 +35,8 @@ function main(){
         '--key-file', keyFile,
         '--bundle-out', bundleFile,
         '--agent', jars.agent,
-        '--mod', jars.mod
+        '--mod', jars.mod,
+        ...(process.env.OBLYVIUM_REUSE_KEY === '1' ? ['--reuse-key'] : [])
     ], { stdio: 'inherit' })
 }
 
