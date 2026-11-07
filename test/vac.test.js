@@ -65,3 +65,28 @@ test('pacote do VacOblyvium vira dois jars com nome aleatório', () => {
         fs.rmSync(tmp, { recursive: true, force: true })
     }
 })
+
+test('último ticket vale com o site fora do ar só para o mesmo nick e versão, longe de vencer', () => {
+    const fs = require('fs')
+    const os = require('os')
+    const path = require('path')
+    const { saveTicket, cachedTicket } = require('../app/assets/js/vac')
+    const { version } = require('../package.json')
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'vac-ticket-'))
+    try {
+        const file = path.join(tmp, 'vac-ticket.json')
+        const now = 1_000_000_000
+        const make = (payload) => ({ ticket: `${Buffer.from(JSON.stringify(payload)).toString('base64url')}.assinatura`, key: 'K' })
+        assert.strictEqual(cachedTicket(file, 'Steve', now), null)
+        const ok = make({ nick: 'Steve', lv: version, exp: now / 1000 + 3600 })
+        saveTicket(file, ok)
+        assert.deepStrictEqual(cachedTicket(file, 'steve', now), ok)
+        assert.strictEqual(cachedTicket(file, 'Alex', now), null)
+        saveTicket(file, make({ nick: 'Steve', lv: version, exp: now / 1000 + 60 }))
+        assert.strictEqual(cachedTicket(file, 'Steve', now), null)
+        saveTicket(file, make({ nick: 'Steve', lv: '0.0.1', exp: now / 1000 + 3600 }))
+        assert.strictEqual(cachedTicket(file, 'Steve', now), null)
+    } finally {
+        fs.rmSync(tmp, { recursive: true, force: true })
+    }
+})
