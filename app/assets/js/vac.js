@@ -10,6 +10,7 @@ const TICKET_URL = process.env.OBLYVIUM_TICKET_URL || 'https://oblyvium.com.br/a
 const CHALLENGE_URL = `${TICKET_URL}/desafio`
 const PROVER_PATH = path.join(__dirname, '..', 'native', 'vac_release.node')
 const BUNDLE_PATH = path.join(__dirname, '..', 'native', 'vac.bin')
+const TICKET_MARGIN_MS = 10 * 60 * 1000
 const run = promisify(execFile)
 
 function fingerprintOf(machineGuid, smbiosUuid){
@@ -94,6 +95,28 @@ async function requestTicket(account, p = loadProver()){
     return res.body.data
 }
 
+// O proxy confere o ticket sozinho, sem o site: o último emitido serve para jogar com o site fora do ar.
+// shortcut: guarda só o último ticket; com várias contas, só a última que jogou tem reserva.
+function saveTicket(file, ticket){
+    try {
+        fs.writeFileSync(file, JSON.stringify({ ticket: ticket.ticket, key: ticket.key }), { mode: 0o600 })
+    } catch {
+        // Sem reserva só se perde a entrada com o site fora do ar.
+    }
+}
+
+function cachedTicket(file, nick, now = Date.now()){
+    try {
+        const saved = JSON.parse(fs.readFileSync(file, 'utf8'))
+        const p = JSON.parse(Buffer.from(saved.ticket.split('.')[0], 'base64url').toString('utf8'))
+        // Margem para o jogo abrir antes de vencer; outra versão do launcher traz outro VAC, que o proxy recusa.
+        const valid = p.nick.toLowerCase() === nick.toLowerCase() && p.lv === version && p.exp * 1000 > now + TICKET_MARGIN_MS
+        return valid ? saved : null
+    } catch {
+        return null
+    }
+}
+
 function unpackVac(dir, p = loadProver(), bundlePath = BUNDLE_PATH){
     if(p == null || typeof p.abrir !== 'function' || !fs.existsSync(bundlePath)) return null
     const plain = p.abrir(fs.readFileSync(bundlePath))
@@ -128,4 +151,4 @@ function ticketFailure(err){
     return { code: `HTTP_${status}`, message: 'Não foi possível falar com o Oblyvium agora. Tente de novo em instantes.' }
 }
 
-module.exports = { fingerprintOf, machineFingerprint, proofData, requestTicket, ticketFailure, unpackVac, PROVER_PATH, BUNDLE_PATH }
+module.exports = { fingerprintOf, machineFingerprint, proofData, requestTicket, saveTicket, cachedTicket, ticketFailure, unpackVac, PROVER_PATH, BUNDLE_PATH }
