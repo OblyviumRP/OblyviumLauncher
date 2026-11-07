@@ -385,16 +385,22 @@ async function launch(handlers){
         const modLoaderData = await new DistributionIndexProcessor(ConfigManager.getCommonDirectory(), distro, serv.rawServer.id).loadModLoaderVersionJson(serv)
         const versionData = await new MojangIndexProcessor(ConfigManager.getCommonDirectory(), serv.rawServer.minecraftVersion).getVersionJson()
 
+        const ticketFile = path.join(ConfigManager.getLauncherDirectory(), 'vac-ticket.json')
         let ticket = null
         try {
             ticket = await Vac.requestTicket(account)
+            Vac.saveTicket(ticketFile, ticket)
         } catch(err) {
             logger.warn('Ticket de entrada não emitido.', err)
             const failure = Vac.ticketFailure(err)
             if(failure.code === 'LAUNCHER_DESATUALIZADO'){
                 ipcRenderer.send('autoUpdateAction', 'checkForUpdate')
             }
-            if(process.defaultApp !== true){
+            // Site fora do ar não impede de jogar: vai o último ticket que ainda vale, ou o jogo abre sem ticket.
+            if(failure.code === 'REDE' || failure.code.startsWith('HTTP_5')){
+                ticket = Vac.cachedTicket(ticketFile, account.displayName)
+                logger.warn(ticket ? 'Site fora do ar, usando o último ticket.' : 'Site fora do ar e sem ticket válido, abrindo o jogo sem ticket.')
+            } else if(process.defaultApp !== true){
                 throw new LaunchError(failure.code === 'LAUNCHER_DESATUALIZADO' ? 'Launcher desatualizado' : 'Não foi possível entrar', failure.message)
             }
         }
