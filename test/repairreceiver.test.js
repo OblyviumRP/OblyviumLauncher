@@ -5,7 +5,7 @@ const os = require('os')
 const path = require('path')
 const { HeliosDistribution } = require('helios-core/common')
 const { DistributionIndexProcessor } = require('helios-core/dl')
-const { isPlayerSetting } = require('../app/assets/js/repairreceiver')
+const { isPlayerSetting, isHealthySetting } = require('../app/assets/js/repairreceiver')
 
 function file(id, filePath) {
     return { id, name: id, type: 'File', artifact: { size: 1, url: `https://x/${id}`, MD5: '0'.repeat(32), path: filePath } }
@@ -49,6 +49,23 @@ test('reparo não sobrescreve configs que o jogador já tem, mas baixa as que fa
     const { distribution } = await new DistributionIndexProcessor(path.join(instanceDir, 'common'), distro, 'srv').validate(async () => {})
     assert.deepEqual(distribution.map(a => a.id).sort(), ['iris', 'menu', 'pack'])
     await fs.remove(instanceDir)
+})
+
+test('config vazia, zerada ou com JSON quebrado volta do pack', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'saude-'))
+    const f = async (nome, conteudo) => {
+        await fs.outputFile(path.join(dir, nome), conteudo)
+        return isHealthySetting(path.join(dir, nome))
+    }
+    assert.equal(await f('ok.json', '﻿{"a":1}'), true)
+    assert.equal(await f('ok.properties', 'a=1\n'), true)
+    assert.equal(await f('servers.dat', Buffer.from([10, 0, 0, 9])), true)
+    assert.equal(await f('vazio.json', ''), false)
+    assert.equal(await f('zerado.json', Buffer.alloc(64)), false)
+    assert.equal(await f('zerado.properties', Buffer.alloc(64)), false)
+    assert.equal(await f('NCR-Common.json', '{"a":'), false)
+    assert.equal(await isHealthySetting(path.join(dir, 'nao-existe.json')), false)
+    await fs.remove(dir)
 })
 
 test('o executor do helios-core existe onde o repairreceiver o carrega', () => {
