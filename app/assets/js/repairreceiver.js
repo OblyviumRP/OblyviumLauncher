@@ -1,8 +1,9 @@
 /**
  * Child process entry for the launch file check. Runs helios-core's receiver,
  * but settings the player can change (game options, server list, mod configs)
- * are only downloaded when missing, so neither relaunching nor a modpack
- * update resets them. Everything else is still hash-checked.
+ * are only downloaded when missing or unreadable (empty, zero-filled after a
+ * full disk, broken JSON), so neither relaunching nor a modpack update resets
+ * them. Everything else is still hash-checked.
  */
 const fs                                = require('fs-extra')
 const path                              = require('path')
@@ -24,6 +25,26 @@ exports.isPlayerSetting = function(relativePath) {
     return PLAYER_SETTINGS.has(p) || (p.startsWith('config/') && !PACK_BRANDING.some(dir => p.startsWith(dir)))
 }
 
+exports.isHealthySetting = async function(file) {
+    let data
+    try {
+        data = await fs.readFile(file)
+    } catch {
+        return false
+    }
+    if(data.length === 0) return false
+    if(file.endsWith('.dat')) return true
+    if(data.includes(0)) return false
+    if(file.endsWith('.json')) {
+        try {
+            JSON.parse(data.toString('utf8').replace(/^\uFEFF/, ''))
+        } catch {
+            return false
+        }
+    }
+    return true
+}
+
 function settingsPaths(modules, out = new Set()) {
     for(const mdl of modules) {
         if(mdl.rawModule.type === Type.File && exports.isPlayerSetting(mdl.rawModule.artifact.path ?? '')) {
@@ -40,7 +61,7 @@ DistributionIndexProcessor.prototype.validate = async function(...args) {
     const keep = settingsPaths(this.distribution.getServerById(this.serverId).modules)
     const invalid = []
     for(const asset of result.distribution) {
-        if(!keep.has(asset.path) || !await fs.pathExists(asset.path)) {
+        if(!keep.has(asset.path) || !await exports.isHealthySetting(asset.path)) {
             invalid.push(asset)
         }
     }
