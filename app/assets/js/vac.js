@@ -6,7 +6,8 @@ const { promisify } = require('util')
 const got = require('got')
 const { version } = require('../../../package.json')
 
-const TICKET_URL = process.env.OBLYVIUM_TICKET_URL || 'https://oblyvium.com.br/api/launcher/ticket'
+// Host das APIs de máquina do site (o caminho antigo em oblyvium.com.br também funciona).
+const TICKET_URL = process.env.OBLYVIUM_TICKET_URL || 'https://api.oblyvium.com.br/api/launcher/ticket'
 const CHALLENGE_URL = `${TICKET_URL}/desafio`
 const PROVER_PATH = path.join(__dirname, '..', 'native', 'vac_release.node')
 const BUNDLE_PATH = path.join(__dirname, '..', 'native', 'vac.bin')
