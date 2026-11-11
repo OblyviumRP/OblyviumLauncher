@@ -65,90 +65,9 @@ Depois de instalado, o launcher avisa quando sai uma versão nova e o botão Jog
 
 O launcher é exclusivo do Oblyvium: o jogador não cria perfis nem instala outros modpacks. O que a staff bloqueia não aparece na busca e é desligado antes de o jogo abrir.
 
-## Desenvolvimento
+## Código aberto
 
-Você precisa do [Node.js 22](https://nodejs.org/) (a versão está no `.nvmrc`).
-
-```console
-git clone https://github.com/OblyviumRP/OblyviumLauncher.git
-cd OblyviumLauncher
-npm install
-npm run ui:install
-npm run ui:build
-npm start
-```
-
-O `npm start` abre o que está em `ui/dist`. Sem o `ui:build`, o launcher avisa que a interface não foi compilada. Em desenvolvimento a janela já abre com o DevTools.
-
-| Comando | O que faz |
-| --- | --- |
-| `npm start` | Abre o launcher com a interface compilada |
-| `npm run ui:dev` | Abre a interface no navegador com dados simulados (`http://localhost:5173`) |
-| `npm run ui:build` | Confere os tipos e as traduções e gera `ui/dist` |
-| `npm run ui:verify` | Abre `ui/dist` no Electron com uma distribuição falsa e percorre as telas |
-| `npm test` | Roda os testes de `test/` com `node --test` |
-| `npm run lint` | Roda o ESLint |
-
-### Estrutura
-
-```
-index.js             processo principal do Electron: janela e atualização
-app/assets/js/       módulos do launcher: contas, distribuição, perfis, Java, download e abertura do jogo
-app/assets/js/core/  lógica sem tela, coberta pelos testes
-ui/                  interface em React (Vite, Tailwind e zustand)
-scripts/             chave de release, publicação e verificação da interface
-test/                testes dos módulos do launcher
-docs/                distribuição, autenticação Microsoft e design system
-```
-
-A interface chama os módulos de `app/assets/js` direto, sem IPC novo. O contrato entre os dois lados está em `ui/src/backend/types.ts`, e o [README da interface](ui/README.md) explica o resto.
-
-### Gerar os instaladores
-
-```console
-npm run dist
-```
-
-| Sistema | Comando |
-| --- | --- |
-| Windows x64 | `npm run dist:win` |
-| macOS | `npm run dist:mac` |
-| Linux x64 | `npm run dist:linux` |
-
-O build de um sistema pode não funcionar em outro.
-
-Todo `npm run dist` gera uma chave de release nova (`scripts/release-key.cjs`) e compila o módulo nativo do repositório privado VacOblyvium com node-gyp. Para isso:
-
-1. Clone o VacOblyvium ao lado do launcher, ou aponte `OBLYVIUM_VAC_DIR` para ele.
-2. Rode `./gradlew build` em `agent/` e em `mod/` do VacOblyvium. Os jars vão selados em `app/assets/native/vac.bin`, que o módulo nativo só abre quando o jogo começa.
-3. No Windows, instale o Visual Studio Build Tools com C++.
-
-A chave fica em `.release-key.json`, fora do git.
-
-### Publicar uma versão
-
-O site serve os instaladores e o auto-update em `https://launcher.oblyvium.com.br/updates/`.
-
-1. Suba a versão no `package.json` e faça o merge na `main`.
-2. Crie a tag `v<versão>` e envie (`git tag v4.1.7 && git push origin v4.1.7`). A action [Build](.github/workflows/build.yml) confere se a tag bate com o `package.json`, gera os três sistemas e publica macOS e Linux.
-3. Publique o Windows da máquina de build, porque o site recusa o `latest.yml` do Windows sem a chave de release e o CI não tem essa chave:
-
-```console
-npm run dist:win
-node scripts/publish-update.cjs dist latest.yml
-```
-
-O `publish-update.cjs` precisa da variável `LAUNCHER_PUBLISH_KEY`, igual à do site. Ele registra a chave de release antes de enviar o instalador. Os detalhes do envio estão em [docs/forja-launcher.md](docs/forja-launcher.md).
-
-## Documentação
-
-| Arquivo | Assunto |
-| --- | --- |
-| [ui/README.md](ui/README.md) | Interface: telas, idiomas, janela, arte e segurança |
-| [DESIGN.md](DESIGN.md) | Identidade visual: cores, tipografia, movimento e acessibilidade |
-| [docs/forja-launcher.md](docs/forja-launcher.md) | Notificações, novidades de cada versão e publicação |
-| [docs/distro.md](docs/distro.md) | Formato do índice de distribuição |
-| [docs/MicrosoftAuth.md](docs/MicrosoftAuth.md) | Como registrar o aplicativo para o login Microsoft |
+O código do launcher é público para qualquer jogador conferir o que ele faz no computador antes de instalar.
 
 ## Créditos
 
