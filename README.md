@@ -67,9 +67,7 @@ O launcher é exclusivo do Oblyvium: o jogador não cria perfis nem instala outr
 
 ## Código aberto
 
-O código do launcher é público para qualquer jogador conferir o que ele faz no computador antes de instalar. Os instaladores são gerados a partir deste repositório.
-
-A exceção é o módulo VacOblyvium, de código fechado, que entra só no instalador.
+O código do launcher é público para qualquer jogador conferir o que ele faz no computador antes de instalar.
 
 ## Créditos
 
