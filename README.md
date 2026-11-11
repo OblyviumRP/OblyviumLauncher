@@ -1,220 +1,155 @@
-<p align="center"><img src="./app/assets/images/OblyviumIcon.png" width="150px" height="150px" alt="Oblyvium"></p>
+<p align="center">
+  <img src="./app/assets/images/OblyviumIcon.png" width="120" height="120" alt="Oblyvium">
+</p>
 
 <h1 align="center">Oblyvium Launcher</h1>
 
-<p align="center">Fork do <a href="https://github.com/dscalzi/HeliosLauncher">Helios Launcher</a> para o Oblyvium.</p>
+<p align="center">
+  O launcher oficial do Oblyvium, servidor de Minecraft RP medieval.<br>
+  Ele instala o Java, os mods e as atualizações. Você entra com a conta e joga.
+</p>
 
-<em><h5 align="center">(formerly Electron Launcher)</h5></em>
+<p align="center">
+  <a href="https://oblyvium.com.br/launcher"><img src="https://img.shields.io/github/package-json/v/OblyviumRP/OblyviumLauncher?style=for-the-badge&label=vers%C3%A3o&color=7c3aed" alt="versão"></a>
+  <img src="https://img.shields.io/badge/Windows%20%C2%B7%20macOS%20%C2%B7%20Linux-18181e?style=for-the-badge" alt="Windows, macOS e Linux">
+  <a href="https://discord.gg/oblyvium"><img src="https://img.shields.io/badge/Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord"></a>
+</p>
 
-[<p align="center"><img src="https://img.shields.io/github/actions/workflow/status/dscalzi/HeliosLauncher/build.yml?branch=master&style=for-the-badge" alt="gh actions">](https://github.com/dscalzi/HeliosLauncher/actions) [<img src="https://img.shields.io/github/downloads/dscalzi/HeliosLauncher/total.svg?style=for-the-badge" alt="downloads">](https://github.com/dscalzi/HeliosLauncher/releases) <img src="https://forthebadge.com/images/badges/winter-is-coming.svg"  height="28px" alt="winter-is-coming"></p>
+<p align="center">
+  <a href="https://oblyvium.com.br/launcher"><b>Baixar</b></a>
+  &nbsp;·&nbsp;
+  <a href="https://oblyvium.com.br">Site</a>
+  &nbsp;·&nbsp;
+  <a href="https://discord.gg/oblyvium">Discord</a>
+</p>
 
-<p align="center">Join modded servers without worrying about installing Java, Forge, or other mods. We'll handle that for you.</p>
+<p align="center">
+  <img src="./ui/src/assets/scene/jormungandr.webp" alt="Jörmungandr, a arte de fundo da tela de Início do launcher">
+</p>
 
-![Screenshot 1](https://i.imgur.com/6o7SmH6.png)
-![Screenshot 2](https://i.imgur.com/x3B34n1.png)
+## Baixar
 
-## Features
+Os instaladores ficam em [oblyvium.com.br/launcher](https://oblyvium.com.br/launcher). Escolha o do seu sistema:
 
-* 🔒 Full account management.
-  * Add multiple accounts and easily switch between them.
-  * Microsoft (OAuth 2.0) + Mojang (Yggdrasil) authentication fully supported.
-  * Credentials are never stored and transmitted directly to Mojang.
-* 📂 Efficient asset management.
-  * Receive client updates as soon as we release them.
-  * Files are validated before launch. Corrupt or incorrect files will be redownloaded.
-* ☕ **Automatic Java validation.**
-  * If you have an incompatible version of Java installed, we'll install the right one *for you*.
-  * You do not need to have Java installed to run the launcher.
-* 📰 News feed natively built into the launcher.
-* ⚙️ Intuitive settings management, including a Java control panel.
-* Supports all of our servers.
-  * Switch between server configurations with ease.
-  * View the player count of the selected server.
-* Updates with one click. When a new version is out, Play asks the player to update; nothing is installed without that click.
-*  View the status of Mojang's services.
+| Sistema | Arquivo |
+| --- | --- |
+| Windows x64 | `Oblyvium-Launcher-setup-VERSÃO.exe` |
+| macOS Intel | `Oblyvium-Launcher-setup-VERSÃO-x64.dmg` |
+| macOS Apple Silicon | `Oblyvium-Launcher-setup-VERSÃO-arm64.dmg` |
+| Linux x64 | `Oblyvium-Launcher-setup-VERSÃO.AppImage` |
 
-This is not an exhaustive list. Download and install the launcher to gauge all it can do!
+Os instaladores ainda não são assinados, então o Windows e o macOS podem pedir confirmação na primeira vez que você abrir.
 
-#### Need Help? [Check the wiki.][wiki]
+Depois de instalado, o launcher avisa quando sai uma versão nova e o botão Jogar pede para atualizar. Nada é instalado sem esse clique.
 
-#### Like the project? Leave a ⭐ star on the repository!
+## O que ele faz
 
-## Downloads
+- Entra com a conta Microsoft ou no modo offline, guarda várias contas e troca entre elas pelo menu.
+- Procura um Java compatível no computador e baixa o certo quando não acha (Java 25 para o Minecraft 26 em diante). Você não precisa ter Java instalado.
+- Confere os arquivos do jogo antes de abrir e baixa de novo o que estiver faltando ou corrompido.
+- Mantém o modpack oficial em dia sem apagar o que você configurou.
+- Mostra as notificações da staff, as novidades de cada versão e o estado do servidor (jogadores, tempo de resposta, versão).
+- Funciona em português, inglês e espanhol.
 
-You can download from [GitHub Releases](https://github.com/dscalzi/HeliosLauncher/releases)
+### Telas
 
-#### Latest Release
+| Tela | O que tem |
+| --- | --- |
+| Início | Arte do servidor, botão Jogar, ficha do servidor e notícias |
+| Descobrir | Busca no Modrinth de mods, resource packs e shaders compatíveis com o modpack oficial |
+| Perfil | Conteúdo instalado, mods opcionais do servidor, capturas, `latest.log` e verificação de arquivos |
+| Skins | Skin e capa da conta Microsoft com prévia 3D e uma biblioteca local de skins |
+| Downloads | Tarefas da sessão: arquivos do jogo, Java e atualização do launcher |
+| Console | Saída do jogo ao vivo com filtro por nível e aviso de falha com o crash report |
+| Configurações | Idioma, memória e janela do jogo, contas, novidades e atualizações |
 
-[![](https://img.shields.io/github/release/dscalzi/HeliosLauncher.svg?style=flat-square)](https://github.com/dscalzi/HeliosLauncher/releases/latest)
+O launcher é exclusivo do Oblyvium: o jogador não cria perfis nem instala outros modpacks. O que a staff bloqueia não aparece na busca e é desligado antes de o jogo abrir.
 
-#### Latest Pre-Release
-[![](https://img.shields.io/github/release/dscalzi/HeliosLauncher/all.svg?style=flat-square)](https://github.com/dscalzi/HeliosLauncher/releases)
+## Desenvolvimento
 
-**Supported Platforms**
-
-If you download from the [Releases](https://github.com/dscalzi/HeliosLauncher/releases) tab, select the installer for your system.
-
-| Platform | File |
-| -------- | ---- |
-| Windows x64 | `Helios-Launcher-setup-VERSION.exe` |
-| macOS x64 | `Helios-Launcher-setup-VERSION-x64.dmg` |
-| macOS arm64 | `Helios-Launcher-setup-VERSION-arm64.dmg` |
-| Linux x64 | `Helios-Launcher-setup-VERSION.AppImage` |
-
-## Console
-
-To open the console, use the following keybind.
-
-```console
-ctrl + shift + i
-```
-
-Ensure that you have the console tab selected. Do not paste anything into the console unless you are 100% sure of what it will do. Pasting the wrong thing can expose sensitive information.
-
-#### Export Output to a File
-
-If you want to export the console output, simply right click anywhere on the console and click **Save as..**
-
-![console example](https://i.imgur.com/T5e73jP.png)
-
-
-## Development
-
-This section details the setup of a basic developmentment environment.
-
-### Getting Started
-
-**System Requirements**
-
-* [Node.js][nodejs] v22
-
----
-
-**Clone and Install Dependencies**
+Você precisa do [Node.js 22](https://nodejs.org/) (a versão está no `.nvmrc`).
 
 ```console
-> git clone https://github.com/dscalzi/HeliosLauncher.git
-> cd HeliosLauncher
-> npm install
+git clone https://github.com/OblyviumRP/OblyviumLauncher.git
+cd OblyviumLauncher
+npm install
+npm run ui:install
+npm run ui:build
+npm start
 ```
 
----
+O `npm start` abre o que está em `ui/dist`. Sem o `ui:build`, o launcher avisa que a interface não foi compilada. Em desenvolvimento a janela já abre com o DevTools.
 
-**Launch Application**
+| Comando | O que faz |
+| --- | --- |
+| `npm start` | Abre o launcher com a interface compilada |
+| `npm run ui:dev` | Abre a interface no navegador com dados simulados (`http://localhost:5173`) |
+| `npm run ui:build` | Confere os tipos e as traduções e gera `ui/dist` |
+| `npm run ui:verify` | Abre `ui/dist` no Electron com uma distribuição falsa e percorre as telas |
+| `npm test` | Roda os testes de `test/` com `node --test` |
+| `npm run lint` | Roda o ESLint |
+
+### Estrutura
+
+```
+index.js             processo principal do Electron: janela e atualização
+app/assets/js/       módulos do launcher: contas, distribuição, perfis, Java, download e abertura do jogo
+app/assets/js/core/  lógica sem tela, coberta pelos testes
+ui/                  interface em React (Vite, Tailwind e zustand)
+scripts/             chave de release, publicação e verificação da interface
+test/                testes dos módulos do launcher
+docs/                distribuição, autenticação Microsoft e design system
+```
+
+A interface chama os módulos de `app/assets/js` direto, sem IPC novo. O contrato entre os dois lados está em `ui/src/backend/types.ts`, e o [README da interface](ui/README.md) explica o resto.
+
+### Gerar os instaladores
 
 ```console
-> npm start
+npm run dist
 ```
 
----
+| Sistema | Comando |
+| --- | --- |
+| Windows x64 | `npm run dist:win` |
+| macOS | `npm run dist:mac` |
+| Linux x64 | `npm run dist:linux` |
 
-**Build Installers**
+O build de um sistema pode não funcionar em outro.
 
-To build for your current platform.
+Todo `npm run dist` gera uma chave de release nova (`scripts/release-key.cjs`) e compila o módulo nativo do repositório privado VacOblyvium com node-gyp. Para isso:
+
+1. Clone o VacOblyvium ao lado do launcher, ou aponte `OBLYVIUM_VAC_DIR` para ele.
+2. Rode `./gradlew build` em `agent/` e em `mod/` do VacOblyvium. Os jars vão selados em `app/assets/native/vac.bin`, que o módulo nativo só abre quando o jogo começa.
+3. No Windows, instale o Visual Studio Build Tools com C++.
+
+A chave fica em `.release-key.json`, fora do git.
+
+### Publicar uma versão
+
+O site serve os instaladores e o auto-update em `https://launcher.oblyvium.com.br/updates/`.
+
+1. Suba a versão no `package.json` e faça o merge na `main`.
+2. Crie a tag `v<versão>` e envie (`git tag v4.1.7 && git push origin v4.1.7`). A action [Build](.github/workflows/build.yml) confere se a tag bate com o `package.json`, gera os três sistemas e publica macOS e Linux.
+3. Publique o Windows da máquina de build, porque o site recusa o `latest.yml` do Windows sem a chave de release e o CI não tem essa chave:
 
 ```console
-> npm run dist
+npm run dist:win
+node scripts/publish-update.cjs dist latest.yml
 ```
 
-Build for a specific platform.
+O `publish-update.cjs` precisa da variável `LAUNCHER_PUBLISH_KEY`, igual à do site. Ele registra a chave de release antes de enviar o instalador. Os detalhes do envio estão em [docs/forja-launcher.md](docs/forja-launcher.md).
 
-| Platform    | Command              |
-| ----------- | -------------------- |
-| Windows x64 | `npm run dist:win`   |
-| macOS       | `npm run dist:mac`   |
-| Linux x64   | `npm run dist:linux` |
+## Documentação
 
-Builds for macOS may not work on Windows/Linux and vice-versa.
+| Arquivo | Assunto |
+| --- | --- |
+| [ui/README.md](ui/README.md) | Interface: telas, idiomas, janela, arte e segurança |
+| [DESIGN.md](DESIGN.md) | Identidade visual: cores, tipografia, movimento e acessibilidade |
+| [docs/forja-launcher.md](docs/forja-launcher.md) | Notificações, novidades de cada versão e publicação |
+| [docs/distro.md](docs/distro.md) | Formato do índice de distribuição |
+| [docs/MicrosoftAuth.md](docs/MicrosoftAuth.md) | Como registrar o aplicativo para o login Microsoft |
 
-Every `npm run dist` generates a new release key (`scripts/release-key.cjs`) and compiles the native module from the
-private VacOblyvium repository (cloned next to the launcher, or `OBLYVIUM_VAC_DIR`) with node-gyp, so Windows needs the
-Visual Studio Build Tools (C++). Build `agent/` and `mod/` of VacOblyvium first (`./gradlew build`): their jars are
-sealed into `app/assets/native/vac.bin`, opened by the native module only when the game starts. The key stays in `.release-key.json` (ignored by git), and
-`scripts/publish-update.cjs` registers it on the website before uploading the installer: the website refuses a Windows
-`latest.yml` without it.
+## Créditos
 
----
-
-### Visual Studio Code
-
-All development of the launcher should be done using [Visual Studio Code][vscode].
-
-Paste the following into `.vscode/launch.json`
-
-```JSON
-{
-  "version": "0.2.0",
-  "configurations": [
-    {
-      "name": "Debug Main Process",
-      "type": "node",
-      "request": "launch",
-      "cwd": "${workspaceFolder}",
-      "program": "${workspaceFolder}/node_modules/electron/cli.js",
-      "args" : ["."],
-      "outputCapture": "std"
-    },
-    {
-      "name": "Debug Renderer Process",
-      "type": "chrome",
-      "request": "launch",
-      "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron",
-      "windows": {
-        "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron.cmd"
-      },
-      "runtimeArgs": [
-        "${workspaceFolder}/.",
-        "--remote-debugging-port=9222"
-      ],
-      "webRoot": "${workspaceFolder}"
-    }
-  ]
-}
-```
-
-This adds two debug configurations.
-
-#### Debug Main Process
-
-This allows you to debug Electron's [main process][mainprocess]. You can debug scripts in the [renderer process][rendererprocess] by opening the DevTools Window.
-
-#### Debug Renderer Process
-
-This allows you to debug Electron's [renderer process][rendererprocess]. This requires you to install the [Debugger for Chrome][chromedebugger] extension.
-
-Note that you **cannot** open the DevTools window while using this debug configuration. Chromium only allows one debugger, opening another will crash the program.
-
----
-
-### Note on Third-Party Usage
-
-Please give credit to the original author and provide a link to the original source. This is free software, please do at least this much.
-
-For instructions on setting up Microsoft Authentication, see https://github.com/dscalzi/HeliosLauncher/blob/master/docs/MicrosoftAuth.md.
-
----
-
-## Resources
-
-* [Wiki][wiki]
-* [Nebula (Create Distribution.json)][nebula]
-* [v2 Rewrite Branch (Inactive)][v2branch]
-
-The best way to contact the developers is on Discord.
-
-[![discord](https://discordapp.com/api/guilds/211524927831015424/embed.png?style=banner3)][discord]
-
----
-
-### See you ingame.
-
-
-[nodejs]: https://nodejs.org/en/ 'Node.js'
-[vscode]: https://code.visualstudio.com/ 'Visual Studio Code'
-[mainprocess]: https://electronjs.org/docs/tutorial/application-architecture#main-and-renderer-processes 'Main Process'
-[rendererprocess]: https://electronjs.org/docs/tutorial/application-architecture#main-and-renderer-processes 'Renderer Process'
-[chromedebugger]: https://marketplace.visualstudio.com/items?itemName=msjsdiag.debugger-for-chrome 'Debugger for Chrome'
-[discord]: https://discord.gg/zNWUXdt 'Discord'
-[wiki]: https://github.com/dscalzi/HeliosLauncher/wiki 'wiki'
-[nebula]: https://github.com/dscalzi/Nebula 'dscalzi/Nebula'
-[v2branch]: https://github.com/dscalzi/HeliosLauncher/tree/ts-refactor 'v2 branch'
+O Oblyvium Launcher é um fork do [Helios Launcher](https://github.com/dscalzi/HeliosLauncher), de Daniel Scalzi. O [LICENSE.txt](LICENSE.txt) traz a licença MIT do projeto original.
