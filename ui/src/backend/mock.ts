@@ -382,11 +382,6 @@ export function createMockBackend(): Backend {
         // Ignora: o idioma vale só nesta sessão.
       }
     },
-    setProfileSetting(serverId, profileId, _k, v) {
-      ps(key(serverId, profileId)).javaPath = v
-    },
-    detectJava: async () => '/usr/lib/jvm/temurin-17/bin/java',
-    chooseJava: async () => null,
     openDataFolder() {},
 
     serverStatus: async (id) => (id.startsWith('oblyvium-rp') ? { online: 87, max: 200, pingMs: 24 } : null),

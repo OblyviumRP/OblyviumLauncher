@@ -237,13 +237,10 @@ export interface Backend {
   launcherSettings(): LauncherSettings
   setLauncherSetting<K extends keyof LauncherSettings>(key: K, value: LauncherSettings[K]): void
   profileSettings(serverId: string, profileId: string): ProfileSettings
-  setProfileSetting(serverId: string, profileId: string, key: 'javaPath', value: string | null): void
   gameSettings(): GameSettings
   setGameSetting(key: 'maxRamGB' | 'width' | 'height' | 'fullscreen', value: number | boolean): void
   language(): string | null
   setLanguage(lang: string): void
-  detectJava(serverId: string, profileId: string): Promise<string | null>
-  chooseJava(serverId: string, profileId: string): Promise<string | null>
   openDataFolder(): void
 
   // Extras da tela inicial

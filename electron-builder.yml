@@ -9,6 +9,12 @@ asarUnpack:
   - 'app/assets/native/*.node'
 compression: 'maximum'
 
+electronFuses:
+  enableNodeCliInspectArguments: false
+  enableNodeOptionsEnvironmentVariable: false
+  enableEmbeddedAsarIntegrityValidation: true
+  onlyLoadAppFromAsar: true
+
 files:
   - '!{dist,.gitignore,.vscode,docs,dev-app-update.yml,.nvmrc,eslint.config.mjs}'
   - '!scripts/publish-update.cjs'
