@@ -58,3 +58,13 @@ test('status no Discord vem ligado, inclusive em config antiga, e desligar fica 
     ConfigManager.load()
     assert.equal(ConfigManager.getDiscordPresence(), false)
 })
+
+test('só o Java dentro do runtime do launcher é aceito', () => {
+    const runtime = path.join(ConfigManager.getDataDirectory(), 'runtime', 'x64', 'jdk-25', 'bin', 'javaw.exe')
+    assert.equal(ConfigManager.isManagedJava(runtime), true)
+    assert.equal(ConfigManager.isManagedJava(runtime.toUpperCase(), 'win32'), true)
+    assert.equal(ConfigManager.isManagedJava(path.join(os.tmpdir(), 'jdk', 'bin', 'java')), false)
+    assert.equal(ConfigManager.isManagedJava(path.join(ConfigManager.getDataDirectory(), 'runtime-falso', 'bin', 'java')), false)
+    assert.equal(ConfigManager.isManagedJava(path.join(ConfigManager.getDataDirectory(), 'runtime', '..', '..', 'java')), false)
+    assert.equal(ConfigManager.isManagedJava(null), false)
+})

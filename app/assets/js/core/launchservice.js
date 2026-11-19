@@ -15,7 +15,11 @@ const {
     validateSelectedJvm,
     ensureJavaDirIsRoot,
     javaExecFromRoot,
-    discoverBestJvmInstallation,
+    DirectoryBasedJavaDiscoverer,
+    resolveJvmSettings,
+    filterApplicableJavaPaths,
+    rankApplicableJvms,
+    getLauncherRuntimeDir,
     latestOpenJDK,
     extractJdk
 } = require('helios-core/java')
@@ -143,7 +147,7 @@ async function updateLauncherPresence(resetTimer = false){
 async function ensureJava(serv, configKey, h){
     const opts = serv.effectiveJavaOptions
     const current = ConfigManager.getJavaExecutable(configKey)
-    if(current != null){
+    if(ConfigManager.isManagedJava(current)){
         h.onStatus(q('landing.launch.pleaseWait'))
         const details = await validateSelectedJvm(ensureJavaDirIsRoot(current), opts.supported)
         if(details != null){
@@ -151,7 +155,10 @@ async function ensureJava(serv, configKey, h){
         }
     }
     h.onStatus(q('landing.systemScan.checking'))
-    const found = await discoverBestJvmInstallation(ConfigManager.getDataDirectory(), opts.supported)
+    const roots = await new DirectoryBasedJavaDiscoverer([getLauncherRuntimeDir(ConfigManager.getDataDirectory())]).discover()
+    const managed = filterApplicableJavaPaths(await resolveJvmSettings(roots), opts.supported)
+    rankApplicableJvms(managed)
+    const found = managed[0]
     if(found != null){
         ConfigManager.setJavaExecutable(configKey, javaExecFromRoot(found.path))
         ConfigManager.save()

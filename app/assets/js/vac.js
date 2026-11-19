@@ -13,6 +13,10 @@ const BUNDLE_PATH = path.join(__dirname, '..', 'native', 'vac.bin')
 const TICKET_MARGIN_MS = 10 * 60 * 1000
 const run = promisify(execFile)
 
+function hardwareFingerprintOf(smbiosUuid){
+    return crypto.createHash('sha256').update(`oblyvium-hw-v1:${smbiosUuid.trim().toLowerCase()}`).digest('hex')
+}
+
 function fingerprintOf(machineGuid, smbiosUuid){
     return crypto.createHash('sha256')
         .update(`oblyvium:${machineGuid.trim().toLowerCase()}:${smbiosUuid.trim().toLowerCase()}`)
@@ -20,9 +24,10 @@ function fingerprintOf(machineGuid, smbiosUuid){
 }
 
 async function windowsFingerprint(opts){
+    const system32 = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32')
     const [reg, cim] = await Promise.all([
-        run('reg', ['query', 'HKLM\\SOFTWARE\\Microsoft\\Cryptography', '/v', 'MachineGuid'], opts),
-        run('powershell', ['-NoProfile', '-NonInteractive', '-Command', '(Get-CimInstance Win32_ComputerSystemProduct).UUID'], opts)
+        run(path.join(system32, 'reg.exe'), ['query', 'HKLM\\SOFTWARE\\Microsoft\\Cryptography', '/v', 'MachineGuid'], opts),
+        run(path.join(system32, 'WindowsPowerShell', 'v1.0', 'powershell.exe'), ['-NoProfile', '-NonInteractive', '-Command', '(Get-CimInstance Win32_ComputerSystemProduct).UUID'], opts)
     ])
     return [/MachineGuid\s+REG_SZ\s+(\S+)/.exec(reg.stdout)?.[1], cim.stdout]
 }
@@ -39,18 +44,22 @@ async function macFingerprint(opts){
     return [uuid, uuid ?? '']
 }
 
-async function machineFingerprint(platform = process.platform){
+async function machineFingerprints(platform = process.platform){
     const opts = { windowsHide: true, timeout: 10000 }
     const [id, uuid] = platform === 'win32' ? await windowsFingerprint(opts)
         : platform === 'darwin' ? await macFingerprint(opts)
             : await linuxFingerprint()
     if(!id || !uuid?.trim()) throw new Error('Identificadores da máquina não encontrados.')
-    return fingerprintOf(id, uuid)
+    return { fingerprint: fingerprintOf(id, uuid), fingerprintHw: hardwareFingerprintOf(uuid) }
+}
+
+async function machineFingerprint(platform = process.platform){
+    return (await machineFingerprints(platform)).fingerprint
 }
 
 async function localFingerprint(){
     try {
-        return await machineFingerprint()
+        return await machineFingerprints()
     } catch(err) {
         throw Object.assign(new Error(`Identificação da máquina falhou: ${err.message}`, { cause: err }), { code: 'IDENTIFICACAO' })
     }
@@ -83,7 +92,7 @@ async function requestTicket(account, p = loadProver()){
         type: premium ? 'premium' : 'pirate',
         accessToken: premium ? account.accessToken : undefined,
         launcherVersion: version,
-        fingerprint: await localFingerprint()
+        ...await localFingerprint()
     }
     if(p != null){
         const challenge = await got.post(CHALLENGE_URL, { headers, json: {}, timeout: 15000, retry: 0, responseType: 'json' })
@@ -151,4 +160,4 @@ function ticketFailure(err){
     return { code: `HTTP_${status}`, message: 'Não foi possível falar com o Oblyvium agora. Tente de novo em instantes.' }
 }
 
-module.exports = { fingerprintOf, machineFingerprint, proofData, requestTicket, saveTicket, cachedTicket, ticketFailure, unpackVac, PROVER_PATH, BUNDLE_PATH }
+module.exports = { fingerprintOf, hardwareFingerprintOf, machineFingerprint, machineFingerprints, proofData, requestTicket, saveTicket, cachedTicket, ticketFailure, unpackVac, PROVER_PATH, BUNDLE_PATH }
