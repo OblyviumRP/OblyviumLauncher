@@ -1,16 +1,5 @@
 const test = require('node:test')
 const assert = require('node:assert')
-const { fingerprintOf, machineFingerprint } = require('../app/assets/js/vac')
-
-test('impressão não depende de espaço nem de maiúscula', () => {
-    const a = fingerprintOf('ABC-1', '  UUID-2\r\n')
-    assert.strictEqual(a, fingerprintOf('abc-1', 'uuid-2'))
-    assert.match(a, /^[0-9a-f]{64}$/)
-})
-
-test('impressão desta máquina', { skip: process.platform !== 'win32' }, async () => {
-    assert.match(await machineFingerprint(), /^[0-9a-f]{64}$/)
-})
 
 test('dados da prova: nonce e campos na ordem do site', () => {
     const { proofData } = require('../app/assets/js/vac')
@@ -18,13 +7,14 @@ test('dados da prova: nonce e campos na ordem do site', () => {
     const d = proofData(nonce, { nick: 'Steve', type: 'pirate', fingerprint: 'f'.repeat(64), launcherVersion: '3.8.0' })
     assert.ok(d.subarray(0, 32).equals(Buffer.alloc(32, 7)))
     assert.strictEqual(d.subarray(32).toString(), `\nSteve\npirate\n${'f'.repeat(64)}\n3.8.0`)
+    const semImpressao = proofData(nonce, { nick: 'Steve', type: 'pirate', launcherVersion: '4.2.0' })
+    assert.strictEqual(semImpressao.subarray(32).toString(), '\nSteve\npirate\n\n4.2.0')
 })
 
 test('falha de ticket vira motivo para o jogador', () => {
     const { ticketFailure } = require('../app/assets/js/vac')
     const http = (statusCode, error) => ({ response: { statusCode, body: { error } } })
     assert.strictEqual(ticketFailure(new Error('ECONNREFUSED')).code, 'REDE')
-    assert.strictEqual(ticketFailure(Object.assign(new Error('spawn reg ENOENT'), { code: 'IDENTIFICACAO' })).code, 'IDENTIFICACAO')
     assert.strictEqual(ticketFailure(http(426, { code: 'LAUNCHER_DESATUALIZADO', message: 'x' })).code, 'LAUNCHER_DESATUALIZADO')
     assert.strictEqual(ticketFailure(http(403, { code: 'FORBIDDEN', message: 'x' })).message, 'Entre de novo com a Microsoft para jogar.')
     assert.strictEqual(ticketFailure(http(429, { code: 'RATE_LIMITED', message: 'Aguarde um minuto.' })).message, 'Aguarde um minuto.')

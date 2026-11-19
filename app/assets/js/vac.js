@@ -1,8 +1,6 @@
-const { execFile } = require('child_process')
 const crypto = require('crypto')
 const fs = require('fs')
 const path = require('path')
-const { promisify } = require('util')
 const got = require('got')
 const { version } = require('../../../package.json')
 
@@ -11,59 +9,6 @@ const CHALLENGE_URL = `${TICKET_URL}/desafio`
 const PROVER_PATH = path.join(__dirname, '..', 'native', 'vac_release.node')
 const BUNDLE_PATH = path.join(__dirname, '..', 'native', 'vac.bin')
 const TICKET_MARGIN_MS = 10 * 60 * 1000
-const run = promisify(execFile)
-
-function hardwareFingerprintOf(smbiosUuid){
-    return crypto.createHash('sha256').update(`oblyvium-hw-v1:${smbiosUuid.trim().toLowerCase()}`).digest('hex')
-}
-
-function fingerprintOf(machineGuid, smbiosUuid){
-    return crypto.createHash('sha256')
-        .update(`oblyvium:${machineGuid.trim().toLowerCase()}:${smbiosUuid.trim().toLowerCase()}`)
-        .digest('hex')
-}
-
-async function windowsFingerprint(opts){
-    const system32 = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32')
-    const [reg, cim] = await Promise.all([
-        run(path.join(system32, 'reg.exe'), ['query', 'HKLM\\SOFTWARE\\Microsoft\\Cryptography', '/v', 'MachineGuid'], opts),
-        run(path.join(system32, 'WindowsPowerShell', 'v1.0', 'powershell.exe'), ['-NoProfile', '-NonInteractive', '-Command', '(Get-CimInstance Win32_ComputerSystemProduct).UUID'], opts)
-    ])
-    return [/MachineGuid\s+REG_SZ\s+(\S+)/.exec(reg.stdout)?.[1], cim.stdout]
-}
-
-async function linuxFingerprint(){
-    const read = (file) => fs.promises.readFile(file, 'utf8').then(t => t.trim()).catch(() => '')
-    const id = await read('/etc/machine-id') || await read('/var/lib/dbus/machine-id')
-    return [id, await read('/sys/class/dmi/id/product_uuid') || id]
-}
-
-async function macFingerprint(opts){
-    const { stdout } = await run('ioreg', ['-rd1', '-c', 'IOPlatformExpertDevice'], opts)
-    const uuid = /"IOPlatformUUID"\s*=\s*"([^"]+)"/.exec(stdout)?.[1]
-    return [uuid, uuid ?? '']
-}
-
-async function machineFingerprints(platform = process.platform){
-    const opts = { windowsHide: true, timeout: 10000 }
-    const [id, uuid] = platform === 'win32' ? await windowsFingerprint(opts)
-        : platform === 'darwin' ? await macFingerprint(opts)
-            : await linuxFingerprint()
-    if(!id || !uuid?.trim()) throw new Error('Identificadores da máquina não encontrados.')
-    return { fingerprint: fingerprintOf(id, uuid), fingerprintHw: hardwareFingerprintOf(uuid) }
-}
-
-async function machineFingerprint(platform = process.platform){
-    return (await machineFingerprints(platform)).fingerprint
-}
-
-async function localFingerprint(){
-    try {
-        return await machineFingerprints()
-    } catch(err) {
-        throw Object.assign(new Error(`Identificação da máquina falhou: ${err.message}`, { cause: err }), { code: 'IDENTIFICACAO' })
-    }
-}
 
 let prover
 function loadProver(){
@@ -80,7 +25,7 @@ function loadProver(){
 function proofData(nonce, fields){
     return Buffer.concat([
         Buffer.from(nonce, 'base64url'),
-        Buffer.from(`\n${fields.nick}\n${fields.type}\n${fields.fingerprint}\n${fields.launcherVersion}`, 'utf8')
+        Buffer.from(`\n${fields.nick}\n${fields.type}\n${fields.fingerprint ?? ''}\n${fields.launcherVersion}`, 'utf8')
     ])
 }
 
@@ -91,8 +36,7 @@ async function requestTicket(account, p = loadProver()){
         nick: account.displayName,
         type: premium ? 'premium' : 'pirate',
         accessToken: premium ? account.accessToken : undefined,
-        launcherVersion: version,
-        ...await localFingerprint()
+        launcherVersion: version
     }
     if(p != null){
         const challenge = await got.post(CHALLENGE_URL, { headers, json: {}, timeout: 15000, retry: 0, responseType: 'json' })
@@ -142,9 +86,6 @@ function unpackVac(dir, p = loadProver(), bundlePath = BUNDLE_PATH){
 function ticketFailure(err){
     const status = err?.response?.statusCode
     const site = err?.response?.body?.error
-    if(err?.code === 'IDENTIFICACAO'){
-        return { code: err.code, message: 'O launcher não conseguiu identificar este computador. Mande o log do launcher para a equipe do Oblyvium.' }
-    }
     if(status == null){
         return { code: 'REDE', message: 'Não foi possível falar com o Oblyvium agora. Tente de novo em instantes.' }
     }
@@ -160,4 +101,4 @@ function ticketFailure(err){
     return { code: `HTTP_${status}`, message: 'Não foi possível falar com o Oblyvium agora. Tente de novo em instantes.' }
 }
 
-module.exports = { fingerprintOf, hardwareFingerprintOf, machineFingerprint, machineFingerprints, proofData, requestTicket, saveTicket, cachedTicket, ticketFailure, unpackVac, PROVER_PATH, BUNDLE_PATH }
+module.exports = { proofData, requestTicket, saveTicket, cachedTicket, ticketFailure, unpackVac, PROVER_PATH, BUNDLE_PATH }
