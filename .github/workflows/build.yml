@@ -1,18 +1,26 @@
-# Builds the launcher for Windows, macOS and Linux on GitHub-hosted runners
-# and publishes each platform to the Oblyvium website, which serves the
+# Builds the launcher for Windows and Linux on GitHub-hosted runners and
+# publishes each platform to the Oblyvium website, which serves the
 # auto-update feed at launcher.oblyvium.com.br/updates/.
 #
 # - v* tags: build and publish. The tag must match the version in package.json.
 # - Actions tab -> Build -> Run workflow: build, and publish only if "publish" is ticked.
 # - Pull requests that change this workflow or the publish script: build only.
 #
-# Nothing is stored as a workflow artifact (the organization's artifact quota
-# fills up). Publishing needs the LAUNCHER_PUBLISH_KEY secret, equal to the
-# website's LAUNCHER_PUBLISH_KEY; the LAUNCHER_PUBLISH_URL variable overrides
-# the website address.
+# The release build embeds the VAC (OblyviumRP/VacOblyvium, private): the `vac`
+# job builds its jars and a fresh release key once, and both platforms reuse
+# them, because the website keeps one key per version (registered by the
+# Windows publish) and the key is bound to the jars' hash. They travel between
+# jobs in the Actions cache, with the key encrypted by RELEASE_CACHE_KEY; the
+# cache entry is deleted at the end. Nothing is stored as a workflow artifact
+# (the organization's artifact quota fills up).
 #
-# The repository is private: macOS minutes count 10x and Windows 2x against
-# the quota, which is why this does not run on every push.
+# Secrets: LAUNCHER_PUBLISH_KEY (equal to the website's), VAC_TOKEN (read access
+# to VacOblyvium, same as the Android release) and RELEASE_CACHE_KEY (any long
+# random string). The LAUNCHER_PUBLISH_URL variable overrides the website address.
+#
+# macOS is not built: the VAC native module has no macOS target, and the
+# macOS feed stopped at 4.1.6. Windows minutes count 2x against the quota of
+# this private repository, which is why this does not run on every push.
 
 name: Build
 
@@ -30,15 +38,20 @@ on:
     paths:
       - '.github/workflows/build.yml'
       - 'scripts/publish-update.cjs'
+      - 'scripts/release-key.cjs'
 
 permissions:
   contents: read
+  actions: write
 
 concurrency:
   group: build-${{ github.ref }}
   # Never cancel a run that may be publishing; a half-sent platform is only
   # completed by running it again.
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  VAC_CACHE: vac-${{ github.run_id }}-${{ github.run_attempt }}
 
 jobs:
   check:
@@ -66,35 +79,112 @@ jobs:
             exit 1
           fi
 
+  vac:
+    name: VAC jars and release key
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: OblyviumRP/VacOblyvium
+          token: ${{ secrets.VAC_TOKEN }}
+          path: VacOblyvium
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: |
+            21
+            25
+      - name: VAC jars
+        run: |
+          export JAVA_HOME="$JAVA_HOME_25_X64"
+          (cd VacOblyvium/agent && sh ./gradlew build)
+          (cd VacOblyvium/mod && sh ./gradlew clean build)
+      - name: Release key (encrypted for the cache)
+        env:
+          RELEASE_CACHE_KEY: ${{ secrets.RELEASE_CACHE_KEY }}
+        run: |
+          test -n "$RELEASE_CACHE_KEY" || { echo "::error::RELEASE_CACHE_KEY secret is missing."; exit 1; }
+          mkdir -p vac-cache/agent vac-cache/mod
+          cp VacOblyvium/agent/build/vac/vac-agent.jar vac-cache/agent/
+          cp VacOblyvium/mod/build/libs/vac-mod-*.jar vac-cache/mod/
+          rm -f vac-cache/mod/*-sources.jar
+          # Same shape release-key.cjs writes; both platforms build with --reuse-key on it.
+          node -e '
+            const fs = require("fs"), crypto = require("crypto"), path = require("path")
+            const { vacHash } = require(path.resolve("VacOblyvium/launcher-native/build.cjs"))
+            const mods = fs.readdirSync("vac-cache/mod")
+            if (mods.length !== 1) throw new Error(`expected one vac-mod jar, found ${mods.length}`)
+            const vac = vacHash(fs.readFileSync("vac-cache/agent/vac-agent.jar"), fs.readFileSync(path.join("vac-cache/mod", mods[0])))
+            const version = require("./package.json").version
+            fs.writeFileSync(".release-key.json", JSON.stringify({ version, key: crypto.randomBytes(32).toString("base64url"), vac }))
+            console.log(`release key for ${version}, VacOblyvium ${vac}`)
+          '
+          openssl enc -aes-256-cbc -pbkdf2 -salt -pass env:RELEASE_CACHE_KEY -in .release-key.json -out vac-cache/release-key.enc
+          rm -f .release-key.json
+      - uses: actions/cache/save@v4
+        with:
+          path: vac-cache
+          key: ${{ env.VAC_CACHE }}
+
   build:
     name: Build (${{ matrix.name }})
-    needs: check
+    needs: vac
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
+      # Windows first: its publish registers the release key that Linux builds also carry.
+      max-parallel: 1
       matrix:
         include:
           - name: Windows
             os: windows-latest
             flag: --win
             feed: latest.yml
-          - name: macOS
-            os: macos-latest
-            flag: --mac
-            feed: latest-mac.yml
           - name: Linux
             os: ubuntu-latest
             flag: --linux
             feed: latest-linux.yml
     env:
       PUBLISH: ${{ startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publish) }}
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: OblyviumRP/VacOblyvium
+          token: ${{ secrets.VAC_TOKEN }}
+          path: VacOblyvium
+      - uses: actions/cache/restore@v4
+        with:
+          path: vac-cache
+          key: ${{ env.VAC_CACHE }}
+          fail-on-cache-miss: true
+      - name: VAC jars and release key from the vac job
+        env:
+          RELEASE_CACHE_KEY: ${{ secrets.RELEASE_CACHE_KEY }}
+        run: |
+          mkdir -p VacOblyvium/agent/build/vac VacOblyvium/mod/build/libs
+          cp vac-cache/agent/vac-agent.jar VacOblyvium/agent/build/vac/
+          cp vac-cache/mod/*.jar VacOblyvium/mod/build/libs/
+          openssl enc -d -aes-256-cbc -pbkdf2 -pass env:RELEASE_CACHE_KEY -in vac-cache/release-key.enc -out .release-key.json
+          rm -rf vac-cache
+      - name: OpenSSL static library (Linux VAC module)
+        if: runner.os == 'Linux'
+        run: sudo apt-get install -y libssl-dev
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+      - name: VAC release module
+        run: node scripts/release-key.cjs
+        env:
+          OBLYVIUM_VAC_DIR: ${{ github.workspace }}/VacOblyvium
+          OBLYVIUM_REUSE_KEY: '1'
       - name: Build interface
         run: |
           npm run ui:ci
@@ -105,7 +195,6 @@ jobs:
           # No signing certificates yet; keep electron-builder from looking for them.
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
       - name: List build output
-        shell: bash
         run: ls -l dist
       - name: Publish to the website
         if: env.PUBLISH == 'true'
@@ -113,3 +202,16 @@ jobs:
         env:
           LAUNCHER_PUBLISH_KEY: ${{ secrets.LAUNCHER_PUBLISH_KEY }}
           LAUNCHER_PUBLISH_URL: ${{ vars.LAUNCHER_PUBLISH_URL }}
+      - name: Remove the release key
+        if: always()
+        run: rm -f .release-key.json
+
+  cleanup:
+    name: Drop the VAC cache entry
+    needs: build
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: gh cache delete "$VAC_CACHE" --repo "$GITHUB_REPOSITORY" || true
+        env:
+          GH_TOKEN: ${{ github.token }}
