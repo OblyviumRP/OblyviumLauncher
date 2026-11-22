@@ -4,7 +4,7 @@ const path = require('path')
 const got = require('got')
 const { version } = require('../../../package.json')
 
-const CRASH_URL = process.env.OBLYVIUM_CRASH_URL || 'https://oblyvium.com.br/api/launcher/crash'
+const CRASH_URL = process.env.OBLYVIUM_CRASH_URL || 'https://api.oblyvium.com.br/api/launcher/crash'
 const MAX_FILE_CHARS = 500000
 const LOG_LINES = 1500
 const HIDDEN = '[oculto]'
