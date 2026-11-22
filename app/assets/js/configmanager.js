@@ -673,6 +673,18 @@ exports.setJavaExecutable = function(serverid, executable){
     config.javaConfig[serverid].executable = executable
 }
 
+/**
+ * The game only runs on a Java the launcher downloaded itself.
+ *
+ * @param {string | null} executable Path of a Java executable.
+ * @returns {boolean} Whether it lives inside the launcher runtime directory.
+ */
+exports.isManagedJava = function(executable, platform = process.platform){
+    if(executable == null) return false
+    const norm = p => platform === 'win32' ? path.resolve(p).toLowerCase() : path.resolve(p)
+    return norm(executable).startsWith(norm(path.join(exports.getDataDirectory(), 'runtime')) + path.sep)
+}
+
 // Game Settings
 
 /**

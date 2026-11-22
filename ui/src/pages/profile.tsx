@@ -341,52 +341,19 @@ function Logs({ serverId, profileId }: { serverId: string; profileId: string }) 
 }
 
 function JavaCard({ serverId, profileId }: { serverId: string; profileId: string }) {
-  const [rev, setRev] = useState(0)
-  const showError = useLauncher((s) => s.showError)
-  void rev // muda a cada troca para reler do backend
   const ps = backend().profileSettings(serverId, profileId)
-  const java = async (fn: () => Promise<string | null>, none: string) => {
-    try {
-      const p = await fn()
-      if (p) toast.success(t('Java configurado'), { description: p })
-      else if (none) toast(none)
-      setRev((r) => r + 1)
-    } catch (err) {
-      showError(err)
-    }
-  }
 
   return (
     <Card className="flex flex-col gap-4 p-4">
       <div className="flex flex-col gap-1">
         <h3 className="text-sm font-semibold">Java</h3>
-        <p className="text-xs text-muted-foreground">{t('Cada versão do Minecraft pede um Java diferente, então ele fica por servidor. No automático o launcher escolhe ou baixa sozinho.')}</p>
+        <p className="text-xs text-muted-foreground">{t('Cada versão do Minecraft pede um Java diferente, então ele fica por servidor. O launcher baixa e usa o próprio Java.')}</p>
       </div>
       <div className="flex flex-col gap-1.5 text-sm">
         <span className="truncate rounded-sm border border-input bg-input-fill px-2.5 py-1.5 font-mono text-xs text-muted-foreground" title={ps.javaPath ?? undefined}>
-          {ps.javaPath ?? t('Automático: escolhido ou baixado ao jogar')}
+          {ps.javaPath ?? t('Baixado ao jogar')}
         </span>
         <span className="font-mono text-2xs text-muted-2">{t('Versões aceitas: {v}', { v: ps.javaSupported || '—' })}</span>
-        <div className="flex flex-wrap gap-2 pt-1">
-          <Button variant="secondary" size="sm" onClick={() => java(() => backend().detectJava(serverId, profileId), t('Nenhum Java compatível encontrado. Ele será baixado ao jogar.'))}>
-            {t('Detectar')}
-          </Button>
-          <Button variant="secondary" size="sm" onClick={() => java(() => backend().chooseJava(serverId, profileId), '')}>
-            {t('Escolher arquivo…')}
-          </Button>
-          {ps.javaPath && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                backend().setProfileSetting(serverId, profileId, 'javaPath', null)
-                setRev((r) => r + 1)
-              }}
-            >
-              {t('Usar automático')}
-            </Button>
-          )}
-        </div>
       </div>
       <p className="border-t border-border pt-3 text-xs text-muted-foreground">
         {t('Memória e tamanho da janela valem para todos os servidores.')}{' '}

@@ -31,7 +31,6 @@ import { t } from '@/i18n'
 const w = window as any
 const nodeRequire: (id: string) => any = w.require
 const path = nodeRequire('path')
-const os = nodeRequire('os')
 const { pathToFileURL } = nodeRequire('url')
 const { ipcRenderer, shell } = nodeRequire('electron')
 const { fileURLToPath } = nodeRequire('url')
@@ -63,7 +62,6 @@ const News = mod('core/news')
 const Skins = mod('core/skins')
 const GameSettingsCore = mod('core/gamesettings')
 const { getServerStatus } = req('helios-core/mojang')
-const { validateSelectedJvm, ensureJavaDirIsRoot, javaExecFromRoot, discoverBestJvmInstallation } = req('helios-core/java')
 
 let distro: any = null
 let lastExit: any = null
@@ -681,11 +679,8 @@ export function createElectronBackend(): Backend {
       const s = server(serverId)
       const key = configKey(serverId, profileId)
       ConfigManager.ensureJavaConfig(key, s.effectiveJavaOptions, s.rawServer.javaOptions?.ram)
-      return { javaPath: ConfigManager.getJavaExecutable(key), javaSupported: s.effectiveJavaOptions?.supported ?? '' }
-    },
-    setProfileSetting(serverId, profileId, _key, value) {
-      ConfigManager.setJavaExecutable(configKey(serverId, profileId), value)
-      ConfigManager.save()
+      const exec = ConfigManager.getJavaExecutable(key)
+      return { javaPath: ConfigManager.isManagedJava(exec) ? exec : null, javaSupported: s.effectiveJavaOptions?.supported ?? '' }
     },
     gameSettings(): GameSettings {
       const servers = (distro?.servers ?? []).filter((s: any) => s.rawServer.id !== 'SELECT')
@@ -719,32 +714,6 @@ export function createElectronBackend(): Backend {
     setLanguage(lang) {
       ConfigManager.setLanguage(lang)
       ConfigManager.save()
-    },
-    async detectJava(serverId, profileId) {
-      const s = server(serverId)
-      const found = await discoverBestJvmInstallation(ConfigManager.getDataDirectory(), s.effectiveJavaOptions.supported)
-      if (found == null) return null
-      const exec = javaExecFromRoot(found.path)
-      ConfigManager.setJavaExecutable(configKey(serverId, profileId), exec)
-      ConfigManager.save()
-      return exec
-    },
-    async chooseJava(serverId, profileId) {
-      const s = server(serverId)
-      const res = await remote.dialog.showOpenDialog(remote.getCurrentWindow(), {
-        title: 'Escolha o executável do Java',
-        properties: ['openFile'],
-        filters: os.platform() === 'win32' ? [{ name: 'Java', extensions: ['exe'] }] : [],
-      })
-      if (res.canceled || res.filePaths.length === 0) return null
-      const exe = res.filePaths[0]
-      const details = await validateSelectedJvm(ensureJavaDirIsRoot(exe), s.effectiveJavaOptions.supported)
-      if (details == null) {
-        throw new UserError('Java incompatível', `Este servidor precisa de Java ${s.effectiveJavaOptions.suggestedMajor}.`)
-      }
-      ConfigManager.setJavaExecutable(configKey(serverId, profileId), exe)
-      ConfigManager.save()
-      return exe
     },
     openDataFolder() {
       shell.openPath(ConfigManager.getDataDirectory())

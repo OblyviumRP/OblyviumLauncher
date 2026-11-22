@@ -107,7 +107,11 @@ class ProcessBuilder {
 
         logger.info('Launch Arguments:', loggableArgs)
 
-        const child = child_process.spawn(ConfigManager.getJavaExecutable(this.configKey), args, {
+        const java = ConfigManager.getJavaExecutable(this.configKey)
+        if(!ConfigManager.isManagedJava(java)){
+            throw new Error('Java fora do runtime do launcher.')
+        }
+        const child = child_process.spawn(java, args, {
             cwd: this.gameDir,
             env: launchEnv(),
             detached: true
