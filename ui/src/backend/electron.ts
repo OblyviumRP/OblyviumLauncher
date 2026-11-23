@@ -50,6 +50,7 @@ const ProfileManager = mod('profilemanager')
 const ProfileIcons = mod('profileicons')
 const ContentManager = mod('contentmanager')
 const Modrinth = mod('modrinth')
+const CurseForge = mod('curseforge')
 const RichText = mod('richtext')
 const Notifications = mod('notifications')
 const Changelog = mod('changelog')
@@ -138,6 +139,7 @@ function configKey(serverId: string, profileId: string) {
 // Mesmos textos de [js.mods.error] no en_US.toml, aqui para passarem pelo t().
 function modrinthMessage(err: any): string {
   const title = err?.data?.title ?? ''
+  const curseforge = err?.source === 'curseforge'
   switch (err?.code) {
     case 'BLOCKED':
       return err.data?.dependency ? t('Não dá para instalar: ele precisa de {title}, que é proibido pela staff.', { title }) : t('{title} é proibido pela staff.', { title })
@@ -152,14 +154,16 @@ function modrinthMessage(err: any): string {
     case 'DESTINATION_EXISTS':
       return t('Já existe um arquivo com esse nome na pasta.')
     case 'BAD_FILENAME':
-      return t('O arquivo anunciado pela Modrinth tem um nome inválido e foi recusado.')
+      return curseforge ? t('O arquivo anunciado pelo CurseForge tem um nome inválido e foi recusado.') : t('O arquivo anunciado pela Modrinth tem um nome inválido e foi recusado.')
+    case 'NO_DOWNLOAD':
+      return t('O autor de {title} só permite baixar pelo site do CurseForge.', { title })
     case 'UNSUPPORTED_TYPE':
       return t('Esse tipo de conteúdo não é suportado pelo launcher.')
     case 'ENOENT':
     case 'ENOSPC':
       return t('Não foi possível ler a pasta do perfil.')
     default:
-      return t('Não foi possível falar com o Modrinth. Verifique a conexão e tente de novo.')
+      return curseforge ? t('Não foi possível falar com o CurseForge. Verifique a conexão e tente de novo.') : t('Não foi possível falar com o Modrinth. Verifique a conexão e tente de novo.')
   }
 }
 
@@ -209,7 +213,7 @@ function waitDistributionIndex(): Promise<boolean> {
 let packProjects: { serverId: string; promise: Promise<Set<string>> } | null = null
 function getPackProjects(s: any, strict: boolean): Promise<Set<string>> {
   if (packProjects == null || packProjects.serverId !== s.rawServer.id || strict) {
-    const promise = Modrinth.getModpackProjects(s, { download: strict })
+    const promise = Modrinth.getModpackProjects(s, { download: strict, extra: CurseForge.projectIds })
     packProjects = { serverId: s.rawServer.id, promise }
     promise.catch(() => {
       if (packProjects?.promise === promise) packProjects = null
@@ -478,7 +482,7 @@ export function createElectronBackend(): Backend {
       const s = server(serverId)
       const files = await ContentManager.describe(dir, type)
       let updates = new Map<string, any>()
-      const recognised = files.filter((f: any) => f.project != null)
+      const recognised = files.filter((f: any) => f.project != null && !CurseForge.isId(f.project.id))
       const target = Modrinth.getServerTarget(s)
       if (recognised.length > 0 && !(type === 'mod' && target.loader == null)) {
         try {
@@ -571,7 +575,8 @@ export function createElectronBackend(): Backend {
       fs.ensureDir(dir).then(() => shell.openPath(dir))
     },
 
-    async categories(type) {
+    async categories(type, source) {
+      if (source === 'curseforge') return []
       try {
         return await Modrinth.getCategories(type)
       } catch {
@@ -582,6 +587,28 @@ export function createElectronBackend(): Backend {
       const { s, dir, target, blocklist } = selectedTarget()
       try {
         const [pack, installed] = await Promise.all([getPackProjects(s, false), ContentManager.installedProjects(dir).catch(() => new Set())])
+        if (o.source === 'curseforge') {
+          const cf = await CurseForge.search(o, target, blocklist, pack)
+          return {
+            total: cf.total,
+            pageSize: cf.pageSize,
+            hits: cf.hits.map(
+              (m: any): SearchHit => ({
+                id: CurseForge.toId(m.id),
+                slug: m.slug,
+                title: m.name,
+                author: m.authors?.[0]?.name ?? '',
+                description: m.summary ?? '',
+                iconUrl: m.logo?.thumbnailUrl || null,
+                downloads: m.downloadCount ?? 0,
+                follows: m.thumbsUpCount ?? 0,
+                updated: m.dateModified ?? null,
+                categories: (m.categories ?? []).map((c: any) => c.name),
+                installed: installed.has(CurseForge.toId(m.id)),
+              }),
+            ),
+          }
+        }
         const res = await Modrinth.search(o, target, blocklist, pack)
         return {
           total: res.total,
@@ -608,6 +635,40 @@ export function createElectronBackend(): Backend {
     },
     async project(idOrSlug) {
       const { dir, target } = selectedTarget()
+      if (CurseForge.isId(idOrSlug)) {
+        try {
+          const m = await CurseForge.getProject(idOrSlug)
+          const type: ContentType = CurseForge.typeOf(m) ?? 'mod'
+          const [installed, body, file] = await Promise.all([
+            ContentManager.installedProjects(dir).catch(() => new Set()),
+            CurseForge.getDescription(idOrSlug).catch(() => ''),
+            CurseForge.getCompatibleFile(idOrSlug, type, target).catch(() => null),
+          ])
+          const details: ProjectDetails = {
+            id: CurseForge.toId(m.id),
+            slug: m.slug,
+            title: m.name,
+            description: m.summary ?? '',
+            bodyHtml: RichText.render(body ?? ''),
+            iconUrl: m.logo?.thumbnailUrl || null,
+            downloads: m.downloadCount ?? 0,
+            follows: m.thumbsUpCount ?? 0,
+            updated: m.dateModified ?? null,
+            categories: (m.categories ?? []).map((c: any) => c.name),
+            gallery: (m.screenshots ?? []).filter((g: any) => /^https:/.test(g.url)).map((g: any) => ({ url: g.url, title: g.title ?? null })),
+            license: null,
+            sourceUrl: m.links?.sourceUrl || null,
+            source: 'curseforge',
+            pageUrl: m.links?.websiteUrl || `https://www.curseforge.com/minecraft/mc-mods/${m.slug}`,
+            type,
+            installed: installed.has(CurseForge.toId(m.id)),
+            compatibleVersion: file ? { id: String(file.id), number: file.displayName, date: file.fileDate ?? null } : null,
+          }
+          return details
+        } catch (err) {
+          throw asUserError(err, 'Projeto indisponível')
+        }
+      }
       try {
         const p = await Modrinth.getProject(idOrSlug)
         const type: ContentType = p.project_type === 'shader' ? 'shader' : p.project_type === 'resourcepack' ? 'resourcepack' : 'mod'
@@ -629,6 +690,8 @@ export function createElectronBackend(): Backend {
           gallery: (p.gallery ?? []).filter((g: any) => /^https:/.test(g.url)).map((g: any) => ({ url: g.url, title: g.title ?? null })),
           license: p.license?.name ?? p.license?.id ?? null,
           sourceUrl: p.source_url ?? null,
+          source: 'modrinth',
+          pageUrl: `https://modrinth.com/project/${p.slug}`,
           type,
           installed: installed.has(p.id),
           compatibleVersion: ver ? { id: ver.id, number: ver.version_number, date: ver.date_published ?? null } : null,
@@ -642,7 +705,7 @@ export function createElectronBackend(): Backend {
       const { s, dir, target, blocklist } = selectedTarget()
       const run = installQueue.then(async () => {
         const [pack, installed] = await Promise.all([getPackProjects(s, true), ContentManager.installedProjects(dir)])
-        await Modrinth.install(projectId, target, dir, installed, blocklist, pack)
+        await (CurseForge.isId(projectId) ? CurseForge : Modrinth).install(projectId, target, dir, installed, blocklist, pack)
       })
       installQueue = run.catch(() => {})
       try {

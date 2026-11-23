@@ -56,7 +56,9 @@ Depois de instalado, o launcher avisa quando sai uma versão nova e o botão Jog
 | Tela | O que tem |
 | --- | --- |
 | Início | Arte do servidor, botão Jogar, ficha do servidor e notícias |
-| Descobrir | Busca no Modrinth de mods, resource packs e shaders compatíveis com o modpack oficial |
+| Descobrir | Busca no Modrinth e no CurseForge de mods, resource packs e shaders compatíveis com o modpack oficial |
+
+O CurseForge passa pelo site (`api.oblyvium.com.br/api/launcher/curseforge/`), que guarda a chave da API. A staff bloqueia projetos na distribuição: `"modrinth": { "blocked": [...] }` aceita slug ou id do Modrinth e `"curseforge": { "blocked": [...] }` aceita id numérico ou slug do CurseForge; um slug bloqueado vale nas duas fontes. Mods cujo autor não libera download por launcher aparecem, mas a instalação manda o jogador para o site do CurseForge.
 | Perfil | Conteúdo instalado, mods opcionais do servidor, capturas, `latest.log` e verificação de arquivos |
 | Skins | Skin e capa da conta Microsoft com prévia 3D e uma biblioteca local de skins |
 | Downloads | Tarefas da sessão: arquivos do jogo, Java e atualização do launcher |

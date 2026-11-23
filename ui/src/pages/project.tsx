@@ -40,7 +40,7 @@ export function ProjectPage() {
       </div>
       {error ? (
         <EmptyState icon={<Package />} title={t('Projeto indisponível')} action={<Button variant="secondary" onClick={reload}>{t('Tentar de novo')}</Button>}>
-          {t('Não foi possível carregar este projeto do Modrinth.')}
+          {t('Não foi possível carregar este projeto.')}
         </EmptyState>
       ) : !p ? (
         <div className="flex flex-col gap-3" aria-label={t('Carregando')}>
@@ -67,9 +67,11 @@ export function ProjectPage() {
                   <span>
                     <span className="font-semibold text-foreground">{formatCount(p.downloads)}</span> {t('downloads')}
                   </span>
-                  <span>
-                    <span className="font-semibold text-foreground">{formatCount(p.follows)}</span> {t('seguidores')}
-                  </span>
+                  {p.source === 'modrinth' && (
+                    <span>
+                      <span className="font-semibold text-foreground">{formatCount(p.follows)}</span> {t('seguidores')}
+                    </span>
+                  )}
                   {p.updated && <span>{t('atualizado em {date}', { date: formatDate(p.updated) })}</span>}
                 </div>
               </div>
@@ -128,8 +130,8 @@ export function ProjectPage() {
                   <span className="font-mono text-xs">{p.license}</span>
                 </div>
               )}
-              <button type="button" onClick={() => backend().openExternal(`https://modrinth.com/project/${p.slug}`)} className="flex cursor-pointer items-center gap-1.5 text-primary-light hover:underline">
-                {t('Ver no Modrinth')} <ExternalLink className="size-3.5" />
+              <button type="button" onClick={() => backend().openExternal(p.pageUrl)} className="flex cursor-pointer items-center gap-1.5 text-primary-light hover:underline">
+                {p.source === 'curseforge' ? t('Ver no CurseForge') : t('Ver no Modrinth')} <ExternalLink className="size-3.5" />
               </button>
               {p.sourceUrl && (
                 <button type="button" onClick={() => backend().openExternal(p.sourceUrl!)} className="flex cursor-pointer items-center gap-1.5 text-primary-light hover:underline">

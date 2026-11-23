@@ -337,7 +337,7 @@ export function createMockBackend(): Backend {
     latestLog: async () => '[12:00:00] [main/INFO]: Nenhum log real no modo de desenvolvimento.',
     openGameFolder() {},
 
-    categories: async (type) => (type === 'mod' ? ['adventure', 'decoration', 'magic', 'optimization', 'storage', 'utility'] : ['realistic', 'vanilla-like', 'cartoon']),
+    categories: async (type, source) => (source === 'curseforge' ? [] : type === 'mod' ? ['adventure', 'decoration', 'magic', 'optimization', 'storage', 'utility'] : ['realistic', 'vanilla-like', 'cartoon']),
     async search(o) {
       await wait(300)
       const q = o.query.toLowerCase()
@@ -353,6 +353,8 @@ export function createMockBackend(): Backend {
         gallery: [],
         license: 'LGPL-3.0',
         sourceUrl: null,
+        source: 'modrinth',
+        pageUrl: `https://modrinth.com/project/${h.slug}`,
         type: h.title.includes('Faithful') ? 'resourcepack' : h.title.includes('Complementary') ? 'shader' : 'mod',
         installed: installed.has(h.id),
         compatibleVersion: { id: 'v1', number: '1.0.0', date: '2026-10-01T10:00:00Z' },

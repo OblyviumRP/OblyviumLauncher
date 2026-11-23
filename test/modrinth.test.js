@@ -287,11 +287,11 @@ test('getModpackProjects não guarda em cache quando falta um mod esperado no di
         ]
     }
     const first = await Modrinth.getModpackProjects(serv)
-    assert.deepEqual([...first], ['AAAAAAAA'])
+    assert.deepEqual([...first], ['AAAAAAAA', 'slug:sodium'])
 
     await fs.outputFile(missingPath, 'iris 1.0')
     const second = await Modrinth.getModpackProjects(serv)
-    assert.deepEqual([...second].sort(), ['AAAAAAAA', 'BBBBBBBB'])
+    assert.deepEqual([...second].sort(), ['AAAAAAAA', 'BBBBBBBB', 'slug:iris', 'slug:sodium'])
 })
 
 test('getModpackProjects com download baixa os mods do pack que faltam antes de identificar', async () => {
@@ -305,7 +305,7 @@ test('getModpackProjects com download baixa os mods do pack que faltam antes de 
         ]
     }
     const pack = await Modrinth.getModpackProjects(serv, { download: true })
-    assert.deepEqual([...pack], ['AAAAAAAA'])
+    assert.deepEqual([...pack], ['AAAAAAAA', 'slug:sodium'])
     assert.equal(await fs.readFile(missingPath, 'utf8'), 'sodium 1.0')
 })
 

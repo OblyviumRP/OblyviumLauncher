@@ -2,7 +2,7 @@ import { Check, ChevronLeft, ChevronRight, Download, Loader2, Package, Search } 
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
-import { backend, type ContentType, type SearchHit } from '@/backend'
+import { backend, type ContentSource, type ContentType, type SearchHit } from '@/backend'
 import { EmptyState, Page, PageHeader } from '@/components/shared/page'
 import { ProfileIcon, profileLabel } from '@/components/shared/profile-icon'
 
@@ -21,6 +21,11 @@ const types: { id: ContentType; label: string }[] = [
   { id: 'mod', label: 'Mods' },
   { id: 'resourcepack', label: 'Resource packs' },
   { id: 'shader', label: 'Shaders' },
+]
+
+const sources: { id: ContentSource; label: string }[] = [
+  { id: 'modrinth', label: 'Modrinth' },
+  { id: 'curseforge', label: 'CurseForge' },
 ]
 
 // Rótulos em português; traduzidos na hora de mostrar.
@@ -82,6 +87,8 @@ export function DiscoverPage() {
   const selectServer = useLauncher((s) => s.selectServer)
   const [params, setParams] = useSearchParams()
   const type = ((params.get('tipo') as ContentType) || 'mod') as ContentType
+  const source: ContentSource = params.get('fonte') === 'curseforge' ? 'curseforge' : 'modrinth'
+  const sourceLabel = sources.find((s) => s.id === source)!.label
   const [q, setQ] = useState('')
   const [sort, setSort] = useState('relevance')
   const [cats, setCats] = useState<string[]>([])
@@ -91,12 +98,12 @@ export function DiscoverPage() {
 
   useEffect(() => {
     setOffset(0)
-  }, [type, query, sort, cats])
+  }, [type, source, query, sort, cats])
 
-  const categories = useAsync(() => backend().categories(type), [type])
+  const categories = useAsync(() => backend().categories(type, source), [type, source])
   const results = useAsync(
-    () => (type === 'mod' && loaderless ? Promise.resolve({ hits: [] as SearchHit[], total: 0, pageSize: 20 }) : backend().search({ query, type, categories: cats, sort, offset })),
-    [type, query, sort, cats.join(','), offset, server?.id, profile?.id, rev],
+    () => (type === 'mod' && loaderless ? Promise.resolve({ hits: [] as SearchHit[], total: 0, pageSize: 20 }) : backend().search({ query, type, source, categories: cats, sort, offset })),
+    [type, source, query, sort, cats.join(','), offset, server?.id, profile?.id, rev],
   )
   const data = results.data
   const pages = data ? Math.ceil(data.total / data.pageSize) : 0
@@ -110,7 +117,7 @@ export function DiscoverPage() {
           server && profile ? (
             // A busca e a instalação valem para o modpack oficial escolhido aqui (o mesmo do Início).
             <span className="flex flex-wrap items-center gap-2">
-              {t('Do Modrinth, só o que é compatível com o modpack oficial. Instalar em')}
+              {t('Do {source}, só o que é compatível com o modpack oficial. Instalar em', { source: sourceLabel })}
               <Select
                 aria-label={t('Modpack oficial')}
                 value={server.id}
@@ -128,11 +135,28 @@ export function DiscoverPage() {
           ) : undefined
         }
         actions={
+          <div className="flex flex-wrap items-center gap-2">
+          <Tabs
+            value={source}
+            onValueChange={(v) => {
+              setCats([])
+              setParams({ tipo: type, fonte: v }, { replace: true })
+            }}
+            variant="pill"
+          >
+            <TabsList aria-label={t('Fonte')}>
+              {sources.map((s) => (
+                <TabsTrigger key={s.id} value={s.id}>
+                  {s.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
           <Tabs
             value={type}
             onValueChange={(v) => {
               setCats([])
-              setParams({ tipo: v }, { replace: true })
+              setParams({ tipo: v, fonte: source }, { replace: true })
             }}
             variant="pill"
           >
@@ -144,6 +168,7 @@ export function DiscoverPage() {
               ))}
             </TabsList>
           </Tabs>
+          </div>
         }
       />
       <div className="flex flex-wrap gap-2">
@@ -157,6 +182,7 @@ export function DiscoverPage() {
 
       <div className="flex flex-wrap items-start gap-5">
         <aside aria-label={t('Filtros')} className="flex w-52 shrink-0 flex-col gap-5">
+          {source === 'modrinth' && (
           <fieldset>
             <legend className="mb-2 font-mono text-2xs uppercase tracking-wider text-muted-2">{t('Categorias')}</legend>
             <div className="flex flex-wrap gap-1.5">
@@ -180,6 +206,7 @@ export function DiscoverPage() {
               {categories.loading && <span className="text-xs text-muted-2">{t('Carregando…')}</span>}
             </div>
           </fieldset>
+          )}
           <p className="text-xs text-muted-foreground">{t('Projetos que a staff bloqueou e mods que já vêm com o servidor não aparecem aqui.')}</p>
         </aside>
 
@@ -193,7 +220,7 @@ export function DiscoverPage() {
             </EmptyState>
           ) : results.error ? (
             <EmptyState icon={<Search />} title={t('Busca indisponível')} action={<Button variant="secondary" onClick={results.reload}>{t('Tentar de novo')}</Button>}>
-              {t('Não foi possível falar com o Modrinth. Verifique a conexão.')}
+              {t('Não foi possível falar com o {source}. Verifique a conexão.', { source: sourceLabel })}
             </EmptyState>
           ) : !results.loading && data && data.hits.length === 0 ? (
             <EmptyState

@@ -4,17 +4,21 @@ const fs = require('fs-extra')
 const os = require('os')
 const path = require('path')
 const Fake = require('./helpers/fakeModrinth')
+const FakeCurseForge = require('./helpers/fakeCurseForge')
 
 let fake
+let fakeCf
 let Content
 
 before(async () => {
     fake = await Fake.start()
     process.env.OBLYVIUM_MODRINTH_API = fake.api
+    fakeCf = await FakeCurseForge.start()
+    process.env.OBLYVIUM_CURSEFORGE_API = fakeCf.api
     Content = require('../app/assets/js/contentmanager')
 })
 
-after(() => fake.close())
+after(() => Promise.all([fake.close(), fakeCf.close()]))
 
 async function gameDir(files = {}){
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'jogo-'))
