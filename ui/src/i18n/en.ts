@@ -405,7 +405,6 @@ export const en: Record<string, string> = {
   "Muitas buscas seguidas, aguarde alguns segundos.": "Too many searches in a row, wait a few seconds.",
   "Nada encontrado": "Nothing found",
   "Nada encontrado.": "Nothing found.",
-  "Nada instalado neste perfil ainda. Use Adicionar para procurar no Modrinth.": "Nothing installed in this profile yet. Use Add to search Modrinth.",
   "No perfil": "In profile",
   "No perfil {name}. Dependências entram junto.": "In profile {name}. Dependencies are installed too.",
   "Novos": "Newest",
@@ -421,7 +420,6 @@ export const en: Record<string, string> = {
   "O arquivo vai para a lixeira do sistema.": "The file goes to the system trash.",
   "Ordenar": "Sort",
   "Projeto indisponível": "Project unavailable",
-  "Projetos que a staff bloqueou e mods que já vêm com o servidor não aparecem aqui.": "Projects blocked by staff and mods that already come with the server are not listed here.",
   "Próxima página": "Next page",
   "Página anterior": "Previous page",
   "Páginas": "Pages",
@@ -484,4 +482,7 @@ export const en: Record<string, string> = {
   "Não foi possível falar com o CurseForge. Verifique a conexão e tente de novo.": "Could not reach CurseForge. Check your connection and try again.",
   "Ver no CurseForge": "View on CurseForge",
   "Fonte": "Source",
+  "Adicionar shaders": "Add shaders",
+  "Adicionar resource packs": "Add resource packs",
+  "Nada instalado neste perfil ainda. Procure no Modrinth ou no CurseForge pelo botão de adicionar.": "Nothing installed in this profile yet. Use the add button to search Modrinth or CurseForge.",
 }

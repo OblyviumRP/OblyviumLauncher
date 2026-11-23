@@ -405,7 +405,6 @@ export const es: Record<string, string> = {
   "Muitas buscas seguidas, aguarde alguns segundos.": "Demasiadas búsquedas seguidas, espera unos segundos.",
   "Nada encontrado": "No se encontró nada",
   "Nada encontrado.": "No se encontró nada.",
-  "Nada instalado neste perfil ainda. Use Adicionar para procurar no Modrinth.": "Todavía no hay nada instalado en este perfil. Usa Añadir para buscar en Modrinth.",
   "No perfil": "En el perfil",
   "No perfil {name}. Dependências entram junto.": "En el perfil {name}. Las dependencias se instalan también.",
   "Novos": "Nuevos",
@@ -421,7 +420,6 @@ export const es: Record<string, string> = {
   "O arquivo vai para a lixeira do sistema.": "El archivo va a la papelera del sistema.",
   "Ordenar": "Ordenar",
   "Projeto indisponível": "Proyecto no disponible",
-  "Projetos que a staff bloqueou e mods que já vêm com o servidor não aparecem aqui.": "Los proyectos bloqueados por el staff y los mods que ya trae el servidor no aparecen aquí.",
   "Próxima página": "Página siguiente",
   "Página anterior": "Página anterior",
   "Páginas": "Páginas",
@@ -484,4 +482,7 @@ export const es: Record<string, string> = {
   "Não foi possível falar com o CurseForge. Verifique a conexão e tente de novo.": "No se pudo conectar con CurseForge. Revisa la conexión e inténtalo de nuevo.",
   "Ver no CurseForge": "Ver en CurseForge",
   "Fonte": "Fuente",
+  "Adicionar shaders": "Añadir shaders",
+  "Adicionar resource packs": "Añadir resource packs",
+  "Nada instalado neste perfil ainda. Procure no Modrinth ou no CurseForge pelo botão de adicionar.": "Todavía no hay nada instalado en este perfil. Usa el botón de añadir para buscar en Modrinth o CurseForge.",
 }

@@ -128,7 +128,22 @@ function loadersFor(type, target) {
     }
 }
 
-function sha1(file) {
+const hashCache = new Map()
+
+async function sha1(file) {
+    const stat = await fs.stat(file)
+    const key = `${file}|${stat.size}|${stat.mtimeMs}`
+    if(!hashCache.has(key)) {
+        hashCache.set(key, await sha1Uncached(file))
+    }
+    return hashCache.get(key)
+}
+
+const LOOKUP_TTL = 10 * 60_000
+const versionCache = new Map()
+const projectCache = new Map()
+
+function sha1Uncached(file) {
     return new Promise((resolve, reject) => {
         const hash = crypto.createHash('sha1')
         fs.createReadStream(file)
@@ -158,10 +173,20 @@ exports.identifyFiles = async function(files) {
     if(pathsByHash.size === 0) {
         return result
     }
-    const versions = await postJson('version_files', { hashes: [...pathsByHash.keys()], algorithm: 'sha1' })
-    for(const [hash, ver] of Object.entries(versions)) {
-        for(const file of pathsByHash.get(hash) ?? []) {
-            result.set(file, ver)
+    const now = Date.now()
+    const missing = [...pathsByHash.keys()].filter(hash => (versionCache.get(hash)?.until ?? 0) <= now)
+    if(missing.length > 0) {
+        const versions = await postJson('version_files', { hashes: missing, algorithm: 'sha1' })
+        for(const hash of missing) {
+            versionCache.set(hash, { until: now + LOOKUP_TTL, value: versions[hash] ?? null })
+        }
+    }
+    for(const [hash, files] of pathsByHash) {
+        const ver = versionCache.get(hash)?.value
+        if(ver != null) {
+            for(const file of files) {
+                result.set(file, ver)
+            }
         }
     }
     return result
@@ -220,9 +245,10 @@ exports.getModpackProjects = async function(serv, { download = false, extra = as
     }
     const complete = missing.length === 0
     const result = (async () => {
-        const ids = [...new Set([...(await exports.identifyFiles(files)).values()].map(v => v.project_id))]
+        const found = await exports.identifyFiles(files)
+        const ids = [...new Set([...found.values()].map(v => v.project_id))]
         const projects = await exports.getProjects(ids)
-        const extras = await extra(files).catch(err => {
+        const extras = await extra(files.filter(f => !found.has(f))).catch(err => {
             logger.warn('Could not identify the modpack outside Modrinth.', err)
             return []
         })
@@ -300,7 +326,14 @@ exports.getProjects = async function(ids) {
     if(ids.length === 0) {
         return []
     }
-    return getJson('projects', { searchParams: { ids: JSON.stringify(ids) } })
+    const now = Date.now()
+    const missing = [...new Set(ids)].filter(id => (projectCache.get(id)?.until ?? 0) <= now)
+    if(missing.length > 0) {
+        for(const p of await getJson('projects', { searchParams: { ids: JSON.stringify(missing) } })) {
+            projectCache.set(p.id, { until: now + LOOKUP_TTL, value: p })
+        }
+    }
+    return ids.map(id => projectCache.get(id)?.value).filter(p => p != null)
 }
 
 /**

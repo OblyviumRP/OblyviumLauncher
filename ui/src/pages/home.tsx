@@ -56,12 +56,11 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
 
 /** Ficha do servidor: jogadores em destaque e os dados técnicos em lista. */
 function ServerSheet({ server }: { server: ServerInfo }) {
-  const { data, loading } = useAsync(() => backend().serverStatus(server.id), [server.id])
+  const { data, loading } = useAsync(() => backend().serverStatus(server.id), [server.address])
   return (
     <motion.aside variants={rise} aria-label={t('Servidor')} className="w-full max-w-[260px] rounded-lg border border-border bg-card/90 p-4">
       <div className="flex items-center gap-2.5">
-        <ServerIcon server={server} className="size-8" />
-        <span className="min-w-0 flex-1 truncate text-sm font-semibold">{server.name}</span>
+        <span className="min-w-0 flex-1 truncate text-sm font-semibold">{t('Servidor')}</span>
         <span className={cn('size-2 shrink-0 rounded-full', loading ? 'animate-pulse bg-muted-2' : data ? 'bg-success-fg' : 'bg-danger-fg')} aria-hidden />
       </div>
       {server.address && (
@@ -259,7 +258,7 @@ export function HomePage() {
             </motion.section>
           </AnimatePresence>
 
-          <ServerSheet key={server.id} server={server} />
+          <ServerSheet key={server.address ?? server.id} server={server} />
         </div>
 
         {/* Notícias em destaque (duas colunas); outros servidores numa lista compacta ao lado. */}

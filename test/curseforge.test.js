@@ -37,6 +37,12 @@ test('search manda classe, versão e loader e tira proibidos e o que o pack já 
     assert.equal(q.get('searchFilter'), 'mapa')
 })
 
+test('categorias são as de primeiro nível e viram categoryIds na busca', async () => {
+    assert.deepEqual(await CurseForge.getCategories('mod'), ['Map and Information', 'Performance'])
+    await CurseForge.search({ type: 'mod', categories: ['Performance', 'Inexistente'] }, TARGET, new Set(), new Set())
+    assert.equal(fake.requests.at(-1).url.searchParams.get('categoryIds'), '[6814]')
+})
+
 test('search de mods sem loader não chama a API', async () => {
     const before = fake.requests.length
     const res = await CurseForge.search({ type: 'mod' }, { gameVersion: '26.3', loader: null }, new Set(), new Set())

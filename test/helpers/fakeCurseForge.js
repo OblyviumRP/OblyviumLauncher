@@ -76,6 +76,13 @@ exports.start = async function(){
                 res.writeHead(200, { 'content-type': 'application/octet-stream' })
                 return res.end(f.buf)
             }
+            if(p === '/api/v1/categories'){
+                return send(200, { data: [
+                    { id: 423, name: 'Map and Information', classId: 6, parentCategoryId: 6 },
+                    { id: 407, name: 'Biomes', classId: 6, parentCategoryId: 406 },
+                    { id: 6814, name: 'Performance', classId: 6, parentCategoryId: 6 }
+                ] })
+            }
             if(p === '/api/v1/mods/search'){
                 const classId = Number(url.searchParams.get('classId'))
                 const data = MODS.filter(x => x.classId === classId)

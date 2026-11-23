@@ -182,7 +182,6 @@ export function DiscoverPage() {
 
       <div className="flex flex-wrap items-start gap-5">
         <aside aria-label={t('Filtros')} className="flex w-52 shrink-0 flex-col gap-5">
-          {source === 'modrinth' && (
           <fieldset>
             <legend className="mb-2 font-mono text-2xs uppercase tracking-wider text-muted-2">{t('Categorias')}</legend>
             <div className="flex flex-wrap gap-1.5">
@@ -206,8 +205,6 @@ export function DiscoverPage() {
               {categories.loading && <span className="text-xs text-muted-2">{t('Carregando…')}</span>}
             </div>
           </fieldset>
-          )}
-          <p className="text-xs text-muted-foreground">{t('Projetos que a staff bloqueou e mods que já vêm com o servidor não aparecem aqui.')}</p>
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col gap-2">

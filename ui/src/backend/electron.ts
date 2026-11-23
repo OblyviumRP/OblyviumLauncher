@@ -92,7 +92,7 @@ function mapServer(s: any): ServerInfo {
   return {
     id: raw.id,
     name: raw.name ?? raw.id,
-    description: stripTags(raw.description ?? ''),
+    description: /\bRunning Minecraft\b/i.test(raw.description ?? '') ? '' : stripTags(raw.description ?? ''),
     mcVersion: raw.minecraftVersion ?? '',
     version: raw.version ?? '',
     loader,
@@ -576,8 +576,8 @@ export function createElectronBackend(): Backend {
     },
 
     async categories(type, source) {
-      if (source === 'curseforge') return []
       try {
+        if (source === 'curseforge') return await CurseForge.getCategories(type)
         return await Modrinth.getCategories(type)
       } catch {
         return []
@@ -604,7 +604,7 @@ export function createElectronBackend(): Backend {
                 follows: m.thumbsUpCount ?? 0,
                 updated: m.dateModified ?? null,
                 categories: (m.categories ?? []).map((c: any) => c.name),
-                installed: installed.has(CurseForge.toId(m.id)),
+                installed: installed.has(CurseForge.toId(m.id)) || installed.has(`slug:${String(m.slug).toLowerCase()}`),
               }),
             ),
           }
@@ -661,7 +661,7 @@ export function createElectronBackend(): Backend {
             source: 'curseforge',
             pageUrl: m.links?.websiteUrl || `https://www.curseforge.com/minecraft/mc-mods/${m.slug}`,
             type,
-            installed: installed.has(CurseForge.toId(m.id)),
+            installed: installed.has(CurseForge.toId(m.id)) || installed.has(`slug:${String(m.slug).toLowerCase()}`),
             compatibleVersion: file ? { id: String(file.id), number: file.displayName, date: file.fileDate ?? null } : null,
           }
           return details

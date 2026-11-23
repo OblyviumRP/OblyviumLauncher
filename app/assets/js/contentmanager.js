@@ -312,7 +312,10 @@ exports.installedProjects = async function(gameDir) {
     const versions = await Modrinth.identifyFiles(files)
     const ids = new Set([...versions.values()].map(v => v.project_id))
     try {
-        for(const id of await CurseForge.projectIds(files)) {
+        for(const p of await Modrinth.getProjects([...ids])) {
+            ids.add(`slug:${p.slug.toLowerCase()}`)
+        }
+        for(const id of await CurseForge.projectIds(files.filter(f => !versions.has(f)))) {
             ids.add(id)
         }
     } catch(err) {

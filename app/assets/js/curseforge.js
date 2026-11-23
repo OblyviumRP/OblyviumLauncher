@@ -90,29 +90,39 @@ function isKnown(set, mod) {
     return set.has(exports.toId(mod.id)) || set.has(`slug:${String(mod.slug ?? '').toLowerCase()}`)
 }
 
+function isWhitespace(x) {
+    return x === 9 || x === 10 || x === 13 || x === 32
+}
+
 exports.fingerprint = function(buf) {
-    const b = buf.filter(x => x !== 9 && x !== 10 && x !== 13 && x !== 32)
-    const len = b.length
+    let len = 0
+    for(let i = 0; i < buf.length; i++) {
+        if(!isWhitespace(buf[i])) {
+            len++
+        }
+    }
     const m = 0x5bd1e995
     let h = (1 ^ len) >>> 0
-    let i = 0
-    while(len - i >= 4) {
-        let k = b[i] | (b[i + 1] << 8) | (b[i + 2] << 16) | (b[i + 3] << 24)
-        k = Math.imul(k, m)
-        k ^= k >>> 24
-        k = Math.imul(k, m)
-        h = Math.imul(h, m) ^ k
-        i += 4
+    let k = 0
+    let shift = 0
+    for(let i = 0; i < buf.length; i++) {
+        const x = buf[i]
+        if(isWhitespace(x)) {
+            continue
+        }
+        k |= x << shift
+        shift += 8
+        if(shift === 32) {
+            k = Math.imul(k, m)
+            k ^= k >>> 24
+            k = Math.imul(k, m)
+            h = Math.imul(h, m) ^ k
+            k = 0
+            shift = 0
+        }
     }
-    const rest = len - i
-    if(rest === 3) {
-        h ^= b[i + 2] << 16
-    }
-    if(rest >= 2) {
-        h ^= b[i + 1] << 8
-    }
-    if(rest >= 1) {
-        h ^= b[i]
+    if(shift > 0) {
+        h ^= k
         h = Math.imul(h, m)
     }
     h ^= h >>> 13
@@ -120,6 +130,20 @@ exports.fingerprint = function(buf) {
     h ^= h >>> 15
     return h >>> 0
 }
+
+const printCache = new Map()
+
+async function fingerprintFile(file) {
+    const stat = await fs.stat(file)
+    const key = `${file}|${stat.size}|${stat.mtimeMs}`
+    if(!printCache.has(key)) {
+        printCache.set(key, exports.fingerprint(await fs.readFile(file)))
+    }
+    return printCache.get(key)
+}
+
+const matchCache = new Map()
+const MATCH_TTL = 10 * 60_000
 
 exports.getMods = async function(modIds) {
     const ids = [...new Set(modIds)]
@@ -136,7 +160,7 @@ exports.getMods = async function(modIds) {
 exports.identifyFiles = async function(files) {
     const pathsByPrint = new Map()
     for(const file of files) {
-        const print = exports.fingerprint(await fs.readFile(file))
+        const print = await fingerprintFile(file)
         if(!pathsByPrint.has(print)) {
             pathsByPrint.set(print, [])
         }
@@ -146,20 +170,32 @@ exports.identifyFiles = async function(files) {
     if(pathsByPrint.size === 0) {
         return result
     }
-    const prints = [...pathsByPrint.keys()]
-    const matches = []
-    for(let i = 0; i < prints.length; i += 1000) {
-        const res = await postData('v1/fingerprints/432', { fingerprints: prints.slice(i, i + 1000) })
-        matches.push(...(res.exactMatches ?? []))
-    }
-    const mods = new Map((await exports.getMods(matches.map(x => x.id))).map(mod => [mod.id, mod]))
-    for(const match of matches) {
-        const mod = mods.get(match.id)
-        if(mod == null) {
-            continue
+    const now = Date.now()
+    const fresh = print => (matchCache.get(print)?.until ?? 0) > now
+    const missing = [...pathsByPrint.keys()].filter(print => !fresh(print))
+    if(missing.length > 0) {
+        const matches = []
+        for(let i = 0; i < missing.length; i += 1000) {
+            const res = await postData('v1/fingerprints/432', { fingerprints: missing.slice(i, i + 1000) })
+            matches.push(...(res.exactMatches ?? []))
         }
-        for(const file of pathsByPrint.get(match.file.fileFingerprint) ?? []) {
-            result.set(file, { mod, file: match.file })
+        const mods = new Map((await exports.getMods(matches.map(x => x.id))).map(mod => [mod.id, mod]))
+        for(const print of missing) {
+            matchCache.set(print, { until: now + MATCH_TTL, value: null })
+        }
+        for(const match of matches) {
+            const mod = mods.get(match.id)
+            if(mod != null) {
+                matchCache.set(match.file.fileFingerprint, { until: now + MATCH_TTL, value: { mod, file: match.file } })
+            }
+        }
+    }
+    for(const [print, paths] of pathsByPrint) {
+        const value = matchCache.get(print)?.value
+        if(value != null) {
+            for(const file of paths) {
+                result.set(file, value)
+            }
         }
     }
     return result
@@ -170,7 +206,26 @@ exports.projectIds = async function(files) {
     return [...found.values()].map(x => exports.toId(x.mod.id))
 }
 
-exports.search = async function({ query = '', type = 'mod', sort = 'relevance', offset = 0 }, target, blocklist, packProjects) {
+const categoriesCache = new Map()
+
+async function categoriesOf(type) {
+    if(!categoriesCache.has(type)) {
+        const promise = getData('v1/categories', { searchParams: { classId: CLASSES[type] } })
+            .then(all => all.filter(c => c.parentCategoryId === CLASSES[type]))
+        promise.catch(() => categoriesCache.delete(type))
+        categoriesCache.set(type, promise)
+    }
+    return categoriesCache.get(type)
+}
+
+exports.getCategories = async function(type) {
+    if(CLASSES[type] == null) {
+        return []
+    }
+    return (await categoriesOf(type)).map(c => c.name).sort((a, b) => a.localeCompare(b))
+}
+
+exports.search = async function({ query = '', type = 'mod', categories = [], sort = 'relevance', offset = 0 }, target, blocklist, packProjects) {
     const empty = { hits: [], total: 0, offset, pageSize: PAGE_SIZE }
     if(CLASSES[type] == null || (type === 'mod' && target.loader == null) || offset + PAGE_SIZE > MAX_RESULTS) {
         return empty
@@ -188,6 +243,13 @@ exports.search = async function({ query = '', type = 'mod', sort = 'relevance', 
     }
     if(type === 'mod' && LOADERS[target.loader] != null) {
         searchParams.modLoaderType = LOADERS[target.loader]
+    }
+    if(categories.length > 0) {
+        const byName = new Map((await categoriesOf(type)).map(c => [c.name, c.id]))
+        const ids = categories.map(name => byName.get(name)).filter(id => id != null).slice(0, 10)
+        if(ids.length > 0) {
+            searchParams.categoryIds = JSON.stringify(ids)
+        }
     }
     let res
     try {

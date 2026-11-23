@@ -145,7 +145,7 @@ test('installedProjects e findBlocked olham todos os tipos', async () => {
         'resourcepacks/pacote-1.0.zip': 'pacote 1.0'
     })
     await Content.setEnabled(dir, 'resourcepack', 'pacote-1.0.zip', true)
-    assert.deepEqual([...await Content.installedProjects(dir)].sort(), ['AAAAAAAA', 'CCCCCCCC', 'DDDDDDDD'])
+    assert.deepEqual([...await Content.installedProjects(dir)].sort(), ['AAAAAAAA', 'CCCCCCCC', 'DDDDDDDD', 'slug:mapa', 'slug:pacote', 'slug:sodium'])
     const blocked = await Content.findBlocked(dir, new Set(['sodium', 'mapa', 'pacote']))
     assert.deepEqual(blocked.map(b => [b.type, b.fileName, b.title]).sort(), [
         ['mod', 'sodium-1.0.jar', 'Sodium'],
