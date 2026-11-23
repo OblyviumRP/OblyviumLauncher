@@ -56,7 +56,10 @@ const raw = { version: '1.0.0', servers: [
         { id: 'com.exemplo:vulkanmod:1.0.0', name: 'VulkanMod', type: 'ForgeMod', artifact }
       ] },
     { id: 'qa-vanilla', name: 'Eventos', description: 'Sem mods', icon: '', address: '127.0.0.1:9',
-      minecraftVersion: '1.21.1', version: '1.0.0', mainServer: false, autoconnect: false, modules: [] }
+      minecraftVersion: '1.21.1', version: '1.0.0', mainServer: false, autoconnect: false, modules: [] },
+    { id: 'qa-pojav', name: 'Pojav', description: 'Só no celular', icon: '', address: '127.0.0.1:9',
+      minecraftVersion: '1.21.1', version: '1.0.0', mainServer: false, autoconnect: false, modules: [],
+      mobile: { manifest: 'https://example.invalid/mobile.json' } }
 ] };
 api.rawDistribution = raw;
 api.distribution = new HeliosDistribution(raw, C.getCommonDirectory(), C.getInstanceDirectory());
@@ -272,6 +275,8 @@ app.whenReady().then(async () => {
 
         // Trocar de servidor pelo Início ("Modpacks"); servidor sem mods não tem a aba.
         await go('#/')
+        assert.doesNotMatch(await text(), /Pojav/, 'modpack do celular fora do PC')
+        assert.equal(await run(`document.querySelectorAll('button[aria-current]').length`), 1, 'modpack em uso marcado na lista')
         await click('button[aria-label="Jogar em Eventos"]')
         await pause(600)
         assert.equal(await config('C.getSelectedServer()'), 'qa-vanilla')

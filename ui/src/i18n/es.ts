@@ -156,6 +156,7 @@ export const es: Record<string, string> = {
   "Jogando {name}": "Jugando {name}",
   "Jogar": "Jugar",
   "Jogar de novo": "Jugar de nuevo",
+  "{name} (em uso)": "{name} (en uso)",
   "Jogar em {name}": "Jugar en {name}",
   "Jogar offline": "Jugar sin conexión",
   "Jogar {name}": "Jugar {name}",
