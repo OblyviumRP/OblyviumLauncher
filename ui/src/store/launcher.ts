@@ -204,7 +204,8 @@ export const useLauncher = create<State>()(
       refreshServers: () => {
         const b = backend()
         const servers = b.servers()
-        const serverId = b.selectedServerId() ?? servers[0]?.id ?? null
+        const selected = b.selectedServerId()
+        const serverId = servers.some((x) => x.id === selected) ? selected : (servers.find((x) => x.main) ?? servers[0])?.id ?? null
         set({ servers, serverId })
         get().refreshProfiles()
       },

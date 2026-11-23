@@ -50,7 +50,7 @@ const { en } = await import(new URL('../src/i18n/en.ts', import.meta.url))
 const { es } = await import(new URL('../src/i18n/es.ts', import.meta.url))
 
 // Siglas e nomes que são iguais em todos os idiomas.
-const same = /^(Info|Logs|Modpacks?|Microsoft|Mojang|Java|Skins?|Shaders|Resource packs|Mods|Slim|Discord Rich Presence|Oblyvium Launcher|Mod|Shader|Resource pack|offline|Offline)$/
+const same = /^(Info|Logs|Modpacks?|Microsoft|Mojang|Java|Skins?|Shaders|Resource packs|Mods|Slim|Discord Rich Presence|Oblyvium Launcher|Mod|Shader|Resource pack|offline|Offline|Modrinth|CurseForge)$/
 const sorted = [...keys].filter((k) => /[A-Za-zÀ-ú]/.test(k) && !same.test(k)).sort()
 if (process.argv.includes('--list')) {
   console.log(JSON.stringify(sorted, null, 1))

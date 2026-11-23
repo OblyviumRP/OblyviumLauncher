@@ -4,17 +4,21 @@ const fs = require('fs-extra')
 const os = require('os')
 const path = require('path')
 const Fake = require('./helpers/fakeModrinth')
+const FakeCurseForge = require('./helpers/fakeCurseForge')
 
 let fake
+let fakeCf
 let Content
 
 before(async () => {
     fake = await Fake.start()
     process.env.OBLYVIUM_MODRINTH_API = fake.api
+    fakeCf = await FakeCurseForge.start()
+    process.env.OBLYVIUM_CURSEFORGE_API = fakeCf.api
     Content = require('../app/assets/js/contentmanager')
 })
 
-after(() => fake.close())
+after(() => Promise.all([fake.close(), fakeCf.close()]))
 
 async function gameDir(files = {}){
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'jogo-'))
@@ -141,7 +145,7 @@ test('installedProjects e findBlocked olham todos os tipos', async () => {
         'resourcepacks/pacote-1.0.zip': 'pacote 1.0'
     })
     await Content.setEnabled(dir, 'resourcepack', 'pacote-1.0.zip', true)
-    assert.deepEqual([...await Content.installedProjects(dir)].sort(), ['AAAAAAAA', 'CCCCCCCC', 'DDDDDDDD'])
+    assert.deepEqual([...await Content.installedProjects(dir)].sort(), ['AAAAAAAA', 'CCCCCCCC', 'DDDDDDDD', 'slug:mapa', 'slug:pacote', 'slug:sodium'])
     const blocked = await Content.findBlocked(dir, new Set(['sodium', 'mapa', 'pacote']))
     assert.deepEqual(blocked.map(b => [b.type, b.fileName, b.title]).sort(), [
         ['mod', 'sodium-1.0.jar', 'Sodium'],

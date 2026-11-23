@@ -10,6 +10,7 @@ const fs                = require('fs-extra')
 const path              = require('path')
 const { LoggerUtil }    = require('helios-core')
 const Modrinth          = require('./modrinth')
+const CurseForge        = require('./curseforge')
 const { VERSION_FILE }  = require('./servermigration')
 
 const logger = LoggerUtil.getLogger('ContentManager')
@@ -203,34 +204,53 @@ exports.remove = async function(gameDir, type, fileName) {
 }
 
 /**
- * listFiles plus Modrinth data for recognised files. Works offline: without
- * Modrinth the files come back without "project" and "version".
+ * listFiles plus Modrinth or CurseForge data for recognised files. Works
+ * offline: unrecognised files come back without "project" and "version".
+ * CurseForge project IDs start with "cf:".
  */
 exports.describe = async function(gameDir, type) {
     const files = await exports.listFiles(gameDir, type)
     if(files.length === 0) {
         return files
     }
+    const described = new Map()
     try {
         const versions = await Modrinth.identifyFiles(files.map(f => f.path))
         const projects = await Modrinth.getProjects([...new Set([...versions.values()].map(v => v.project_id))])
         const byId = new Map(projects.map(p => [p.id, p]))
-        return files.map(f => {
+        for(const f of files) {
             const ver = versions.get(f.path)
             const project = ver != null ? byId.get(ver.project_id) : null
-            if(project == null) {
-                return f
+            if(project != null) {
+                described.set(f.path, {
+                    ...f,
+                    project: { id: project.id, slug: project.slug, title: project.title, iconUrl: project.icon_url },
+                    version: { id: ver.id, number: ver.version_number }
+                })
             }
-            return {
-                ...f,
-                project: { id: project.id, slug: project.slug, title: project.title, iconUrl: project.icon_url },
-                version: { id: ver.id, number: ver.version_number }
-            }
-        })
+        }
     } catch(err) {
         logger.warn('Could not describe content with Modrinth.', err)
-        return files
     }
+    const rest = files.filter(f => !described.has(f.path))
+    if(rest.length > 0) {
+        try {
+            const found = await CurseForge.identifyFiles(rest.map(f => f.path))
+            for(const f of rest) {
+                const x = found.get(f.path)
+                if(x != null) {
+                    described.set(f.path, {
+                        ...f,
+                        project: { id: CurseForge.toId(x.mod.id), slug: x.mod.slug, title: x.mod.name, iconUrl: x.mod.logo?.thumbnailUrl ?? null },
+                        version: { id: String(x.file.id), number: x.file.displayName }
+                    })
+                }
+            }
+        } catch(err) {
+            logger.warn('Could not describe content with CurseForge.', err)
+        }
+    }
+    return files.map(f => described.get(f.path) ?? f)
 }
 
 /**
@@ -285,16 +305,28 @@ async function listAll(gameDir) {
 }
 
 /**
- * @returns {Promise<Set<string>>} Modrinth project IDs of everything in the profile, enabled or not.
+ * @returns {Promise<Set<string>>} Modrinth and CurseForge ("cf:") project IDs of everything in the profile, enabled or not.
  */
 exports.installedProjects = async function(gameDir) {
-    const versions = await Modrinth.identifyFiles((await listAll(gameDir)).map(f => f.path))
-    return new Set([...versions.values()].map(v => v.project_id))
+    const files = (await listAll(gameDir)).map(f => f.path)
+    const versions = await Modrinth.identifyFiles(files)
+    const ids = new Set([...versions.values()].map(v => v.project_id))
+    try {
+        for(const p of await Modrinth.getProjects([...ids])) {
+            ids.add(`slug:${p.slug.toLowerCase()}`)
+        }
+        for(const id of await CurseForge.projectIds(files.filter(f => !versions.has(f)))) {
+            ids.add(id)
+        }
+    } catch(err) {
+        logger.warn('Could not identify content with CurseForge.', err)
+    }
+    return ids
 }
 
 /**
- * Enabled files whose Modrinth project the staff has blocked. Files Modrinth
- * does not recognise cannot be checked and are left alone.
+ * Enabled files whose Modrinth or CurseForge project the staff has blocked.
+ * Files neither recognises cannot be checked and are left alone.
  *
  * @returns {Promise<{fileName: string, type: string, title: string}[]>}
  */
@@ -307,17 +339,30 @@ exports.findBlocked = async function(gameDir, blocklist) {
         return []
     }
     const versions = await Modrinth.identifyFiles(files.map(f => f.path))
-    if(versions.size === 0) {
-        return []
-    }
-    const projects = await Modrinth.getProjects([...new Set([...versions.values()].map(v => v.project_id))])
-    const byId = new Map(projects.map(p => [p.id, p]))
     const found = []
-    for(const f of files) {
-        const ver = versions.get(f.path)
-        const project = ver != null ? byId.get(ver.project_id) : null
-        if(project != null && Modrinth.isBlocked(blocklist, project)) {
-            found.push({ fileName: f.fileName, type: f.type, title: project.title })
+    if(versions.size > 0) {
+        const projects = await Modrinth.getProjects([...new Set([...versions.values()].map(v => v.project_id))])
+        const byId = new Map(projects.map(p => [p.id, p]))
+        for(const f of files) {
+            const ver = versions.get(f.path)
+            const project = ver != null ? byId.get(ver.project_id) : null
+            if(project != null && Modrinth.isBlocked(blocklist, project)) {
+                found.push({ fileName: f.fileName, type: f.type, title: project.title })
+            }
+        }
+    }
+    const rest = files.filter(f => !versions.has(f.path))
+    if(rest.length > 0) {
+        try {
+            const cf = await CurseForge.identifyFiles(rest.map(f => f.path))
+            for(const f of rest) {
+                const x = cf.get(f.path)
+                if(x != null && CurseForge.isBlocked(blocklist, x.mod)) {
+                    found.push({ fileName: f.fileName, type: f.type, title: x.mod.name })
+                }
+            }
+        } catch(err) {
+            logger.warn('Could not check content against CurseForge.', err)
         }
     }
     return found

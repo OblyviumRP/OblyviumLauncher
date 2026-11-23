@@ -56,12 +56,11 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
 
 /** Ficha do servidor: jogadores em destaque e os dados técnicos em lista. */
 function ServerSheet({ server }: { server: ServerInfo }) {
-  const { data, loading } = useAsync(() => backend().serverStatus(server.id), [server.id])
+  const { data, loading } = useAsync(() => backend().serverStatus(server.id), [server.address])
   return (
     <motion.aside variants={rise} aria-label={t('Servidor')} className="w-full max-w-[260px] rounded-lg border border-border bg-card/90 p-4">
       <div className="flex items-center gap-2.5">
-        <ServerIcon server={server} className="size-8" />
-        <span className="min-w-0 flex-1 truncate text-sm font-semibold">{server.name}</span>
+        <span className="min-w-0 flex-1 truncate text-sm font-semibold">{t('Servidor')}</span>
         <span className={cn('size-2 shrink-0 rounded-full', loading ? 'animate-pulse bg-muted-2' : data ? 'bg-success-fg' : 'bg-danger-fg')} aria-hidden />
       </div>
       {server.address && (
@@ -184,8 +183,6 @@ export function HomePage() {
   if (!server || !profile) {
     return <p className="p-6 text-sm text-muted-foreground">{t('Nenhum servidor disponível na distribuição.')}</p>
   }
-  const others = servers.filter((s) => s.id !== server.id)
-
   return (
     <motion.div variants={stagger} initial="hidden" animate="show" className="relative isolate flex min-h-[calc(100vh-2.5rem)] flex-col">
       <Art server={server} />
@@ -261,7 +258,7 @@ export function HomePage() {
             </motion.section>
           </AnimatePresence>
 
-          <ServerSheet key={server.id} server={server} />
+          <ServerSheet key={server.address ?? server.id} server={server} />
         </div>
 
         {/* Notícias em destaque (duas colunas); outros servidores numa lista compacta ao lado. */}
@@ -289,18 +286,24 @@ export function HomePage() {
                   <Progress value={task.progress ?? 0} label={task.title} />
                 </div>
               ))
-            ) : others.length === 0 ? (
+            ) : servers.length <= 1 ? (
               <p className="text-sm text-muted-foreground">{t('Nada baixando agora. Os arquivos do servidor são conferidos sempre que você joga.')}</p>
             ) : (
               <ul className="-mx-1.5 flex flex-col gap-0.5">
-                {others.slice(0, 4).map((s) => (
+                {servers.map((s) => {
+                  const on = s.id === server.id
+                  return (
                   <li key={s.id}>
                     <button
                       type="button"
-                      disabled={locked}
+                      disabled={locked && !on}
+                      aria-current={on || undefined}
                       onClick={() => selectServer(s.id)}
-                      aria-label={t('Jogar em {name}', { name: s.name })}
-                      className="group flex w-full cursor-pointer items-center gap-2.5 rounded-sm px-1.5 py-1.5 text-left transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60"
+                      aria-label={on ? t('{name} (em uso)', { name: s.name }) : t('Jogar em {name}', { name: s.name })}
+                      className={cn(
+                        'group flex w-full items-center gap-2.5 rounded-sm border px-1.5 py-1.5 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60',
+                        on ? 'cursor-default border-primary-line bg-primary-soft' : 'cursor-pointer border-transparent hover:bg-accent',
+                      )}
                     >
                       <ServerIcon server={s} className="size-7" />
                       <span className="min-w-0 flex-1">
@@ -309,10 +312,15 @@ export function HomePage() {
                           {s.mcVersion} · {s.group}
                         </span>
                       </span>
-                      <ArrowRight className="size-3.5 text-muted-2 transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />
+                      {on ? (
+                        <span className="font-mono text-2xs uppercase tracking-wider text-primary-light">{t('Em uso')}</span>
+                      ) : (
+                        <ArrowRight className="size-3.5 text-muted-2 transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />
+                      )}
                     </button>
                   </li>
-                ))}
+                  )
+                })}
               </ul>
             )}
           </Panel>

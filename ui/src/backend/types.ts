@@ -79,6 +79,8 @@ export type LauncherSettings = {
 
 export type Article = { title: string; link: string | null; date: string | null; author: string; summary: string }
 
+export type ContentSource = 'modrinth' | 'curseforge'
+
 export type SearchHit = {
   id: string
   slug: string
@@ -107,6 +109,8 @@ export type ProjectDetails = {
   gallery: { url: string; title: string | null }[]
   license: string | null
   sourceUrl: string | null
+  source: ContentSource
+  pageUrl: string
   type: ContentType
   installed: boolean
   compatibleVersion: { id: string; number: string; date: string | null } | null
@@ -227,9 +231,9 @@ export interface Backend {
   latestLog(serverId: string, profileId: string): Promise<string | null>
   openGameFolder(serverId: string, profileId: string, sub?: string): void
 
-  // Modrinth
-  categories(type: ContentType): Promise<string[]>
-  search(o: { query: string; type: ContentType; categories: string[]; sort: string; offset: number }): Promise<{ hits: SearchHit[]; total: number; pageSize: number }>
+  // Modrinth e CurseForge
+  categories(type: ContentType, source: ContentSource): Promise<string[]>
+  search(o: { query: string; type: ContentType; source: ContentSource; categories: string[]; sort: string; offset: number }): Promise<{ hits: SearchHit[]; total: number; pageSize: number }>
   project(idOrSlug: string): Promise<ProjectDetails>
   install(projectId: string): Promise<void>
 

@@ -102,8 +102,12 @@ exports.getServerTarget = function(serv) {
  * @returns {Set<string>} Blocked slugs and project IDs, lower-cased.
  */
 exports.getBlocklist = function(serv) {
-    const blocked = serv.rawServer.modrinth?.blocked
-    return new Set(Array.isArray(blocked) ? blocked.map(b => String(b).toLowerCase()) : [])
+    const modrinth = serv.rawServer.modrinth?.blocked
+    const curseforge = serv.rawServer.curseforge?.blocked
+    return new Set([
+        ...(Array.isArray(modrinth) ? modrinth.map(b => String(b).toLowerCase()) : []),
+        ...(Array.isArray(curseforge) ? curseforge.map(b => /^\d+$/.test(String(b)) ? `cf:${b}` : String(b).toLowerCase()) : [])
+    ])
 }
 
 /**
@@ -124,7 +128,22 @@ function loadersFor(type, target) {
     }
 }
 
-function sha1(file) {
+const hashCache = new Map()
+
+async function sha1(file) {
+    const stat = await fs.stat(file)
+    const key = `${file}|${stat.size}|${stat.mtimeMs}`
+    if(!hashCache.has(key)) {
+        hashCache.set(key, await sha1Uncached(file))
+    }
+    return hashCache.get(key)
+}
+
+const LOOKUP_TTL = 10 * 60_000
+const versionCache = new Map()
+const projectCache = new Map()
+
+function sha1Uncached(file) {
     return new Promise((resolve, reject) => {
         const hash = crypto.createHash('sha1')
         fs.createReadStream(file)
@@ -154,13 +173,42 @@ exports.identifyFiles = async function(files) {
     if(pathsByHash.size === 0) {
         return result
     }
-    const versions = await postJson('version_files', { hashes: [...pathsByHash.keys()], algorithm: 'sha1' })
-    for(const [hash, ver] of Object.entries(versions)) {
-        for(const file of pathsByHash.get(hash) ?? []) {
-            result.set(file, ver)
+    const now = Date.now()
+    const missing = [...pathsByHash.keys()].filter(hash => (versionCache.get(hash)?.until ?? 0) <= now)
+    if(missing.length > 0) {
+        const versions = await postJson('version_files', { hashes: missing, algorithm: 'sha1' })
+        for(const hash of missing) {
+            versionCache.set(hash, { until: now + LOOKUP_TTL, value: versions[hash] ?? null })
+        }
+    }
+    for(const [hash, files] of pathsByHash) {
+        const ver = versionCache.get(hash)?.value
+        if(ver != null) {
+            for(const file of files) {
+                result.set(file, ver)
+            }
         }
     }
     return result
+}
+
+exports.modpackFiles = function(serv) {
+    const files = []
+    const missing = []
+    const walk = mdls => {
+        for(const mdl of mdls) {
+            if(mdl.rawModule.type === Type.ForgeMod || mdl.rawModule.type === Type.FabricMod) {
+                if(fs.existsSync(mdl.getPath())) {
+                    files.push(mdl.getPath())
+                } else {
+                    missing.push(mdl)
+                }
+            }
+            walk(mdl.subModules)
+        }
+    }
+    walk(serv.modules)
+    return { files, missing }
 }
 
 const packProjectsCache = new Map()
@@ -179,29 +227,15 @@ const packProjectsCache = new Map()
  * mods would be installed a second time as dependencies.
  *
  * @param {HeliosServer} serv The distribution server.
- * @param {{download?: boolean}} [options]
- * @returns {Promise<Set<string>>}
+ * @param {{download?: boolean, extra?: (files: string[]) => Promise<string[]>}} [options]
+ * @returns {Promise<Set<string>>} Modrinth project IDs, "slug:<slug>" and whatever extra returns.
  */
-exports.getModpackProjects = async function(serv, { download = false } = {}) {
+exports.getModpackProjects = async function(serv, { download = false, extra = async () => [] } = {}) {
     const key = `${serv.rawServer.id}@${serv.rawServer.version}`
     if(packProjectsCache.has(key)) {
         return packProjectsCache.get(key)
     }
-    const files = []
-    const missing = []
-    const walk = mdls => {
-        for(const mdl of mdls) {
-            if(mdl.rawModule.type === Type.ForgeMod || mdl.rawModule.type === Type.FabricMod) {
-                if(fs.existsSync(mdl.getPath())) {
-                    files.push(mdl.getPath())
-                } else {
-                    missing.push(mdl)
-                }
-            }
-            walk(mdl.subModules)
-        }
-    }
-    walk(serv.modules)
+    const { files, missing } = exports.modpackFiles(serv)
     if(download) {
         for(const mdl of missing.splice(0)) {
             const { url, MD5 } = mdl.rawModule.artifact
@@ -210,7 +244,16 @@ exports.getModpackProjects = async function(serv, { download = false } = {}) {
         }
     }
     const complete = missing.length === 0
-    const result = exports.identifyFiles(files).then(ids => new Set([...ids.values()].map(v => v.project_id)))
+    const result = (async () => {
+        const found = await exports.identifyFiles(files)
+        const ids = [...new Set([...found.values()].map(v => v.project_id))]
+        const projects = await exports.getProjects(ids)
+        const extras = await extra(files.filter(f => !found.has(f))).catch(err => {
+            logger.warn('Could not identify the modpack outside Modrinth.', err)
+            return []
+        })
+        return new Set([...ids, ...projects.map(p => `slug:${p.slug.toLowerCase()}`), ...extras])
+    })()
     if(!complete) {
         return result
     }
@@ -283,7 +326,14 @@ exports.getProjects = async function(ids) {
     if(ids.length === 0) {
         return []
     }
-    return getJson('projects', { searchParams: { ids: JSON.stringify(ids) } })
+    const now = Date.now()
+    const missing = [...new Set(ids)].filter(id => (projectCache.get(id)?.until ?? 0) <= now)
+    if(missing.length > 0) {
+        for(const p of await getJson('projects', { searchParams: { ids: JSON.stringify(missing) } })) {
+            projectCache.set(p.id, { until: now + LOOKUP_TTL, value: p })
+        }
+    }
+    return ids.map(id => projectCache.get(id)?.value).filter(p => p != null)
 }
 
 /**
@@ -375,6 +425,8 @@ async function downloadChecked(url, dest, algorithm, expected, label) {
     }
     await fs.move(tmp, dest, { overwrite: true })
 }
+
+exports.downloadChecked = downloadChecked
 
 /** Download a Modrinth version file, verifying its sha512 hash. */
 function downloadVerified(file, dest) {
