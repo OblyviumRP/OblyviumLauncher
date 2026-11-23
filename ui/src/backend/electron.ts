@@ -284,7 +284,7 @@ export function createElectronBackend(): Backend {
     },
 
     servers() {
-      return (distro?.servers ?? []).filter((s: any) => s.rawServer.id !== 'SELECT').map(mapServer)
+      return (distro?.servers ?? []).filter((s: any) => s.rawServer.id !== 'SELECT' && s.rawServer.mobile == null).map(mapServer)
     },
     selectedServerId() {
       return ConfigManager.getSelectedServer() ?? null
@@ -683,7 +683,7 @@ export function createElectronBackend(): Backend {
       return { javaPath: ConfigManager.isManagedJava(exec) ? exec : null, javaSupported: s.effectiveJavaOptions?.supported ?? '' }
     },
     gameSettings(): GameSettings {
-      const servers = (distro?.servers ?? []).filter((s: any) => s.rawServer.id !== 'SELECT')
+      const servers = (distro?.servers ?? []).filter((s: any) => s.rawServer.id !== 'SELECT' && s.rawServer.mobile == null)
       const b = GameSettingsCore.ramBounds(servers, ConfigManager)
       const current = ConfigManager.getGlobalMaxRAM()
       // Sem valor global ainda: mostra o que o servidor selecionado usa hoje.
