@@ -216,6 +216,7 @@ export interface Backend {
   pendingCrashReport(): Promise<CrashDraft | null>
   dismissCrashReport(): Promise<void>
   memoryWarning(serverId: string, profileId: string): Promise<{ freeMb: number; needMb: number } | null>
+  vulkanProblem(serverId: string): Promise<true | null>
   sendCrashReport(draft: CrashDraft, description: string): Promise<void>
   verifyFiles(h: Pick<LaunchHandlers, 'onStatus' | 'onProgress' | 'onModsDisabled'>): Promise<boolean>
 

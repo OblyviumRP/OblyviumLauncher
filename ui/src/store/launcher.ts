@@ -295,6 +295,16 @@ export const useLauncher = create<State>()(
           toast.warning(t('Entre em uma conta'), { description: t('Adicione uma conta para jogar.') })
           return
         }
+        if (s.serverId && (await backend().vulkanProblem(s.serverId).catch(() => null))) {
+          const leve = s.servers.find((x) => x.group === 'OpenGL' && x.id.toLowerCase().includes('leve'))
+          const go = await get().confirm({
+            title: t('Sua placa de vídeo não roda Vulkan'),
+            body: leve ? t('O Windows não tem o Vulkan instalado para a sua placa de vídeo, então este modpack não abre. Use o {leve}, que roda em OpenGL.', { leve: leve.name }) : t('O Windows não tem o Vulkan instalado para a sua placa de vídeo, então este modpack não abre. Escolha um modpack OpenGL.'),
+            confirm: leve ? t('Trocar para o {leve}', { leve: leve.name }) : t('Entendi'),
+          })
+          if (go && leve) get().selectServer(leve.id)
+          return
+        }
         const low = s.serverId ? await backend().memoryWarning(s.serverId, s.profileId).catch(() => null) : null
         if (low) {
           const gb = (mb: number) => `${(mb / 1024).toFixed(1).replace('.', ',')} GB`

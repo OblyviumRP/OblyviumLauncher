@@ -282,6 +282,9 @@ export function createMockBackend(): Backend {
     async memoryWarning() {
       return null
     },
+    async vulkanProblem() {
+      return null
+    },
     async sendCrashReport() {
       await wait(600)
     },
