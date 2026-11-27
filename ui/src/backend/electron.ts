@@ -43,6 +43,7 @@ const mod = (name: string) => req(path.join(appRoot, 'app', 'assets', 'js', name
 
 const ConfigManager = mod('configmanager')
 const Memory = mod('memory')
+const Vulkan = mod('vulkan')
 const AuthManager = mod('authmanager')
 const AuthManagerOffline = req(path.join(appRoot, 'app', 'assets', 'extension', 'offline', 'authmanagerOffline'))
 const { DistroAPI } = mod('distromanager')
@@ -460,6 +461,10 @@ export function createElectronBackend(): Backend {
       } catch {
         return null
       }
+    },
+    async vulkanProblem(serverId: string) {
+      if (!serverId.toLowerCase().includes('vulkan')) return null
+      return (await Vulkan.vulkanProblem().catch(() => null)) ? true : null
     },
     async sendCrashReport(draft: CrashDraft, description: string) {
       const acc = ConfigManager.getSelectedAccount()
