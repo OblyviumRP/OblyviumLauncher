@@ -99,3 +99,11 @@ test('crash pendente: hs_err mais novo das instâncias e perfis, depois do visto
         fs.rmSync(root, { recursive: true, force: true })
     }
 })
+
+test('linhas repetidas em sequência viram uma só e o começo do log sobrevive', () => {
+    const oom = s => `[14:52:${s}] [Render thread/INFO]: OpenGL debug message: GL_OUT_OF_MEMORY`
+    const log = ['[14:50:01] [Render thread/ERROR]: causa', ...Array.from({ length: 3000 }, (_, i) => oom(String(i % 60).padStart(2, '0'))), '[14:53:00] fim'].join('\r\n')
+    const out = CrashReport.tailLines(log)
+    assert.deepStrictEqual(out.split('\n'), ['[14:50:01] [Render thread/ERROR]: causa', oom('00'), '[... linha repetida mais 2999 vezes ...]', '[14:53:00] fim'])
+    assert.deepStrictEqual(CrashReport.foldRepeats(['a', 'a', '', '', 'b']), ['a', '[... linha repetida mais 1 vezes ...]', '', '', 'b'])
+})

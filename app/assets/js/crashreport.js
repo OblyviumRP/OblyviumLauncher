@@ -37,11 +37,29 @@ function head(text, max = MAX_FILE_CHARS){
     return text.length > max ? `${text.slice(0, max)}\n[... cortado ...]` : text
 }
 
+function foldRepeats(all){
+    const body = line => line.replace(/^\[\d\d:\d\d:\d\d\] /, '')
+    const out = []
+    let run = 0
+    for(let i = 0; i < all.length; i++){
+        if(i > 0 && all[i] !== '' && body(all[i]) === body(all[i - 1])){
+            run++
+            continue
+        }
+        if(run > 0) out.push(`[... linha repetida mais ${run} vezes ...]`)
+        run = 0
+        out.push(all[i])
+    }
+    if(run > 0) out.push(`[... linha repetida mais ${run} vezes ...]`)
+    return out
+}
+
 function tailLines(text, lines = LOG_LINES, max = MAX_FILE_CHARS){
-    const all = text.split(/\r?\n/)
-    let out = all.length > lines ? all.slice(-lines).join('\n') : text
-    if(out.length > max) out = out.slice(-max)
-    return out.length < text.length ? `[... início cortado ...]\n${out}` : out
+    const all = foldRepeats(text.split(/\r?\n/))
+    const cut = all.length > lines
+    let out = cut ? all.slice(-lines).join('\n') : all.join('\n')
+    if(out.length <= max) return cut ? `[... início cortado ...]\n${out}` : out
+    return `[... início cortado ...]\n${out.slice(-max)}`
 }
 
 async function readIfNewer(file, since){
@@ -216,4 +234,4 @@ async function writeSeen(launcherDir, ms = Date.now()){
     }
 }
 
-module.exports = { collect, send, redactor, modsFromLog, javaFrom, ramMb, tailLines, gpusFrom, pendingHsErr, readSeen, writeSeen }
+module.exports = { collect, send, redactor, modsFromLog, javaFrom, ramMb, tailLines, foldRepeats, gpusFrom, pendingHsErr, readSeen, writeSeen }
