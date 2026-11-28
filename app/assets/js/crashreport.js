@@ -72,20 +72,24 @@ async function readIfNewer(file, since){
     }
 }
 
-async function newestHsErr(gameDir, since){
+async function newestMatching(dir, pattern, since){
     try {
         let best = null
-        for(const f of await fs.readdir(gameDir)){
-            if(!/^hs_err_pid\d+\.log$/.test(f)) continue
-            const st = await fs.stat(path.join(gameDir, f))
+        for(const f of await fs.readdir(dir)){
+            if(!pattern.test(f)) continue
+            const st = await fs.stat(path.join(dir, f))
             if(st.mtimeMs >= since - 2000 && (best == null || st.mtimeMs > best.mtime)){
-                best = { file: path.join(gameDir, f), mtime: st.mtimeMs }
+                best = { file: path.join(dir, f), mtime: st.mtimeMs }
             }
         }
         return best?.file ?? null
     } catch {
         return null
     }
+}
+
+function newestHsErr(gameDir, since){
+    return newestMatching(gameDir, /^hs_err_pid\d+\.log$/, since)
 }
 
 function modsFromLog(log){
@@ -156,6 +160,13 @@ async function collect({ gameDir, crashReport, startedAt, maxRam, secrets = [], 
         if(text != null){
             raw.push(text)
             files.push({ name: path.basename(hsErr), content: head(redact(text)) })
+        }
+    }
+    const hang = await newestMatching(path.join(gameDir, 'travamentos'), /^travamento-[\d-]+\.txt$/, startedAt)
+    if(hang){
+        const text = await readIfNewer(hang, startedAt)
+        if(text != null){
+            files.push({ name: path.basename(hang), content: head(redact(text)) })
         }
     }
     const log = await readIfNewer(path.join(gameDir, 'logs', 'latest.log'), startedAt)

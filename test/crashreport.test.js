@@ -77,6 +77,19 @@ test('collect pega o hs_err do jogo na pasta temporária quando não há na inst
     }
 })
 
+test('collect junta o arquivo de travamento do vigia', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'crash-'))
+    try {
+        const startedAt = Date.now() - 1000
+        await fs.outputFile(path.join(dir, 'logs', 'latest.log'), 'linha')
+        await fs.outputFile(path.join(dir, 'travamentos', 'travamento-20261128-031500.txt'), 'Oblyvium Vigia: o jogo ficou 10 s sem desenhar um quadro.\n"Render thread" id=1 RUNNABLE\n')
+        const r = await CrashReport.collect({ gameDir: dir, crashReport: null, startedAt, maxRam: '4G', tmpDir: path.join(dir, 'tmp') })
+        assert.deepStrictEqual(r.files.map(f => f.name), ['travamento-20261128-031500.txt', 'latest.log'])
+    } finally {
+        await fs.remove(dir)
+    }
+})
+
 test('gpusFrom pega nome, fabricante e driver e ignora o render por software', () => {
     const gpus = CrashReport.gpusFrom([
         { vendorId: 0x10de, deviceId: 0x2d83, deviceString: 'NVIDIA GeForce RTX 5050', driverVersion: '32.0.16.1742' },
