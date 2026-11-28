@@ -13,6 +13,8 @@ export function CrashReportDialog() {
   const crash = useLauncher((s) => s.crash)
   const close = useLauncher((s) => s.closeCrash)
   const send = useLauncher((s) => s.sendCrash)
+  const servers = useLauncher((s) => s.servers)
+  const selectServer = useLauncher((s) => s.selectServer)
   const [description, setDescription] = useState('')
   const [sending, setSending] = useState(false)
 
@@ -23,6 +25,9 @@ export function CrashReportDialog() {
     if (ok) setDescription('')
   }
 
+  const leve = servers.find((x) => x.group === 'OpenGL' && x.id.toLowerCase().includes('leve'))
+  const suggestLeve = crash != null && leve != null && !crash.serverId.toLowerCase().includes('leve')
+
   return (
     <DialogPrimitive.Root open={crash != null} onOpenChange={(open) => !open && !sending && close()}>
       {crash && (
@@ -31,6 +36,14 @@ export function CrashReportDialog() {
           title={t('O jogo fechou com erro')}
           description={t('Quer enviar um relatório para a staff? Nada sai do seu computador sem você clicar em Enviar.')}
         >
+          {suggestLeve && (
+            <div className="flex items-center justify-between gap-3 rounded-sm border border-border-2 bg-sidebar p-2.5 text-sm">
+              <span>{t('Se o jogo fecha sempre, o seu PC pode não aguentar este modpack. O {leve} pesa menos e costuma abrir onde os outros fecham.', { leve: leve.name })}</span>
+              <Button variant="secondary" disabled={sending} onClick={() => selectServer(leve.id)}>
+                {t('Trocar para o {leve}', { leve: leve.name })}
+              </Button>
+            </div>
+          )}
           <label className="flex flex-col gap-1.5 text-sm">
             <span>{t('O que você estava fazendo quando fechou?')}</span>
             <textarea

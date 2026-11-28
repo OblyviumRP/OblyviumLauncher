@@ -59,6 +59,24 @@ test('collect junta crash report, hs_err e o fim do latest.log', async () => {
     }
 })
 
+test('collect pega o hs_err do jogo na pasta temporária quando não há na instância', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'crash-'))
+    try {
+        const game = path.join(dir, 'jogo')
+        const tmp = path.join(dir, 'tmp')
+        const startedAt = Date.now() - 1000
+        await fs.outputFile(path.join(game, 'logs', 'latest.log'), 'linha')
+        await fs.outputFile(path.join(tmp, 'hs_err_pid7.log'), '# EXCEPTION_ACCESS_VIOLATION\njava_command: net.fabricmc.loader.impl.launch.knot.KnotClient\n')
+        const r = await CrashReport.collect({ gameDir: game, crashReport: null, startedAt, maxRam: '4G', tmpDir: tmp })
+        assert.deepStrictEqual(r.files.map(f => f.name), ['hs_err_pid7.log', 'latest.log'])
+        await fs.outputFile(path.join(tmp, 'hs_err_pid7.log'), '# EXCEPTION_ACCESS_VIOLATION\njava_command: outro.Programa\n')
+        const outro = await CrashReport.collect({ gameDir: game, crashReport: null, startedAt, maxRam: '4G', tmpDir: tmp })
+        assert.deepStrictEqual(outro.files.map(f => f.name), ['latest.log'])
+    } finally {
+        await fs.remove(dir)
+    }
+})
+
 test('gpusFrom pega nome, fabricante e driver e ignora o render por software', () => {
     const gpus = CrashReport.gpusFrom([
         { vendorId: 0x10de, deviceId: 0x2d83, deviceString: 'NVIDIA GeForce RTX 5050', driverVersion: '32.0.16.1742' },
