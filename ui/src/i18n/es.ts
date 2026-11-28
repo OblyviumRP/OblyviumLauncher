@@ -468,6 +468,7 @@ export const es: Record<string, string> = {
   "O Windows não tem o Vulkan instalado para a sua placa de vídeo, então este modpack não abre. Use o {leve}, que roda em OpenGL.": "Windows no tiene Vulkan instalado para tu tarjeta gráfica, así que este modpack no abre. Usa {leve}, que funciona con OpenGL.",
   "O Windows não tem o Vulkan instalado para a sua placa de vídeo, então este modpack não abre. Escolha um modpack OpenGL.": "Windows no tiene Vulkan instalado para tu tarjeta gráfica, así que este modpack no abre. Elige un modpack OpenGL.",
   "Trocar para o {leve}": "Cambiar a {leve}",
+  "Se o jogo fecha sempre, o seu PC pode não aguentar este modpack. O {leve} pesa menos e costuma abrir onde os outros fecham.": "Si el juego se cierra siempre, puede que tu PC no aguante este modpack. {leve} es más liviano y suele abrir donde los otros se cierran.",
   "Entendi": "Entendido",
   "Jogar mesmo assim": "Jugar de todos modos",
   "O jogo fechou com erro": "El juego se cerró con un error",

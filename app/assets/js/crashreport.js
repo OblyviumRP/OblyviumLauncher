@@ -132,7 +132,14 @@ function gpusFrom(devices){
         }))
 }
 
-async function collect({ gameDir, crashReport, startedAt, maxRam, secrets = [], gpuDevices = [] }){
+async function minecraftHsErr(dir, since){
+    const file = await newestHsErr(dir, since)
+    if(file == null) return null
+    const text = await readIfNewer(file, since)
+    return text != null && /KnotClient|net\.minecraft/.test(text) ? file : null
+}
+
+async function collect({ gameDir, crashReport, startedAt, maxRam, secrets = [], gpuDevices = [], tmpDir = os.tmpdir() }){
     const redact = redactor(secrets)
     const files = []
     const raw = []
@@ -143,7 +150,7 @@ async function collect({ gameDir, crashReport, startedAt, maxRam, secrets = [], 
             files.push({ name: path.basename(crashReport), content: head(redact(text)) })
         }
     }
-    const hsErr = await newestHsErr(gameDir, startedAt)
+    const hsErr = await newestHsErr(gameDir, startedAt) ?? await minecraftHsErr(tmpDir, startedAt)
     if(hsErr){
         const text = await readIfNewer(hsErr, startedAt)
         if(text != null){
